@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Users, Mail, Phone } from "lucide-react";
+import { Download, Users, Mail, Phone, ExternalLink, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
@@ -123,7 +123,16 @@ const Dashboard = () => {
               {userProfile?.user_type === 'admin' ? 'Painel Administrativo' : 'Painel do Cliente'}
             </p>
           </div>
-          <Button onClick={signOut} variant="outline">Sair</Button>
+          <div className="flex gap-2">
+            <Button onClick={() => window.open('/demo', '_blank')} variant="outline">
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Ver Demo
+            </Button>
+            <Button onClick={signOut} variant="outline">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
