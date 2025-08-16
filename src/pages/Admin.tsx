@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Users, Building } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import AdminNavigation from "@/components/AdminNavigation";
 
 const Admin = () => {
   const { userProfile } = useAuth();
@@ -278,7 +279,9 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background">
+      <AdminNavigation />
+      <div className="p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
             <div>
@@ -538,6 +541,7 @@ const Admin = () => {
             )}
           </DialogContent>
         </Dialog>
+      </div>
       </div>
     </div>
   );

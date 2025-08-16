@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
+import Sites from "./pages/Sites";
 import Landing from "./pages/Landing";
 import LeadDemo from "./pages/LeadDemo";
 import NotFound from "./pages/NotFound";
@@ -66,6 +67,11 @@ const App = () => (
             <Route path="/admin" element={
               <ProtectedRoute requiredRole="admin">
                 <Admin />
+              </ProtectedRoute>
+            } />
+            <Route path="/sites" element={
+              <ProtectedRoute requiredRole="admin">
+                <Sites />
               </ProtectedRoute>
             } />
             <Route path="/" element={
