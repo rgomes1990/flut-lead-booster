@@ -37,22 +37,20 @@ const Admin = () => {
 
   const loadUsers = async () => {
     try {
-      console.log("Loading users...");
-      
       // Carregar todos os perfis de usuários
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
         .order("created_at", { ascending: false });
       
-      console.log("Profiles loaded:", profiles, "Error:", profilesError);
+      if (profilesError) throw profilesError;
       
       // Carregar dados de clientes para usuários do tipo 'client'
       const { data: clientsData, error: clientsError } = await supabase
         .from("clients")
         .select("*");
       
-      console.log("Clients data loaded:", clientsData, "Error:", clientsError);
+      if (clientsError) throw clientsError;
       
       // Combinar dados
       const usersWithClientData = profiles?.map(profile => {
@@ -72,7 +70,6 @@ const Admin = () => {
         };
       }) || [];
       
-      console.log("Final users data:", usersWithClientData);
       setUsers(usersWithClientData);
     } catch (error) {
       console.error("Error loading users:", error);
