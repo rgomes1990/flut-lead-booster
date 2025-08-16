@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Download, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import AdminNavigation from "@/components/AdminNavigation";
 
 interface Lead {
@@ -60,33 +60,50 @@ const LeadsCaptured = () => {
       
       const { data: leadsData, error } = await supabase
         .from("leads")
-        .select(`
-          *,
-          client:clients!inner(
-            user_id,
-            website_url,
-            profile:profiles!inner(
-              name,
-              email
-            )
-          )
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      // Transformar os dados para o formato esperado
-      const transformedLeads = leadsData?.map((lead: any) => ({
-        ...lead,
-        client: {
-          user_id: lead.client.user_id,
-          website_url: lead.client.website_url,
-        },
-        profile: {
-          name: lead.client.profile.name,
-          email: lead.client.profile.email,
-        }
-      })) || [];
+      // Buscar informações dos clientes separadamente
+      const clientIds = [...new Set(leadsData?.map(lead => lead.client_id))];
+      const { data: clientsData, error: clientsError } = await supabase
+        .from("clients")
+        .select(`
+          id,
+          user_id,
+          website_url
+        `)
+        .in("id", clientIds);
+
+      if (clientsError) throw clientsError;
+
+      // Buscar perfis dos usuários
+      const userIds = [...new Set(clientsData?.map(client => client.user_id))];
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, name, email")
+        .in("user_id", userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Combinar os dados
+      const transformedLeads = leadsData?.map((lead: any) => {
+        const client = clientsData?.find(c => c.id === lead.client_id);
+        const profile = profilesData?.find(p => p.user_id === client?.user_id);
+        
+        return {
+          ...lead,
+          client: {
+            user_id: client?.user_id,
+            website_url: client?.website_url,
+          },
+          profile: {
+            name: profile?.name || 'N/A',
+            email: profile?.email || 'N/A',
+          }
+        };
+      }) || [];
 
       setLeads(transformedLeads);
     } catch (error) {
