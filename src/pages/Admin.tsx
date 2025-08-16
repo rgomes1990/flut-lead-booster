@@ -36,36 +36,47 @@ const Admin = () => {
   }, [userProfile]);
 
   const loadUsers = async () => {
-    // Carregar todos os perfis de usuários
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
-    
-    // Carregar dados de clientes para usuários do tipo 'client'
-    const { data: clientsData } = await supabase
-      .from("clients")
-      .select("*");
-    
-    // Combinar dados
-    const usersWithClientData = profiles?.map(profile => {
-      const clientData = clientsData?.find(client => client.user_id === profile.user_id);
-      return {
-        ...profile,
-        client_data: clientData,
-        // Para compatibilidade com o código existente
-        id: clientData?.id || profile.id,
-        company_name: clientData?.company_name || 'N/A',
-        website_url: clientData?.website_url || '',
-        script_id: clientData?.script_id || 'N/A',
-        is_active: clientData?.is_active ?? true,
-        created_at: profile.created_at,
-        user_id: profile.user_id,
-        profiles: { name: profile.name, email: profile.email }
-      };
-    }) || [];
-    
-    setUsers(usersWithClientData);
+    try {
+      console.log("Loading users...");
+      
+      // Carregar todos os perfis de usuários
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      console.log("Profiles loaded:", profiles, "Error:", profilesError);
+      
+      // Carregar dados de clientes para usuários do tipo 'client'
+      const { data: clientsData, error: clientsError } = await supabase
+        .from("clients")
+        .select("*");
+      
+      console.log("Clients data loaded:", clientsData, "Error:", clientsError);
+      
+      // Combinar dados
+      const usersWithClientData = profiles?.map(profile => {
+        const clientData = clientsData?.find(client => client.user_id === profile.user_id);
+        return {
+          ...profile,
+          client_data: clientData,
+          // Para compatibilidade com o código existente
+          id: clientData?.id || profile.id,
+          company_name: clientData?.company_name || 'N/A',
+          website_url: clientData?.website_url || '',
+          script_id: clientData?.script_id || 'N/A',
+          is_active: clientData?.is_active ?? true,
+          created_at: profile.created_at,
+          user_id: profile.user_id,
+          profiles: { name: profile.name, email: profile.email }
+        };
+      }) || [];
+      
+      console.log("Final users data:", usersWithClientData);
+      setUsers(usersWithClientData);
+    } catch (error) {
+      console.error("Error loading users:", error);
+    }
   };
 
   const createClient = async () => {
