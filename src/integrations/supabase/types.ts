@@ -16,7 +16,6 @@ export type Database = {
     Tables: {
       clients: {
         Row: {
-          company_name: string
           created_at: string
           id: string
           is_active: boolean
@@ -26,7 +25,6 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
-          company_name: string
           created_at?: string
           id?: string
           is_active?: boolean
@@ -36,7 +34,6 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
-          company_name?: string
           created_at?: string
           id?: string
           is_active?: boolean

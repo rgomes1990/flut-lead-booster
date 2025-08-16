@@ -20,7 +20,6 @@ const Admin = () => {
     email: "", 
     password: "", 
     confirmPassword: "", 
-    company_name: "", 
     website_url: "", 
     user_type: "client" as "admin" | "client" 
   });
@@ -62,7 +61,6 @@ const Admin = () => {
           client_data: clientData,
           // Para compatibilidade com o código existente
           id: clientData?.id || profile.id,
-          company_name: clientData?.company_name || 'N/A',
           website_url: clientData?.website_url || '',
           script_id: clientData?.script_id || 'N/A',
           is_active: clientData?.is_active ?? true,
@@ -126,7 +124,6 @@ const Admin = () => {
           .from("clients")
           .insert({
             user_id: authData.user.id,
-            company_name: newClient.company_name,
             website_url: newClient.website_url,
             script_id: '' // Será sobrescrito pelo trigger
           });
@@ -143,7 +140,6 @@ const Admin = () => {
         email: "", 
         password: "", 
         confirmPassword: "", 
-        company_name: "", 
         website_url: "", 
         user_type: "client" 
       });
@@ -208,7 +204,6 @@ const Admin = () => {
         const { error: clientError } = await supabase
           .from("clients")
           .update({
-            company_name: editingClient.company_name,
             website_url: editingClient.website_url,
             is_active: editingClient.is_active
           })
@@ -359,26 +354,15 @@ const Admin = () => {
                   </Select>
                 </div>
                 {newClient.user_type === "client" && (
-                  <>
-                    <div>
-                      <Label htmlFor="company">Nome da Empresa</Label>
-                      <Input
-                        id="company"
-                        value={newClient.company_name}
-                        onChange={(e) => setNewClient({ ...newClient, company_name: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="website">Site (opcional)</Label>
-                      <Input
-                        id="website"
-                        value={newClient.website_url}
-                        onChange={(e) => setNewClient({ ...newClient, website_url: e.target.value })}
-                        placeholder="https://exemplo.com"
-                      />
-                    </div>
-                  </>
+                  <div>
+                    <Label htmlFor="website">Site (opcional)</Label>
+                    <Input
+                      id="website"
+                      value={newClient.website_url}
+                      onChange={(e) => setNewClient({ ...newClient, website_url: e.target.value })}
+                      placeholder="https://exemplo.com"
+                    />
+                  </div>
                 )}
                 <Button onClick={createClient} className="w-full">
                   Criar {newClient.user_type === 'admin' ? 'Administrador' : 'Cliente'}
@@ -405,7 +389,6 @@ const Admin = () => {
                   <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Empresa</TableHead>
                   <TableHead>Script ID</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Data Criação</TableHead>
@@ -422,7 +405,6 @@ const Admin = () => {
                         {user.user_type === 'admin' ? 'Administrador' : 'Cliente'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{user.company_name}</TableCell>
                     <TableCell className="font-mono">{user.script_id}</TableCell>
                     <TableCell>
                       <Badge variant={user.is_active ? 'default' : 'secondary'}>
@@ -529,14 +511,6 @@ const Admin = () => {
                 </div>
                 {editingClient.user_type === "client" && (
                   <>
-                    <div>
-                      <Label htmlFor="edit-company">Nome da Empresa</Label>
-                      <Input
-                        id="edit-company"
-                        value={editingClient.company_name || ""}
-                        onChange={(e) => setEditingClient({ ...editingClient, company_name: e.target.value })}
-                      />
-                    </div>
                     <div>
                       <Label htmlFor="edit-website">Site</Label>
                       <Input
