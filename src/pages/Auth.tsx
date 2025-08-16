@@ -69,7 +69,8 @@ const Auth = () => {
 
       if (error) throw error;
 
-      navigate("/");
+      // O redirecionamento será feito automaticamente pelo DashboardRouter
+      // baseado no tipo de usuário
     } catch (error: any) {
       toast({
         title: "Erro no login",

@@ -13,8 +13,8 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode; requiredRole?: 'admin' | 'client' }) => {
+  const { user, userProfile, loading } = useAuth();
   
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
@@ -23,8 +23,28 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
+
+  // Se requer admin mas usuário não é admin, redireciona para dashboard
+  if (requiredRole === 'admin' && userProfile?.user_type !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
   
   return <>{children}</>;
+};
+
+const DashboardRouter = () => {
+  const { userProfile, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
+  }
+  
+  // Redireciona baseado no tipo de usuário
+  if (userProfile?.user_type === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
+  
+  return <Dashboard />;
 };
 
 const App = () => (
@@ -44,13 +64,13 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/admin" element={
-              <ProtectedRoute>
+              <ProtectedRoute requiredRole="admin">
                 <Admin />
               </ProtectedRoute>
             } />
             <Route path="/" element={
               <ProtectedRoute>
-                <Dashboard />
+                <DashboardRouter />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
