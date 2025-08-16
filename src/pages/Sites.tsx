@@ -106,9 +106,10 @@ const Sites = () => {
 
       console.log("Domínio processado:", domain);
 
-      // Validar formato do domínio
-      const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]*\.[a-zA-Z]{2,}$/;
+      // Validar formato do domínio (aceita múltiplos pontos como .com.br)
+      const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.[a-zA-Z0-9.-]+[a-zA-Z]{2,}$/;
       if (!domainRegex.test(domain)) {
+        console.log("Domínio inválido:", domain);
         toast({
           title: "Erro",
           description: "Por favor, insira um domínio válido (ex: exemplo.com)",
