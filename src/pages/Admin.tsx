@@ -25,6 +25,8 @@ const Admin = () => {
     user_type: "client" as "admin" | "client" 
   });
   const [editingClient, setEditingClient] = useState<any>(null);
+  const [editPassword, setEditPassword] = useState("");
+  const [editConfirmPassword, setEditConfirmPassword] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -158,6 +160,37 @@ const Admin = () => {
 
   const updateClient = async () => {
     try {
+      // Validar senhas se foram preenchidas
+      if (editPassword || editConfirmPassword) {
+        if (editPassword !== editConfirmPassword) {
+          toast({
+            title: "Erro",
+            description: "As senhas não coincidem",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (editPassword.length < 6) {
+          toast({
+            title: "Erro",
+            description: "A senha deve ter pelo menos 6 caracteres",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Atualizar senha no auth (nota: isso deve ser feito via edge function em produção)
+        // Por enquanto, informamos ao usuário que a senha deve ser alterada no painel Supabase
+        if (editPassword) {
+          toast({
+            title: "Atenção",
+            description: "A alteração de senha deve ser feita diretamente no painel Supabase por questões de segurança.",
+            variant: "default",
+          });
+        }
+      }
+
       // Atualizar perfil do usuário
       const { error: profileError } = await supabase
         .from("profiles")
@@ -196,6 +229,8 @@ const Admin = () => {
 
       setEditDialogOpen(false);
       setEditingClient(null);
+      setEditPassword("");
+      setEditConfirmPassword("");
       loadUsers();
     } catch (error: any) {
       toast({
@@ -455,6 +490,26 @@ const Admin = () => {
                       ...editingClient, 
                       profiles: { ...editingClient.profiles, email: e.target.value }
                     })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-password">Nova Senha (opcional)</Label>
+                  <Input
+                    id="edit-password"
+                    type="password"
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    placeholder="Deixe vazio para manter a senha atual"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-confirm-password">Confirmar Nova Senha</Label>
+                  <Input
+                    id="edit-confirm-password"
+                    type="password"
+                    value={editConfirmPassword}
+                    onChange={(e) => setEditConfirmPassword(e.target.value)}
+                    placeholder="Confirme a nova senha"
                   />
                 </div>
                 <div>
