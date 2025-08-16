@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -89,15 +89,18 @@ const Admin = () => {
         return;
       }
 
-      // Criar usuário no auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // Criar usuário no auth usando signUp
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newClient.email,
         password: newClient.password,
-        user_metadata: { name: newClient.name },
-        email_confirm: true
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: { name: newClient.name }
+        }
       });
 
       if (authError) throw authError;
+      if (!authData.user) throw new Error("Falha ao criar usuário");
 
       // Atualizar perfil do usuário com o tipo selecionado
       const { error: profileError } = await supabase
@@ -186,12 +189,11 @@ const Admin = () => {
 
       if (clientError) throw clientError;
 
-      // Deletar usuário do auth
-      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-      if (authError) throw authError;
-
+      // Nota: A deleção do usuário do auth deve ser feita via RPC ou edge function
+      // Por enquanto, apenas removemos o cliente da tabela clients
       toast({
         title: "Cliente excluído com sucesso!",
+        description: "Os dados do cliente foram removidos. Para remover completamente do sistema de autenticação, isso deve ser feito via painel Supabase.",
       });
 
       loadUsers();
@@ -235,6 +237,9 @@ const Admin = () => {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Criar Novo Usuário</DialogTitle>
+                <DialogDescription>
+                  Preencha os dados para criar um novo usuário do sistema
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
@@ -398,6 +403,9 @@ const Admin = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Editar Cliente</DialogTitle>
+              <DialogDescription>
+                Edite as informações do cliente selecionado
+              </DialogDescription>
             </DialogHeader>
             {editingClient && (
               <div className="space-y-4">
