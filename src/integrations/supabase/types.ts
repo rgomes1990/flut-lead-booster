@@ -121,6 +121,71 @@ export type Database = {
         }
         Relationships: []
       }
+      site_configs: {
+        Row: {
+          attendant_name: string | null
+          company_name: string | null
+          created_at: string
+          email: string | null
+          field_capture_page: boolean
+          field_email: boolean
+          field_message: boolean
+          field_name: boolean
+          field_phone: boolean
+          icon_position: string
+          icon_type: string
+          id: string
+          is_active: boolean
+          phone: string | null
+          site_id: string
+          updated_at: string
+        }
+        Insert: {
+          attendant_name?: string | null
+          company_name?: string | null
+          created_at?: string
+          email?: string | null
+          field_capture_page?: boolean
+          field_email?: boolean
+          field_message?: boolean
+          field_name?: boolean
+          field_phone?: boolean
+          icon_position?: string
+          icon_type?: string
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          site_id: string
+          updated_at?: string
+        }
+        Update: {
+          attendant_name?: string | null
+          company_name?: string | null
+          created_at?: string
+          email?: string | null
+          field_capture_page?: boolean
+          field_email?: boolean
+          field_message?: boolean
+          field_name?: boolean
+          field_phone?: boolean
+          icon_position?: string
+          icon_type?: string
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          site_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_configs_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: true
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sites: {
         Row: {
           created_at: string

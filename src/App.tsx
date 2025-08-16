@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import Sites from "./pages/Sites";
+import SiteConfig from "./pages/SiteConfig";
 import Landing from "./pages/Landing";
 import LeadDemo from "./pages/LeadDemo";
 import NotFound from "./pages/NotFound";
@@ -72,6 +73,11 @@ const App = () => (
             <Route path="/sites" element={
               <ProtectedRoute requiredRole="admin">
                 <Sites />
+              </ProtectedRoute>
+            } />
+            <Route path="/sites/:siteId/config" element={
+              <ProtectedRoute>
+                <SiteConfig />
               </ProtectedRoute>
             } />
             <Route path="/" element={

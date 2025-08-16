@@ -8,10 +8,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Globe, Users } from "lucide-react";
+import { Plus, Edit, Trash2, Globe, Users, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminNavigation from "@/components/AdminNavigation";
+import { Link } from "react-router-dom";
 
 const Sites = () => {
   const { userProfile } = useAuth();
@@ -81,8 +82,6 @@ const Sites = () => {
 
   const createSite = async () => {
     try {
-      console.log("Criando site:", newSite);
-      
       if (!newSite.domain || !newSite.user_id) {
         toast({
           title: "Erro",
@@ -104,12 +103,9 @@ const Sites = () => {
       // Remover barra final se presente
       domain = domain.replace(/\/$/, '');
 
-      console.log("Domínio processado:", domain);
-
       // Validar formato do domínio (aceita múltiplos pontos como .com.br)
       const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.[a-zA-Z0-9.-]+[a-zA-Z]{2,}$/;
       if (!domainRegex.test(domain)) {
-        console.log("Domínio inválido:", domain);
         toast({
           title: "Erro",
           description: "Por favor, insira um domínio válido (ex: exemplo.com)",
@@ -118,8 +114,6 @@ const Sites = () => {
         return;
       }
 
-      console.log("Inserindo no banco:", { domain, user_id: newSite.user_id });
-
       const { error } = await supabase
         .from("sites")
         .insert({
@@ -127,12 +121,7 @@ const Sites = () => {
           user_id: newSite.user_id
         });
 
-      if (error) {
-        console.error("Erro ao inserir:", error);
-        throw error;
-      }
-
-      console.log("Site criado com sucesso!");
+      if (error) throw error;
 
       toast({
         title: "Site criado com sucesso!",
@@ -336,7 +325,14 @@ const Sites = () => {
               <TableBody>
                 {sites.map((site) => (
                   <TableRow key={site.id}>
-                    <TableCell className="font-medium">{site.domain}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link 
+                        to={`/sites/${site.id}/config`}
+                        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      >
+                        {site.domain}
+                      </Link>
+                    </TableCell>
                     <TableCell>{site.profiles?.name}</TableCell>
                     <TableCell>{site.profiles?.email}</TableCell>
                     <TableCell>
@@ -353,6 +349,15 @@ const Sites = () => {
                       {new Date(site.created_at).toLocaleDateString("pt-BR")}
                     </TableCell>
                     <TableCell className="space-x-2">
+                      <Link to={`/sites/${site.id}/config`}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          title="Configurar site"
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      </Link>
                       <Button
                         size="sm"
                         variant="outline"
