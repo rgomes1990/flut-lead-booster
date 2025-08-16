@@ -35,20 +35,31 @@ const Sites = () => {
 
   const loadSites = async () => {
     try {
-      const { data: sitesData, error } = await supabase
+      // Carregar sites
+      const { data: sitesData, error: sitesError } = await supabase
         .from("sites")
-        .select(`
-          *,
-          profiles:user_id (
-            name,
-            email,
-            user_type
-          )
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setSites(sitesData || []);
+      if (sitesError) throw sitesError;
+
+      // Carregar perfis dos usuários
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*");
+
+      if (profilesError) throw profilesError;
+
+      // Combinar dados
+      const sitesWithProfiles = sitesData?.map(site => {
+        const profile = profilesData?.find(p => p.user_id === site.user_id);
+        return {
+          ...site,
+          profiles: profile
+        };
+      }) || [];
+
+      setSites(sitesWithProfiles);
     } catch (error) {
       console.error("Error loading sites:", error);
     }
