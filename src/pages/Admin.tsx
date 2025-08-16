@@ -158,19 +158,40 @@ const Admin = () => {
 
   const updateClient = async () => {
     try {
-      const { error } = await supabase
-        .from("clients")
+      // Atualizar perfil do usuário
+      const { error: profileError } = await supabase
+        .from("profiles")
         .update({
-          company_name: editingClient.company_name,
-          website_url: editingClient.website_url,
-          is_active: editingClient.is_active
+          name: editingClient.profiles.name,
+          email: editingClient.profiles.email,
+          user_type: editingClient.user_type
         })
-        .eq("id", editingClient.id);
+        .eq("user_id", editingClient.user_id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
+
+      // Se for cliente, atualizar dados da tabela clients
+      if (editingClient.user_type === "client") {
+        const { error: clientError } = await supabase
+          .from("clients")
+          .update({
+            company_name: editingClient.company_name,
+            website_url: editingClient.website_url,
+            is_active: editingClient.is_active
+          })
+          .eq("user_id", editingClient.user_id);
+
+        if (clientError) throw clientError;
+      } else {
+        // Se mudou de cliente para admin, deletar registro da tabela clients
+        await supabase
+          .from("clients")
+          .delete()
+          .eq("user_id", editingClient.user_id);
+      }
 
       toast({
-        title: "Cliente atualizado com sucesso!",
+        title: "Usuário atualizado com sucesso!",
       });
 
       setEditDialogOpen(false);
@@ -178,7 +199,7 @@ const Admin = () => {
       loadUsers();
     } catch (error: any) {
       toast({
-        title: "Erro ao atualizar cliente",
+        title: "Erro ao atualizar usuário",
         description: error.message,
         variant: "destructive",
       });
@@ -377,27 +398,23 @@ const Admin = () => {
                       {new Date(user.created_at).toLocaleDateString("pt-BR")}
                     </TableCell>
                     <TableCell className="space-x-2">
-                      {user.user_type === 'client' && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingClient(user);
-                              setEditDialogOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => deleteClient(user.id, user.user_id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditingClient(user);
+                          setEditDialogOpen(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deleteClient(user.id, user.user_id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -410,39 +427,84 @@ const Admin = () => {
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Editar Cliente</DialogTitle>
+              <DialogTitle>Editar Usuário</DialogTitle>
               <DialogDescription>
-                Edite as informações do cliente selecionado
+                Edite as informações do usuário selecionado
               </DialogDescription>
             </DialogHeader>
             {editingClient && (
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="edit-company">Nome da Empresa</Label>
+                  <Label htmlFor="edit-name">Nome</Label>
                   <Input
-                    id="edit-company"
-                    value={editingClient.company_name}
-                    onChange={(e) => setEditingClient({ ...editingClient, company_name: e.target.value })}
+                    id="edit-name"
+                    value={editingClient.profiles?.name || ""}
+                    onChange={(e) => setEditingClient({ 
+                      ...editingClient, 
+                      profiles: { ...editingClient.profiles, name: e.target.value }
+                    })}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit-website">Site</Label>
+                  <Label htmlFor="edit-email">Email</Label>
                   <Input
-                    id="edit-website"
-                    value={editingClient.website_url || ""}
-                    onChange={(e) => setEditingClient({ ...editingClient, website_url: e.target.value })}
+                    id="edit-email"
+                    type="email"
+                    value={editingClient.profiles?.email || ""}
+                    onChange={(e) => setEditingClient({ 
+                      ...editingClient, 
+                      profiles: { ...editingClient.profiles, email: e.target.value }
+                    })}
                   />
                 </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="edit-active"
-                    checked={editingClient.is_active}
-                    onChange={(e) => setEditingClient({ ...editingClient, is_active: e.target.checked })}
-                  />
-                  <Label htmlFor="edit-active">Cliente Ativo</Label>
+                <div>
+                  <Label htmlFor="edit-user-type">Tipo de Usuário</Label>
+                  <Select 
+                    value={editingClient.user_type} 
+                    onValueChange={(value: "admin" | "client") => setEditingClient({ ...editingClient, user_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo de usuário" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="client">Cliente</SelectItem>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Button onClick={updateClient} className="w-full">Atualizar Cliente</Button>
+                {editingClient.user_type === "client" && (
+                  <>
+                    <div>
+                      <Label htmlFor="edit-company">Nome da Empresa</Label>
+                      <Input
+                        id="edit-company"
+                        value={editingClient.company_name || ""}
+                        onChange={(e) => setEditingClient({ ...editingClient, company_name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-website">Site</Label>
+                      <Input
+                        id="edit-website"
+                        value={editingClient.website_url || ""}
+                        onChange={(e) => setEditingClient({ ...editingClient, website_url: e.target.value })}
+                        placeholder="https://exemplo.com"
+                      />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="edit-active"
+                        checked={editingClient.is_active}
+                        onChange={(e) => setEditingClient({ ...editingClient, is_active: e.target.checked })}
+                      />
+                      <Label htmlFor="edit-active">Cliente Ativo</Label>
+                    </div>
+                  </>
+                )}
+                <Button onClick={updateClient} className="w-full">
+                  Atualizar {editingClient.user_type === 'admin' ? 'Administrador' : 'Cliente'}
+                </Button>
               </div>
             )}
           </DialogContent>
