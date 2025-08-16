@@ -81,6 +81,8 @@ const Sites = () => {
 
   const createSite = async () => {
     try {
+      console.log("Criando site:", newSite);
+      
       if (!newSite.domain || !newSite.user_id) {
         toast({
           title: "Erro",
@@ -102,6 +104,8 @@ const Sites = () => {
       // Remover barra final se presente
       domain = domain.replace(/\/$/, '');
 
+      console.log("Domínio processado:", domain);
+
       // Validar formato do domínio
       const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]*\.[a-zA-Z]{2,}$/;
       if (!domainRegex.test(domain)) {
@@ -113,6 +117,8 @@ const Sites = () => {
         return;
       }
 
+      console.log("Inserindo no banco:", { domain, user_id: newSite.user_id });
+
       const { error } = await supabase
         .from("sites")
         .insert({
@@ -120,7 +126,12 @@ const Sites = () => {
           user_id: newSite.user_id
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao inserir:", error);
+        throw error;
+      }
+
+      console.log("Site criado com sucesso!");
 
       toast({
         title: "Site criado com sucesso!",
