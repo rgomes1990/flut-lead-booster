@@ -47,14 +47,7 @@ const SiteConfig = () => {
       // Carregar dados do site
       const { data: siteData, error: siteError } = await supabase
         .from("sites")
-        .select(`
-          *,
-          profiles:user_id (
-            name,
-            email,
-            user_type
-          )
-        `)
+        .select("*")
         .eq("id", siteId)
         .single();
 
@@ -66,11 +59,11 @@ const SiteConfig = () => {
         .from("site_configs")
         .select("*")
         .eq("site_id", siteId)
-        .single();
+        .maybeSingle();
 
       if (configData) {
         setConfig(configData);
-      } else if (configError?.code !== 'PGRST116') {
+      } else if (configError) {
         throw configError;
       }
 
@@ -82,6 +75,7 @@ const SiteConfig = () => {
         description: "Erro ao carregar configurações do site",
         variant: "destructive",
       });
+      setLoading(false);
     }
   };
 
