@@ -62,6 +62,9 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Primeiro, limpa qualquer sessão existente
+      await supabase.auth.signOut();
+      
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -79,6 +82,20 @@ const Auth = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const clearStorage = async () => {
+    try {
+      await supabase.auth.signOut();
+      localStorage.clear();
+      sessionStorage.clear();
+      toast({
+        title: "Cache limpo",
+        description: "Dados de sessão foram removidos. Tente fazer login novamente.",
+      });
+    } catch (error: any) {
+      console.error("Erro ao limpar cache:", error);
     }
   };
 
@@ -164,6 +181,17 @@ const Auth = () => {
               </form>
             </TabsContent>
           </Tabs>
+          
+          <div className="mt-4 text-center">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={clearStorage}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Limpar dados de sessão
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
