@@ -79,9 +79,21 @@ const Sites = () => {
         return;
       }
 
+      // Extrair domínio de URL completa se necessário
+      let domain = newSite.domain.trim();
+      
+      // Remover protocolo se presente
+      domain = domain.replace(/^https?:\/\//, '');
+      
+      // Remover www se presente
+      domain = domain.replace(/^www\./, '');
+      
+      // Remover barra final se presente
+      domain = domain.replace(/\/$/, '');
+
       // Validar formato do domínio
-      const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
-      if (!domainRegex.test(newSite.domain)) {
+      const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]*\.[a-zA-Z]{2,}$/;
+      if (!domainRegex.test(domain)) {
         toast({
           title: "Erro",
           description: "Por favor, insira um domínio válido (ex: exemplo.com)",
@@ -93,7 +105,7 @@ const Sites = () => {
       const { error } = await supabase
         .from("sites")
         .insert({
-          domain: newSite.domain,
+          domain: domain, // Salvar apenas o domínio limpo
           user_id: newSite.user_id
         });
 
@@ -126,9 +138,21 @@ const Sites = () => {
         return;
       }
 
+      // Extrair domínio de URL completa se necessário
+      let domain = editingSite.domain.trim();
+      
+      // Remover protocolo se presente
+      domain = domain.replace(/^https?:\/\//, '');
+      
+      // Remover www se presente
+      domain = domain.replace(/^www\./, '');
+      
+      // Remover barra final se presente
+      domain = domain.replace(/\/$/, '');
+
       // Validar formato do domínio
-      const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
-      if (!domainRegex.test(editingSite.domain)) {
+      const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]*\.[a-zA-Z]{2,}$/;
+      if (!domainRegex.test(domain)) {
         toast({
           title: "Erro",
           description: "Por favor, insira um domínio válido (ex: exemplo.com)",
@@ -140,7 +164,7 @@ const Sites = () => {
       const { error } = await supabase
         .from("sites")
         .update({
-          domain: editingSite.domain,
+          domain: domain, // Salvar domínio limpo
           user_id: editingSite.user_id,
           is_active: editingSite.is_active
         })
@@ -233,7 +257,7 @@ const Sites = () => {
                     id="domain"
                     value={newSite.domain}
                     onChange={(e) => setNewSite({ ...newSite, domain: e.target.value })}
-                    placeholder="exemplo.com"
+                    placeholder="exemplo.com ou https://exemplo.com"
                     required
                   />
                 </div>
