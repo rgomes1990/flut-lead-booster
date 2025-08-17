@@ -53,6 +53,9 @@ const Dashboard = () => {
         
         allLeads = data || [];
         setLeads(allLeads);
+        
+        console.log('Dashboard - Total leads carregados (admin):', allLeads.length);
+        console.log('Dashboard - Dados dos leads (admin):', allLeads);
       } else {
         // Cliente: ver apenas seus leads
         const { data: client } = await supabase
@@ -72,6 +75,9 @@ const Dashboard = () => {
           
           allLeads = clientLeads || [];
           setLeads(allLeads);
+          
+          console.log('Dashboard - Cliente leads carregados:', allLeads.length);
+          console.log('Dashboard - Dados dos leads do cliente:', allLeads);
         }
       }
 
@@ -105,7 +111,15 @@ const Dashboard = () => {
         dailyAverage
       });
 
-      // Preparar dados dos gráficos
+      console.log('Dashboard - Estatísticas calculadas:', {
+        totalLeads: allLeads.length,
+        newLeads: unreadLeads,
+        leadsToday,
+        leadsThisMonth,
+        readLeads,
+        unreadLeads,
+        dailyAverage
+      });
       await prepareChartData(allLeads);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
