@@ -259,120 +259,58 @@ Deno.serve(async (req) => {
             
             <form id="flut-form" style="display: flex; flex-direction: column; gap: 15px;">
               \${SITE_CONFIG.field_phone !== false ? \`
-              <input 
-                type="tel" 
-                id="flut-phone" 
-                required 
-                placeholder="DDD + Celular" 
-                style="
-                  all: unset !important;
-                  padding: 15px !important;
-                  border: none !important;
-                  border-radius: 25px !important;
-                  background: white !important;
-                  font-size: 14px !important;
-                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-                  color: #333 !important;
-                  width: 100% !important;
-                  box-sizing: border-box !important;
-                  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
-                  outline: none !important;
-                  transition: box-shadow 0.2s !important;
-                  display: block !important;
-                  line-height: 1.4 !important;
-                  -webkit-appearance: none !important;
-                  appearance: none !important;
-                " 
-                onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" 
-                onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">
+              <input type="tel" id="flut-phone" required placeholder="DDD + Celular" style="
+                padding: 15px;
+                border: none;
+                border-radius: 25px;
+                background: white;
+                font-size: 14px;
+                box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+                outline: none;
+                transition: box-shadow 0.2s;
+              " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2)'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1)'">
               \` : ''}
               
               \${SITE_CONFIG.field_email !== false ? \`
-              <input 
-                type="email" 
-                id="flut-email" 
-                \${SITE_CONFIG.field_phone === false ? 'required' : ''} 
-                placeholder="E-mail" 
-                style="
-                  all: unset !important;
-                  padding: 15px !important;
-                  border: none !important;
-                  border-radius: 25px !important;
-                  background: white !important;
-                  font-size: 14px !important;
-                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-                  color: #333 !important;
-                  width: 100% !important;
-                  box-sizing: border-box !important;
-                  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
-                  outline: none !important;
-                  transition: box-shadow 0.2s !important;
-                  display: block !important;
-                  line-height: 1.4 !important;
-                  -webkit-appearance: none !important;
-                  appearance: none !important;
-                " 
-                onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" 
-                onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">
+              <input type="email" id="flut-email" \${SITE_CONFIG.field_phone === false ? 'required' : ''} placeholder="E-mail" style="
+                padding: 15px;
+                border: none;
+                border-radius: 25px;
+                background: white;
+                font-size: 14px;
+                box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+                outline: none;
+                transition: box-shadow 0.2s;
+              " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2)'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1)'">
               \` : ''}
               
               \${SITE_CONFIG.field_name !== false ? \`
-              <input 
-                type="text" 
-                id="flut-name" 
-                \${!SITE_CONFIG.field_phone && !SITE_CONFIG.field_email ? 'required' : ''} 
-                placeholder="Nome Completo" 
-                style="
-                  all: unset !important;
-                  padding: 15px !important;
-                  border: none !important;
-                  border-radius: 25px !important;
-                  background: white !important;
-                  font-size: 14px !important;
-                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-                  color: #333 !important;
-                  width: 100% !important;
-                  box-sizing: border-box !important;
-                  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
-                  outline: none !important;
-                  transition: box-shadow 0.2s !important;
-                  display: block !important;
-                  line-height: 1.4 !important;
-                  -webkit-appearance: none !important;
-                  appearance: none !important;
-                " 
-                onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" 
-                onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">
+              <input type="text" id="flut-name" \${!SITE_CONFIG.field_phone && !SITE_CONFIG.field_email ? 'required' : ''} placeholder="Nome Completo" style="
+                padding: 15px;
+                border: none;
+                border-radius: 25px;
+                background: white;
+                font-size: 14px;
+                box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+                outline: none;
+                transition: box-shadow 0.2s;
+              " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2)'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1)'">
               \` : ''}
               
               \${SITE_CONFIG.field_message !== false ? \`
-              <textarea 
-                id="flut-message" 
-                placeholder="Mensagem" 
-                style="
-                  all: unset !important;
-                  padding: 15px !important;
-                  border: none !important;
-                  border-radius: 15px !important;
-                  background: white !important;
-                  font-size: 14px !important;
-                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-                  color: #333 !important;
-                  width: 100% !important;
-                  box-sizing: border-box !important;
-                  min-height: 80px !important;
-                  resize: vertical !important;
-                  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
-                  outline: none !important;
-                  transition: box-shadow 0.2s !important;
-                  display: block !important;
-                  line-height: 1.4 !important;
-                  -webkit-appearance: none !important;
-                  appearance: none !important;
-                  vertical-align: top !important;
-                " 
-                onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" 
-                onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'"></textarea>
+              <textarea id="flut-message" placeholder="Mensagem:" style="
+                padding: 15px;
+                border: none;
+                border-radius: 15px;
+                background: white;
+                font-size: 14px;
+                min-height: 80px;
+                resize: vertical;
+                box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+                outline: none;
+                transition: box-shadow 0.2s;
+                font-family: inherit;
+              " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2)'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1)'"></textarea>
               \` : ''}
               
               <!-- Área para mensagens de erro -->
