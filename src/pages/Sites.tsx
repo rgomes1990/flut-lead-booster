@@ -28,18 +28,27 @@ const Sites = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (userProfile?.user_type === 'admin') {
+    if (userProfile) {
       loadSites();
-      loadUsers();
+      if (userProfile.user_type === 'admin') {
+        loadUsers();
+      }
     }
   }, [userProfile]);
 
   const loadSites = async () => {
     try {
-      // Carregar sites
-      const { data: sitesData, error: sitesError } = await supabase
+      // Carregar sites baseado no tipo de usuário
+      let sitesQuery = supabase
         .from("sites")
-        .select("*")
+        .select("*");
+
+      // Se for cliente, filtrar apenas seus próprios sites
+      if (userProfile?.user_type === 'client') {
+        sitesQuery = sitesQuery.eq('user_id', userProfile.user_id);
+      }
+
+      const { data: sitesData, error: sitesError } = await sitesQuery
         .order("created_at", { ascending: false });
 
       if (sitesError) throw sitesError;
@@ -225,12 +234,12 @@ const Sites = () => {
     }
   };
 
-  if (userProfile?.user_type !== 'admin') {
+  if (!userProfile || (userProfile.user_type !== 'admin' && userProfile.user_type !== 'client')) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card>
           <CardContent className="pt-6">
-            <p>Acesso negado. Apenas administradores podem acessar esta página.</p>
+            <p>Acesso negado. Você não tem permissão para acessar esta página.</p>
           </CardContent>
         </Card>
       </div>
@@ -248,13 +257,14 @@ const Sites = () => {
             <p className="text-muted-foreground">Administrar sites e vincular usuários</p>
           </div>
           
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Site
-              </Button>
-            </DialogTrigger>
+          {userProfile?.user_type === 'admin' && (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Site
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Criar Novo Site</DialogTitle>
@@ -297,6 +307,7 @@ const Sites = () => {
               </div>
             </DialogContent>
           </Dialog>
+          )}
         </div>
 
         <Card>
@@ -358,23 +369,27 @@ const Sites = () => {
                           <Settings className="h-4 w-4" />
                         </Button>
                       </Link>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setEditingSite(site);
-                          setEditDialogOpen(true);
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => deleteSite(site.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {userProfile?.user_type === 'admin' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingSite(site);
+                              setEditDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => deleteSite(site.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 const AdminNavigation = () => {
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { signOut, userProfile } = useAuth();
 
   return (
     <nav className="bg-card border-b border-border p-4">
@@ -26,7 +26,7 @@ const AdminNavigation = () => {
               className="flex items-center gap-2"
             >
               <Users className="h-4 w-4" />
-              Usuários
+              {userProfile?.user_type === 'admin' ? 'Usuários' : 'Meu Perfil'}
             </Button>
           </Link>
           <Link to="/sites">

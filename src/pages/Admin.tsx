@@ -32,17 +32,24 @@ const Admin = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (userProfile?.user_type === 'admin') {
+    if (userProfile) {
       loadUsers();
     }
   }, [userProfile]);
 
   const loadUsers = async () => {
     try {
-      // Carregar todos os perfis de usuários
-      const { data: profiles, error: profilesError } = await supabase
+      // Carregar perfis baseado no tipo de usuário
+      let profilesQuery = supabase
         .from("profiles")
-        .select("*")
+        .select("*");
+
+      // Se for cliente, mostrar apenas seu próprio perfil
+      if (userProfile?.user_type === 'client') {
+        profilesQuery = profilesQuery.eq('user_id', userProfile.user_id);
+      }
+
+      const { data: profiles, error: profilesError } = await profilesQuery
         .order("created_at", { ascending: false });
       
       if (profilesError) throw profilesError;
@@ -266,12 +273,12 @@ const Admin = () => {
     }
   };
 
-  if (userProfile?.user_type !== 'admin') {
+  if (!userProfile || (userProfile.user_type !== 'admin' && userProfile.user_type !== 'client')) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card>
           <CardContent className="pt-6">
-            <p>Acesso negado. Apenas administradores podem acessar esta página.</p>
+            <p>Acesso negado. Você não tem permissão para acessar esta página.</p>
           </CardContent>
         </Card>
       </div>
@@ -289,13 +296,14 @@ const Admin = () => {
               <p className="text-muted-foreground">Gerenciar usuários e clientes do sistema FLUT</p>
             </div>
           
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Usuário
-              </Button>
-            </DialogTrigger>
+          {userProfile?.user_type === 'admin' && (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Usuário
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Criar Novo Usuário</DialogTitle>
@@ -373,6 +381,7 @@ const Admin = () => {
               </div>
             </DialogContent>
           </Dialog>
+          )}
         </div>
 
         <Card>
@@ -428,13 +437,15 @@ const Admin = () => {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => deleteClient(user.id, user.user_id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {userProfile?.user_type === 'admin' && user.user_id !== userProfile.user_id && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => deleteClient(user.id, user.user_id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -497,21 +508,23 @@ const Admin = () => {
                     placeholder="Confirme a nova senha"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="edit-user-type">Tipo de Usuário</Label>
-                  <Select 
-                    value={editingClient.user_type} 
-                    onValueChange={(value: "admin" | "client") => setEditingClient({ ...editingClient, user_type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo de usuário" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="client">Cliente</SelectItem>
-                      <SelectItem value="admin">Administrador</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {userProfile?.user_type === 'admin' && (
+                  <div>
+                    <Label htmlFor="edit-user-type">Tipo de Usuário</Label>
+                    <Select 
+                      value={editingClient.user_type} 
+                      onValueChange={(value: "admin" | "client") => setEditingClient({ ...editingClient, user_type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo de usuário" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="client">Cliente</SelectItem>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 {editingClient.user_type === "client" && (
                   <>
                     <div>

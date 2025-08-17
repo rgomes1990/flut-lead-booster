@@ -48,7 +48,7 @@ export default function Plans() {
   const [updateLoading, setUpdateLoading] = useState(false);
 
   useEffect(() => {
-    if (userProfile?.user_type === 'admin') {
+    if (userProfile) {
       loadClients();
     }
   }, [userProfile]);
@@ -56,12 +56,20 @@ export default function Plans() {
   const loadClients = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+
+      let clientsQuery = supabase
         .from('clients')
         .select(`
           *,
           subscription_plans(id, plan_type, start_date, end_date, is_active)
-        `)
+        `);
+
+      // Se for cliente, filtrar apenas seus próprios dados
+      if (userProfile?.user_type === 'client') {
+        clientsQuery = clientsQuery.eq('user_id', userProfile.user_id);
+      }
+
+      const { data, error } = await clientsQuery
         .order('created_at', { ascending: false });
 
       // Buscar profiles separadamente - apenas clientes
@@ -218,7 +226,7 @@ export default function Plans() {
     }
   };
 
-  if (userProfile?.user_type !== 'admin') {
+  if (!userProfile || (userProfile.user_type !== 'admin' && userProfile.user_type !== 'client')) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -249,13 +257,14 @@ export default function Plans() {
             </p>
           </div>
 
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                <Calendar className="mr-2 h-4 w-4" />
-                Atualizar Plano
-              </Button>
-            </DialogTrigger>
+          {userProfile?.user_type === 'admin' && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Atualizar Plano
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Atualizar Plano de Cliente</DialogTitle>
@@ -307,6 +316,7 @@ export default function Plans() {
               </div>
             </DialogContent>
           </Dialog>
+          )}
         </div>
 
         <Card>
@@ -365,7 +375,7 @@ export default function Plans() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {activePlan && (
+                          {activePlan && userProfile?.user_type === 'admin' && (
                             <div className="flex gap-2">
                               {activePlan.is_active && (
                                 <Button
@@ -385,6 +395,7 @@ export default function Plans() {
                               </Button>
                             </div>
                           )}
+                          {userProfile?.user_type === 'client' && <span className="text-muted-foreground text-sm">-</span>}
                         </TableCell>
                       </TableRow>
                     );

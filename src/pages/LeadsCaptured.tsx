@@ -46,7 +46,7 @@ const LeadsCaptured = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (userProfile?.user_type === "admin") {
+    if (userProfile) {
       loadLeads();
     }
   }, [userProfile]);
@@ -66,9 +66,26 @@ const LeadsCaptured = () => {
     try {
       setLoading(true);
       
-      const { data: leadsData, error } = await supabase
+      // Buscar leads baseado no tipo de usuário
+      let leadsQuery = supabase
         .from("leads")
-        .select("*")
+        .select("*");
+
+      // Se for cliente, filtrar apenas leads relacionados ao cliente
+      if (userProfile?.user_type === 'client') {
+        // Primeiro, buscar o ID do cliente baseado no user_id
+        const { data: clientData } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("user_id", userProfile.user_id)
+          .single();
+
+        if (clientData) {
+          leadsQuery = leadsQuery.eq('client_id', clientData.id);
+        }
+      }
+
+      const { data: leadsData, error } = await leadsQuery
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -245,7 +262,7 @@ const LeadsCaptured = () => {
     setLeadToDelete(null);
   };
 
-  if (userProfile?.user_type !== "admin") {
+  if (!userProfile || (userProfile.user_type !== "admin" && userProfile.user_type !== "client")) {
     return (
       <div className="min-h-screen bg-background">
         <AdminNavigation />
@@ -318,7 +335,7 @@ const LeadsCaptured = () => {
                     <TableRow>
                       <TableHead className="w-48">Atendimento / Nome</TableHead>
                       <TableHead>Site</TableHead>
-                      <TableHead>Usuário</TableHead>
+                      {userProfile?.user_type === 'admin' && <TableHead>Usuário</TableHead>}
                       <TableHead>WhatsApp</TableHead>
                       <TableHead>E-mail</TableHead>
                       <TableHead>Mensagem</TableHead>
@@ -357,9 +374,11 @@ const LeadsCaptured = () => {
                         <TableCell>
                           <span className="text-sm">{lead.website_url}</span>
                         </TableCell>
-                        <TableCell>
-                          <span className="font-medium">{lead.profile?.name || 'N/A'}</span>
-                        </TableCell>
+                        {userProfile?.user_type === 'admin' && (
+                          <TableCell>
+                            <span className="font-medium">{lead.profile?.name || 'N/A'}</span>
+                          </TableCell>
+                        )}
                         <TableCell>
                           <span className="text-sm">{lead.phone}</span>
                         </TableCell>
