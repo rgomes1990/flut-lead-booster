@@ -239,80 +239,90 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navegação para todos os usuários autenticados */}
       <AdminNavigation />
       
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6 p-4 sm:p-6">
+      
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">FLUT Dashboard</h1>
-            <p className="text-muted-foreground">
-              {userProfile?.user_type === 'admin' ? 'Painel Administrativo' : 'Painel do Cliente'}
-            </p>
+        <div className="bg-gradient-to-r from-primary to-primary-light rounded-lg p-6 sm:p-8 text-white shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold">Dashboard Flut</h1>
+              <p className="text-primary-foreground/80 mt-1">
+                {userProfile?.user_type === 'admin' ? 'Painel Administrativo' : 'Painel do Cliente'}
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-primary-foreground/70">Leads Capturados</div>
+              <div className="text-3xl font-bold text-accent">{stats.totalLeads}</div>
+            </div>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          <Card>
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+          <Card className="border-l-4 border-l-accent hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Leads Hoje</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Hoje</CardTitle>
+              <Calendar className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.leadsToday}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{stats.leadsToday}</div>
+              <p className="text-xs text-muted-foreground mt-1">leads captados</p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="border-l-4 border-l-primary hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Leads do Mês</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Este Mês</CardTitle>
+              <TrendingUp className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.leadsThisMonth}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{stats.leadsThisMonth}</div>
+              <p className="text-xs text-muted-foreground mt-1">leads no mês</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-accent hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Leads</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
+              <Users className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalLeads}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{stats.totalLeads}</div>
+              <p className="text-xs text-muted-foreground mt-1">todos os leads</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-primary hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Leads Lidos</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Lidos</CardTitle>
+              <Eye className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.readLeads}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{stats.readLeads}</div>
+              <p className="text-xs text-muted-foreground mt-1">leads lidos</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-accent hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Leads Não Lidos</CardTitle>
-              <EyeOff className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Não Lidos</CardTitle>
+              <EyeOff className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.unreadLeads}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{stats.unreadLeads}</div>
+              <p className="text-xs text-muted-foreground mt-1">aguardando</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-primary hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Média Diária</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Média</CardTitle>
+              <Clock className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.dailyAverage}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{stats.dailyAverage}</div>
               <p className="text-xs text-muted-foreground mt-1">leads/dia</p>
             </CardContent>
           </Card>
@@ -425,7 +435,6 @@ const Dashboard = () => {
           </Card>
         )}
 
-        </div>
       </div>
     </div>
   );
