@@ -6,14 +6,18 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req) => {
+  console.log('Widget script function called:', req.url);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const url = new URL(req.url);
     const siteId = url.searchParams.get('siteId');
+    console.log('Site ID received:', siteId);
 
     if (!siteId) {
       return new Response('Site ID is required', { 
