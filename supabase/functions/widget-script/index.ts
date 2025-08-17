@@ -397,9 +397,19 @@ Deno.serve(async (req) => {
           window.open(whatsappUrl, '_blank');
         }
       } else {
-        const errorText = await response.text();
-        console.error('Server error:', errorText);
-        throw new Error('Erro ao enviar mensagem');
+        try {
+          const errorData = await response.json();
+          if (errorData.error === 'Plano inativo') {
+            alert('Plano Inativo: ' + (errorData.message || 'O plano de assinatura expirou. Entre em contato com o administrador do sistema.'));
+            return;
+          }
+          throw new Error(errorData.error || 'Erro ao enviar mensagem');
+        } catch (jsonError) {
+          // Se não conseguir fazer parse do JSON, usa texto plano
+          const errorText = await response.text();
+          console.error('Server error:', errorText);
+          throw new Error('Erro ao enviar mensagem');
+        }
       }
     } catch (error) {
       console.error('Erro:', error);
