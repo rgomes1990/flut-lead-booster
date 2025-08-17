@@ -47,7 +47,7 @@ const Dashboard = () => {
           .from("leads")
           .select(`
             *,
-            clients(company_name, script_id, website_url)
+            clients(script_id, website_url)
           `)
           .order("created_at", { ascending: false });
         
@@ -174,7 +174,7 @@ const Dashboard = () => {
       const leadsByClient = leads
         .filter(lead => new Date(lead.created_at) >= monthStart)
         .reduce((acc, lead) => {
-          const clientName = lead.clients?.company_name || lead.clients?.website_url || 'Site não identificado';
+          const clientName = lead.clients?.website_url || 'Site não identificado';
           acc[clientName] = (acc[clientName] || 0) + 1;
           return acc;
         }, {});
@@ -476,7 +476,7 @@ const Dashboard = () => {
                     </TableCell>
                     <TableCell>{formatDate(lead.created_at)}</TableCell>
                     {userProfile?.user_type === 'admin' && (
-                      <TableCell>{lead.clients?.company_name}</TableCell>
+                      <TableCell>{lead.clients?.website_url || 'Site não identificado'}</TableCell>
                     )}
                   </TableRow>
                 ))}
