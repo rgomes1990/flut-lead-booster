@@ -27,23 +27,45 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === 'GET') {
+      console.log('Processing GET request for widget script');
+      
       // Inicializar cliente Supabase
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      
+      console.log('Supabase URL:', supabaseUrl);
+      console.log('Creating Supabase client...');
+      
       const supabase = createClient(supabaseUrl, supabaseKey);
 
+      console.log('Fetching site config for siteId:', siteId);
+      
       // Buscar configurações do site
-      const { data: siteConfig } = await supabase
+      const { data: siteConfig, error: configError } = await supabase
         .from('site_configs')
         .select('*')
         .eq('site_id', siteId)
         .single();
 
-      const { data: site } = await supabase
+      console.log('Site config result:', { siteConfig, configError });
+
+      const { data: site, error: siteError } = await supabase
         .from('sites')
         .select('*')
         .eq('id', siteId)
         .single();
+
+      console.log('Site result:', { site, siteError });
+
+      if (!siteConfig || !site) {
+        console.log('Site or config not found');
+        return new Response('Site or configuration not found', { 
+          status: 404, 
+          headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+        });
+      }
+
+      console.log('Generating script...');
 
       // Script JavaScript personalizado
       const script = `
@@ -384,10 +406,13 @@ Deno.serve(async (req) => {
 })();
       `;
 
+      console.log('Script generated successfully, sending response');
+      
       return new Response(script, {
         headers: {
           ...corsHeaders,
-          'Content-Type': 'application/javascript',
+          'Content-Type': 'application/javascript; charset=utf-8',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
         },
       });
     }
@@ -398,10 +423,10 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error:', error);
-    return new Response('Internal server error', { 
+    console.error('Error in widget-script function:', error);
+    return new Response(`Internal server error: ${error.message}`, { 
       status: 500, 
-      headers: corsHeaders 
+      headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
     });
   }
 });
