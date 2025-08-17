@@ -46,6 +46,8 @@ const DashboardRouter = () => {
   // Redireciona baseado no tipo de usuário
   if (userProfile?.user_type === 'admin') {
     return <Navigate to="/admin" replace />;
+  } else if (userProfile?.user_type === 'client') {
+    return <Navigate to="/dashboard" replace />;
   }
   
   return <Dashboard />;
@@ -68,12 +70,12 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/admin" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute>
                 <Admin />
               </ProtectedRoute>
             } />
             <Route path="/sites" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute>
                 <Sites />
               </ProtectedRoute>
             } />
@@ -83,12 +85,12 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/leads-captured" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute>
                 <LeadsCaptured />
               </ProtectedRoute>
             } />
             <Route path="/plans" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute>
                 <Plans />
               </ProtectedRoute>
             } />

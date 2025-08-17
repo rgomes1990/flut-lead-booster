@@ -82,10 +82,20 @@ const Auth = () => {
           description: "Redirecionando...",
         });
         
-        // Força redirecionamento após login bem-sucedido
-        setTimeout(() => {
-          window.location.href = "/";
-        }, 1000);
+        // Redireciona baseado no tipo de usuário após buscar o perfil
+        setTimeout(async () => {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("user_type")
+            .eq("user_id", data.user.id)
+            .single();
+          
+          if (profile?.user_type === 'admin') {
+            window.location.href = "/admin";
+          } else {
+            window.location.href = "/dashboard";
+          }
+        }, 1500);
       }
     } catch (error: any) {
       console.error("Erro no login:", error);
