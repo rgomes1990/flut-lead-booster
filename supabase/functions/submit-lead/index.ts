@@ -40,11 +40,37 @@ Deno.serve(async (req) => {
       .eq('script_id', client_id)
       .single();
 
-    if (clientError || !client || !client.is_active) {
-      console.error('Client not found or inactive:', clientError);
-      return new Response('Client not found or inactive', { 
+    if (clientError || !client) {
+      console.error('Client not found:', clientError);
+      return new Response(JSON.stringify({ 
+        error: 'Cliente não encontrado' 
+      }), { 
         status: 404, 
-        headers: corsHeaders 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Verificar se o cliente tem plano ativo
+    const { data: hasActivePlan, error: planError } = await supabase
+      .rpc('client_has_active_plan', { client_uuid: client.id });
+
+    if (planError) {
+      console.error('Erro ao verificar plano:', planError);
+      return new Response(JSON.stringify({ 
+        error: 'Erro interno do servidor' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (!hasActivePlan) {
+      return new Response(JSON.stringify({ 
+        error: 'Plano inativo',
+        message: 'Seu plano de assinatura expirou. Entre em contato para renovar.'
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 

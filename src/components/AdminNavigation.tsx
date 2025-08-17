@@ -1,6 +1,6 @@
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Users, Globe, LogOut, Contact, BarChart3 } from "lucide-react";
+import { Users, Globe, LogOut, Contact, BarChart3, Calendar } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const AdminNavigation = () => {
@@ -45,6 +45,15 @@ const AdminNavigation = () => {
             >
               <Contact className="h-4 w-4" />
               Leads Capturados
+            </Button>
+          </Link>
+          <Link to="/plans">
+            <Button 
+              variant={location.pathname === "/plans" ? "default" : "ghost"}
+              className="flex items-center gap-2"
+            >
+              <Calendar className="h-4 w-4" />
+              Planos
             </Button>
           </Link>
         </div>

@@ -10,6 +10,7 @@ import Admin from "./pages/Admin";
 import Sites from "./pages/Sites";
 import SiteConfig from "./pages/SiteConfig";
 import LeadsCaptured from "./pages/LeadsCaptured";
+import Plans from "./pages/Plans";
 import Landing from "./pages/Landing";
 import LeadDemo from "./pages/LeadDemo";
 import NotFound from "./pages/NotFound";
@@ -84,6 +85,11 @@ const App = () => (
             <Route path="/leads-captured" element={
               <ProtectedRoute requiredRole="admin">
                 <LeadsCaptured />
+              </ProtectedRoute>
+            } />
+            <Route path="/plans" element={
+              <ProtectedRoute requiredRole="admin">
+                <Plans />
               </ProtectedRoute>
             } />
             <Route path="/" element={

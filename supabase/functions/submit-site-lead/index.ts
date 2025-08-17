@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verificar se existe um client para este user_id, senão criar
+    // Verificar se existe um client para este user_id
     let { data: client, error: clientError } = await supabase
       .from('clients')
       .select('id')
@@ -86,6 +86,30 @@ Deno.serve(async (req) => {
       }
       
       client = newClient;
+    }
+
+    // Verificar se o cliente tem plano ativo
+    const { data: hasActivePlan, error: planError } = await supabase
+      .rpc('client_has_active_plan', { client_uuid: client.id });
+
+    if (planError) {
+      console.error('Erro ao verificar plano:', planError);
+      return new Response(JSON.stringify({ 
+        error: 'Erro interno do servidor' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (!hasActivePlan) {
+      return new Response(JSON.stringify({ 
+        error: 'Plano inativo',
+        message: 'O plano de assinatura deste site expirou. Entre em contato com o proprietário.'
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     // Obter configuração do site para o telefone do WhatsApp

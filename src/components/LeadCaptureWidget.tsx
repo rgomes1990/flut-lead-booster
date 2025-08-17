@@ -50,7 +50,16 @@ const LeadCaptureWidget = ({ scriptId, companyName = "Empresa", websiteUrl = win
         setFormData({ name: "", email: "", phone: "", message: "" });
         setOpen(false);
       } else {
-        throw new Error("Erro ao enviar lead");
+        const errorData = await response.json();
+        if (errorData.error === 'Plano inativo') {
+          toast({
+            title: "Plano Inativo",
+            description: errorData.message || "O plano de assinatura expirou. Entre em contato para renovar.",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw new Error(errorData.error || "Erro ao enviar lead");
       }
     } catch (error) {
       toast({
