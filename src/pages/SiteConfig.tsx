@@ -103,9 +103,9 @@ const SiteConfig = () => {
   };
 
   const generateScript = () => {
-    const baseUrl = window.location.origin;
+    const supabaseUrl = "https://qwisnnipdjqmxpgfvhij.supabase.co";
     return `<!-- Início Flut -->
-<script src="${baseUrl}/widget.js?site=${siteId}&domain=${site?.domain}"></script>
+<script src="${supabaseUrl}/functions/v1/widget-script?siteId=${siteId}"></script>
 <!-- Fim Flut -->`;
   };
 
