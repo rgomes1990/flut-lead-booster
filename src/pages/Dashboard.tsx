@@ -239,8 +239,8 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navegação do Admin (apenas para admins) */}
-      {userProfile?.user_type === 'admin' && <AdminNavigation />}
+      {/* Navegação para todos os usuários autenticados */}
+      <AdminNavigation />
       
       <div className="p-6">
         <div className="max-w-7xl mx-auto space-y-6">
