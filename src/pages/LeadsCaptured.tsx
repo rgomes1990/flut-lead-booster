@@ -187,11 +187,13 @@ const LeadsCaptured = () => {
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case "new":
-        return "default";
-      case "contacted":
+        return "destructive";
+      case "read":
         return "secondary";
-      case "qualified":
+      case "contacted":
         return "outline";
+      case "qualified":
+        return "default";
       default:
         return "default";
     }
@@ -200,7 +202,9 @@ const LeadsCaptured = () => {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case "new":
-        return "Novo";
+        return "Não Lido";
+      case "read":
+        return "Lido";
       case "contacted":
         return "Contatado";
       case "qualified":
@@ -210,9 +214,36 @@ const LeadsCaptured = () => {
     }
   };
 
-  const handleViewMessage = (lead: Lead) => {
+  const handleViewMessage = async (lead: Lead) => {
     setSelectedLead(lead);
     setIsModalOpen(true);
+    
+    // Marcar o lead como lido se ainda não foi lido
+    if (lead.status === 'new') {
+      try {
+        const { error } = await supabase
+          .from("leads")
+          .update({ status: 'read' })
+          .eq("id", lead.id);
+
+        if (error) throw error;
+
+        // Atualizar o lead na lista local
+        setLeads(prev => prev.map(l => 
+          l.id === lead.id ? { ...l, status: 'read' } : l
+        ));
+        setFilteredLeads(prev => prev.map(l => 
+          l.id === lead.id ? { ...l, status: 'read' } : l
+        ));
+        
+        toast({
+          title: "Lead marcado como lido",
+          description: "O status do lead foi atualizado",
+        });
+      } catch (error) {
+        console.error("Erro ao marcar lead como lido:", error);
+      }
+    }
   };
 
   const handleCloseModal = () => {
@@ -346,29 +377,42 @@ const LeadsCaptured = () => {
                   <TableBody>
                     {filteredLeads.map((lead, index) => (
                       <TableRow key={lead.id}>
-                        <TableCell>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Button 
-                                variant="secondary" 
-                                size="sm"
-                                onClick={() => handleViewMessage(lead)}
-                                className="bg-green-100 text-green-800 border-green-300 hover:bg-green-200 text-xs px-2 py-1 h-6"
-                              >
-                                Ver Mensagem
-                              </Button>
-                              <span className="text-sm text-muted-foreground">#{index + 1}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 bg-muted rounded-full flex items-center justify-center">
-                                <span className="text-xs font-medium">
-                                  {lead.name.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <span className="font-medium text-sm">{lead.name}</span>
-                            </div>
-                          </div>
-                        </TableCell>
+                         <TableCell>
+                           <div className="space-y-2">
+                             <div className="flex items-center gap-2">
+                               <Button 
+                                 variant="secondary" 
+                                 size="sm"
+                                 onClick={() => handleViewMessage(lead)}
+                                 className="bg-green-100 text-green-800 border-green-300 hover:bg-green-200 text-xs px-2 py-1 h-6"
+                               >
+                                 Ver Mensagem
+                               </Button>
+                               <Badge 
+                                 variant={getStatusBadgeVariant(lead.status)}
+                                 className={lead.status === 'new' ? 'bg-red-100 text-red-800 border-red-300 animate-pulse' : ''}
+                               >
+                                 {getStatusLabel(lead.status)}
+                               </Badge>
+                               <span className="text-sm text-muted-foreground">#{index + 1}</span>
+                             </div>
+                             <div className="flex items-center gap-2">
+                               <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                                 lead.status === 'new' ? 'bg-red-100 border-2 border-red-300' : 'bg-muted'
+                               }`}>
+                                 <span className="text-xs font-medium">
+                                   {lead.name.charAt(0).toUpperCase()}
+                                 </span>
+                               </div>
+                               <span className={`font-medium text-sm ${
+                                 lead.status === 'new' ? 'font-bold text-red-800' : ''
+                               }`}>
+                                 {lead.name}
+                                 {lead.status === 'new' && <span className="ml-1 text-red-500">●</span>}
+                               </span>
+                             </div>
+                           </div>
+                         </TableCell>
                         <TableCell>
                           <span className="text-sm">{lead.website_url}</span>
                         </TableCell>
