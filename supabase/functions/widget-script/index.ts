@@ -379,55 +379,77 @@ Deno.serve(async (req) => {
     }
   }
 
-  function detectOrigin() {
+  function detectOriginAndCampaign() {
     const referrer = document.referrer;
     const url = new URL(window.location.href);
     
     // Verificar parâmetros UTM
     const utmSource = url.searchParams.get('utm_source');
     const utmMedium = url.searchParams.get('utm_medium');
+    const utmCampaign = url.searchParams.get('utm_campaign');
+    const utmContent = url.searchParams.get('utm_content');
+    const utmTerm = url.searchParams.get('utm_term');
+    
+    let origin = '';
+    let campaign = 'Não informado';
     
     // Google Ads
     if (utmSource === 'google' && utmMedium === 'cpc') {
-      return 'Google Ads';
+      origin = 'Google Ads';
+      // Para Google Ads, priorizar utm_campaign, depois utm_term, depois utm_content
+      if (utmCampaign) {
+        campaign = utmCampaign;
+      } else if (utmTerm) {
+        campaign = utmTerm;
+      } else if (utmContent) {
+        campaign = utmContent;
+      }
     }
-    
     // Meta Ads
-    if (utmSource === 'facebook' && utmMedium === 'cpc') {
-      return 'Meta Ads';
+    else if ((utmSource === 'facebook' || utmSource === 'instagram') && utmMedium === 'cpc') {
+      origin = 'Meta Ads';
+      // Para Meta Ads, priorizar utm_campaign, depois utm_content
+      if (utmCampaign) {
+        campaign = utmCampaign;
+      } else if (utmContent) {
+        campaign = utmContent;
+      }
     }
-    if (utmSource === 'instagram' && utmMedium === 'cpc') {
-      return 'Meta Ads';
-    }
-    
     // Verificar referrer
-    if (referrer) {
+    else if (referrer) {
       const referrerUrl = new URL(referrer);
       const domain = referrerUrl.hostname.toLowerCase();
       
       // Google Orgânico
       if (domain.includes('google.')) {
-        return 'Google Organico';
+        origin = 'Google Organico';
       }
-      
       // Facebook
-      if (domain.includes('facebook.com') || domain.includes('fb.com')) {
-        return 'Facebook';
+      else if (domain.includes('facebook.com') || domain.includes('fb.com')) {
+        origin = 'Facebook';
       }
-      
       // Instagram
-      if (domain.includes('instagram.com')) {
-        return 'Instagram';
+      else if (domain.includes('instagram.com')) {
+        origin = 'Instagram';
       }
-      
       // Meta Ads (outros domínios do Meta)
-      if (domain.includes('l.facebook.com') || domain.includes('l.instagram.com')) {
-        return 'Meta Ads';
+      else if (domain.includes('l.facebook.com') || domain.includes('l.instagram.com')) {
+        origin = 'Meta Ads';
+        // Tentar capturar campanha dos parâmetros UTM mesmo vindo de links do Meta
+        if (utmCampaign) {
+          campaign = utmCampaign;
+        } else if (utmContent) {
+          campaign = utmContent;
+        }
       }
     }
     
     // Se não houver referrer ou não for identificado, é tráfego direto
-    return 'Trafego Direto';
+    if (!origin) {
+      origin = 'Trafego Direto';
+    }
+    
+    return { origin, campaign };
   }
 
   async function submitForm(e) {
@@ -442,6 +464,8 @@ Deno.serve(async (req) => {
     const nameEl = document.getElementById('flut-name');
     const messageEl = document.getElementById('flut-message');
     
+    const { origin, campaign } = detectOriginAndCampaign();
+    
     const leadData = {
       site_id: SITE_ID,
       website_url: window.location.href,
@@ -449,7 +473,8 @@ Deno.serve(async (req) => {
       email: emailEl ? emailEl.value : '',
       name: nameEl ? nameEl.value : '',
       message: messageEl ? messageEl.value : '',
-      origin: detectOrigin()
+      origin: origin,
+      campaign: campaign
     };
 
     // Validar se pelo menos um campo obrigatório foi preenchido
