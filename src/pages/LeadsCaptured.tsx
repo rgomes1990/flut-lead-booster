@@ -5,10 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search, X, Phone, Send } from "lucide-react";
+import { Download, Search, X, Phone, Send, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import AdminNavigation from "@/components/AdminNavigation";
 
 interface Lead {
@@ -39,6 +40,8 @@ const LeadsCaptured = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { userProfile } = useAuth();
   const { toast } = useToast();
 
@@ -201,6 +204,47 @@ const LeadsCaptured = () => {
     setSelectedLead(null);
   };
 
+  const handleDeleteClick = (lead: Lead) => {
+    setLeadToDelete(lead);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!leadToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("leads")
+        .delete()
+        .eq("id", leadToDelete.id);
+
+      if (error) throw error;
+
+      // Remove o lead da lista local
+      setLeads(prev => prev.filter(lead => lead.id !== leadToDelete.id));
+      
+      toast({
+        title: "Sucesso",
+        description: "Lead excluído com sucesso",
+      });
+    } catch (error) {
+      console.error("Erro ao excluir lead:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir lead. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setLeadToDelete(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setIsDeleteDialogOpen(false);
+    setLeadToDelete(null);
+  };
+
   if (userProfile?.user_type !== "admin") {
     return (
       <div className="min-h-screen bg-background">
@@ -281,6 +325,7 @@ const LeadsCaptured = () => {
                       <TableHead>Data e Hora</TableHead>
                       <TableHead>Origem</TableHead>
                       <TableHead>Campanha</TableHead>
+                      <TableHead className="w-20">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -332,6 +377,16 @@ const LeadsCaptured = () => {
                         </TableCell>
                         <TableCell>
                           <span className="text-sm">{lead.campaign || 'Não informado'}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteClick(lead)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -434,6 +489,30 @@ const LeadsCaptured = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Dialog de confirmação de exclusão */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir o lead <strong>{leadToDelete?.name}</strong>? 
+                Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleDeleteCancel}>
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteConfirm}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
