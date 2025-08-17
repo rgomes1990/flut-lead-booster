@@ -1,6 +1,6 @@
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Users, Globe, LogOut, Contact } from "lucide-react";
+import { Users, Globe, LogOut, Contact, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const AdminNavigation = () => {
@@ -11,6 +11,15 @@ const AdminNavigation = () => {
     <nav className="bg-card border-b border-border p-4">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <div className="flex space-x-4">
+          <Link to="/dashboard">
+            <Button 
+              variant={location.pathname === "/dashboard" ? "default" : "ghost"}
+              className="flex items-center gap-2"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Dashboard
+            </Button>
+          </Link>
           <Link to="/admin">
             <Button 
               variant={location.pathname === "/admin" ? "default" : "ghost"}

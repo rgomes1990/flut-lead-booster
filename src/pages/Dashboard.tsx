@@ -9,6 +9,7 @@ import { Download, Users, Mail, Phone, ExternalLink, LogOut, Calendar, TrendingU
 import { useToast } from "@/hooks/use-toast";
 import { ChartContainer, ChartConfig, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import AdminNavigation from "@/components/AdminNavigation";
 
 const Dashboard = () => {
   const { user, userProfile, signOut } = useAuth();
@@ -223,8 +224,12 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background">
+      {/* Navegação do Admin (apenas para admins) */}
+      {userProfile?.user_type === 'admin' && <AdminNavigation />}
+      
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -470,6 +475,7 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );
