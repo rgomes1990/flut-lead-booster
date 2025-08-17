@@ -1,7 +1,8 @@
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Users, Globe, LogOut, Contact, BarChart3, Calendar } from "lucide-react";
+import { Users, Globe, LogOut, Contact, BarChart3, Calendar, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminNavigation = () => {
   const location = useLocation();
@@ -38,6 +39,32 @@ const AdminNavigation = () => {
               Sites
             </Button>
           </Link>
+          {userProfile?.user_type === 'client' && (
+            <Button 
+              variant={location.pathname.includes("/config") ? "default" : "ghost"}
+              className="flex items-center gap-2"
+              onClick={async () => {
+                try {
+                  const { data: sites } = await supabase
+                    .from('sites')
+                    .select('id')
+                    .eq('user_id', userProfile.user_id)
+                    .limit(1);
+                  
+                  if (sites && sites.length > 0) {
+                    window.location.href = `/sites/${sites[0].id}/config`;
+                  } else {
+                    window.location.href = '/sites';
+                  }
+                } catch (error) {
+                  window.location.href = '/sites';
+                }
+              }}
+            >
+              <Settings className="h-4 w-4" />
+              Instalação
+            </Button>
+          )}
           <Link to="/leads-captured">
             <Button 
               variant={location.pathname === "/leads-captured" ? "default" : "ghost"}
