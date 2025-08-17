@@ -379,6 +379,57 @@ Deno.serve(async (req) => {
     }
   }
 
+  function detectOrigin() {
+    const referrer = document.referrer;
+    const url = new URL(window.location.href);
+    
+    // Verificar parâmetros UTM
+    const utmSource = url.searchParams.get('utm_source');
+    const utmMedium = url.searchParams.get('utm_medium');
+    
+    // Google Ads
+    if (utmSource === 'google' && utmMedium === 'cpc') {
+      return 'Google Ads';
+    }
+    
+    // Meta Ads
+    if (utmSource === 'facebook' && utmMedium === 'cpc') {
+      return 'Meta Ads';
+    }
+    if (utmSource === 'instagram' && utmMedium === 'cpc') {
+      return 'Meta Ads';
+    }
+    
+    // Verificar referrer
+    if (referrer) {
+      const referrerUrl = new URL(referrer);
+      const domain = referrerUrl.hostname.toLowerCase();
+      
+      // Google Orgânico
+      if (domain.includes('google.')) {
+        return 'Google Organico';
+      }
+      
+      // Facebook
+      if (domain.includes('facebook.com') || domain.includes('fb.com')) {
+        return 'Facebook';
+      }
+      
+      // Instagram
+      if (domain.includes('instagram.com')) {
+        return 'Instagram';
+      }
+      
+      // Meta Ads (outros domínios do Meta)
+      if (domain.includes('l.facebook.com') || domain.includes('l.instagram.com')) {
+        return 'Meta Ads';
+      }
+    }
+    
+    // Se não houver referrer ou não for identificado, é tráfego direto
+    return 'Trafego Direto';
+  }
+
   async function submitForm(e) {
     e.preventDefault();
     
@@ -398,7 +449,7 @@ Deno.serve(async (req) => {
       email: emailEl ? emailEl.value : '',
       name: nameEl ? nameEl.value : '',
       message: messageEl ? messageEl.value : '',
-      origin: window.location.href
+      origin: detectOrigin()
     };
 
     // Validar se pelo menos um campo obrigatório foi preenchido
