@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search } from "lucide-react";
+import { Download, Search, X, Phone, Send } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import AdminNavigation from "@/components/AdminNavigation";
 
 interface Lead {
@@ -36,6 +37,8 @@ const LeadsCaptured = () => {
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { userProfile } = useAuth();
   const { toast } = useToast();
 
@@ -188,6 +191,16 @@ const LeadsCaptured = () => {
     }
   };
 
+  const handleViewMessage = (lead: Lead) => {
+    setSelectedLead(lead);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedLead(null);
+  };
+
   if (userProfile?.user_type !== "admin") {
     return (
       <div className="min-h-screen bg-background">
@@ -276,9 +289,14 @@ const LeadsCaptured = () => {
                         <TableCell>
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-300">
-                                Atendimento
-                              </Badge>
+                              <Button 
+                                variant="secondary" 
+                                size="sm"
+                                onClick={() => handleViewMessage(lead)}
+                                className="bg-green-100 text-green-800 border-green-300 hover:bg-green-200 text-xs px-2 py-1 h-6"
+                              >
+                                Ver Mensagem
+                              </Button>
                               <span className="text-sm text-muted-foreground">#{index + 1}</span>
                             </div>
                             <div className="flex items-center gap-2">
@@ -329,6 +347,93 @@ const LeadsCaptured = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Modal para visualizar detalhes do lead */}
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="max-w-md bg-white p-0 overflow-hidden">
+            {selectedLead && (
+              <>
+                {/* Header verde com avatar */}
+                <div className="bg-green-500 text-white p-6 text-center relative">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCloseModal}
+                    className="absolute top-2 right-2 text-white hover:bg-white/20 w-8 h-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                  <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-xl font-bold text-white">
+                      {selectedLead.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-bold">{selectedLead.name}</h2>
+                  <p className="text-green-100">{selectedLead.email}</p>
+                </div>
+
+                {/* Conteúdo do modal */}
+                <div className="p-6 space-y-4">
+                  <div className="text-center text-sm text-gray-600">
+                    recebido em: {formatDate(selectedLead.created_at)}
+                  </div>
+
+                  <div>
+                    <span className="inline-block bg-yellow-200 text-yellow-800 px-2 py-1 rounded text-sm font-medium">
+                      mensagem:
+                    </span>
+                    <p className="mt-2 text-gray-800">
+                      {selectedLead.message || 'Nenhuma mensagem especificada'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <a 
+                      href={selectedLead.website_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline text-sm"
+                    >
+                      Página de Origem
+                    </a>
+                  </div>
+
+                  {/* Botão de telefone */}
+                  <div className="text-center">
+                    <Button
+                      onClick={() => window.open(`tel:${selectedLead.phone}`, '_self')}
+                      className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 mx-auto"
+                    >
+                      <Phone className="h-4 w-4" />
+                      {selectedLead.phone}
+                    </Button>
+                  </div>
+
+                  {/* Botão de enviar mensagem */}
+                  <div className="text-center">
+                    <Button
+                      onClick={() => window.open(`https://wa.me/${selectedLead.phone.replace(/\D/g, '')}`, '_blank')}
+                      className="bg-green-500 hover:bg-green-600 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto"
+                    >
+                      <Send className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Botão fechar */}
+                <div className="p-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={handleCloseModal}
+                    className="w-full"
+                  >
+                    Fechar
+                  </Button>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
