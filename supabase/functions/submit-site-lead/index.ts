@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verificar se o site existe e obter o client_id
+    // Verificar se o site existe e obter user_id
     const { data: site, error: siteError } = await supabase
       .from('sites')
       .select('user_id')
@@ -51,17 +51,55 @@ Deno.serve(async (req) => {
       .single();
 
     if (siteError || !site) {
+      console.error('Site error:', siteError);
       return new Response('Site not found or inactive', { 
         status: 404, 
         headers: corsHeaders 
       });
     }
 
+    // Verificar se existe um client para este user_id, senão criar
+    let { data: client, error: clientError } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('user_id', site.user_id)
+      .single();
+
+    if (clientError || !client) {
+      // Criar client se não existir
+      const { data: newClient, error: createClientError } = await supabase
+        .from('clients')
+        .insert({
+          user_id: site.user_id,
+          website_url: website_url || '',
+          script_id: Math.floor(Math.random() * 9000 + 1000).toString()
+        })
+        .select('id')
+        .single();
+
+      if (createClientError) {
+        console.error('Client creation error:', createClientError);
+        return new Response('Error creating client', { 
+          status: 500, 
+          headers: corsHeaders 
+        });
+      }
+      
+      client = newClient;
+    }
+
+    // Obter configuração do site para o telefone do WhatsApp
+    const { data: siteConfig } = await supabase
+      .from('site_configs')
+      .select('phone, attendant_name')
+      .eq('site_id', site_id)
+      .single();
+
     // Inserir lead na tabela leads
     const { error: leadError } = await supabase
       .from('leads')
       .insert({
-        client_id: site.user_id,
+        client_id: client.id,
         name: name || 'Não informado',
         email: email || 'Não informado',
         phone: phone || 'Não informado',
@@ -79,9 +117,31 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response('Lead submitted successfully', { 
+    // Preparar resposta com dados para redirecionamento do WhatsApp
+    const whatsappPhone = siteConfig?.phone || '';
+    const attendantName = siteConfig?.attendant_name || 'Atendimento';
+    
+    // Criar mensagem para WhatsApp
+    const whatsappMessage = `Olá ${attendantName}! Meu nome é ${name || 'Cliente'}. 
+${message ? `Mensagem: ${message}` : ''}
+${email !== 'Não informado' ? `Email: ${email}` : ''}
+${phone !== 'Não informado' ? `Telefone: ${phone}` : ''}`;
+
+    const responseData = {
+      success: true,
+      message: 'Lead submitted successfully',
+      whatsapp: {
+        phone: whatsappPhone,
+        message: encodeURIComponent(whatsappMessage)
+      }
+    };
+
+    return new Response(JSON.stringify(responseData), { 
       status: 200, 
-      headers: corsHeaders 
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
     });
 
   } catch (error) {

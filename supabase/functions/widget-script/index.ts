@@ -385,10 +385,20 @@ Deno.serve(async (req) => {
       });
 
       if (response.ok) {
-        alert('Mensagem enviada com sucesso! Entraremos em contato em breve.');
+        const responseData = await response.json();
+        
+        alert('Mensagem enviada com sucesso! Você será redirecionado para o WhatsApp.');
         hideModal();
         document.getElementById('flut-form').reset();
+        
+        // Redirecionar para WhatsApp se os dados estiverem disponíveis
+        if (responseData.whatsapp && responseData.whatsapp.phone) {
+          const whatsappUrl = \`https://wa.me/\${responseData.whatsapp.phone.replace(/[^0-9]/g, '')}?text=\${responseData.whatsapp.message}\`;
+          window.open(whatsappUrl, '_blank');
+        }
       } else {
+        const errorText = await response.text();
+        console.error('Server error:', errorText);
         throw new Error('Erro ao enviar mensagem');
       }
     } catch (error) {
