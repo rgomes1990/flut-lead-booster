@@ -65,19 +65,33 @@ const Auth = () => {
       // Primeiro, limpa qualquer sessão existente
       await supabase.auth.signOut();
       
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
+      // Limpa storage local para evitar conflitos
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
         password,
       });
 
       if (error) throw error;
 
-      // O redirecionamento será feito automaticamente pelo DashboardRouter
-      // baseado no tipo de usuário
+      if (data.user) {
+        toast({
+          title: "Login realizado com sucesso!",
+          description: "Redirecionando...",
+        });
+        
+        // Força redirecionamento após login bem-sucedido
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 1000);
+      }
     } catch (error: any) {
+      console.error("Erro no login:", error);
       toast({
         title: "Erro no login",
-        description: error.message,
+        description: error.message || "Credenciais inválidas",
         variant: "destructive",
       });
     } finally {
