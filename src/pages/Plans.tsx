@@ -27,7 +27,7 @@ interface Client {
     start_date: string;
     end_date: string;
     is_active: boolean;
-  }[];
+  } | null;
 }
 
 const PLAN_LABELS = {
@@ -60,8 +60,9 @@ export default function Plans() {
         .from('clients')
         .select(`
           *,
-          subscription_plans(id, plan_type, start_date, end_date, is_active)
+          subscription_plans!inner(id, plan_type, start_date, end_date, is_active)
         `)
+        .eq('subscription_plans.is_active', true)
         .order('created_at', { ascending: false });
 
       // Buscar profiles separadamente - apenas clientes
@@ -70,13 +71,16 @@ export default function Plans() {
         .select('user_id, name, email')
         .eq('user_type', 'client');
 
-      // Combinar dados e filtrar apenas clientes
+      // Combinar dados e filtrar apenas clientes - transformar array em objeto único
       const clientsWithProfiles = data?.filter(client => {
         const profile = profilesData?.find(profile => profile.user_id === client.user_id);
         return profile !== undefined;
       }).map(client => ({
         ...client,
-        profiles: profilesData?.find(profile => profile.user_id === client.user_id) || null
+        profiles: profilesData?.find(profile => profile.user_id === client.user_id) || null,
+        subscription_plans: Array.isArray(client.subscription_plans) && client.subscription_plans.length > 0 
+          ? client.subscription_plans[0] 
+          : null
       })) || [];
 
       if (error) throw error;
@@ -161,8 +165,8 @@ export default function Plans() {
     return new Date(endDate) < new Date();
   };
 
-  const getActivePlan = (plans: Client['subscription_plans']) => {
-    return plans.find(plan => plan.is_active) || plans[plans.length - 1];
+  const getActivePlan = (plan: Client['subscription_plans']) => {
+    return plan;
   };
 
   const deactivatePlan = async (planId: string) => {
