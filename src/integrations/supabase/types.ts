@@ -132,6 +132,7 @@ export type Database = {
           attendant_name: string | null
           company_name: string | null
           created_at: string
+          default_message: string | null
           email: string | null
           field_capture_page: boolean
           field_email: boolean
@@ -150,6 +151,7 @@ export type Database = {
           attendant_name?: string | null
           company_name?: string | null
           created_at?: string
+          default_message?: string | null
           email?: string | null
           field_capture_page?: boolean
           field_email?: boolean
@@ -168,6 +170,7 @@ export type Database = {
           attendant_name?: string | null
           company_name?: string | null
           created_at?: string
+          default_message?: string | null
           email?: string | null
           field_capture_page?: boolean
           field_email?: boolean

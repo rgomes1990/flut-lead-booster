@@ -136,7 +136,31 @@ Deno.serve(async (req) => {
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       z-index: 10000;
       transition: all 0.3s ease;
+      animation: pulse-button 2s infinite;
     \`;
+    
+    // Adicionar CSS da animação de pulsação ao documento
+    if (!document.getElementById('flut-pulse-animation')) {
+      const style = document.createElement('style');
+      style.id = 'flut-pulse-animation';
+      style.textContent = \`
+        @keyframes pulse-button {
+          0% {
+            transform: scale(1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          }
+          50% {
+            transform: scale(1.05);
+            box-shadow: 0 4px 20px rgba(37,211,102,0.4);
+          }
+          100% {
+            transform: scale(1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          }
+        }
+      \`;
+      document.head.appendChild(style);
+    }
 
     button.addEventListener('mouseenter', () => {
       button.style.transform = position === 'center' ? 'translateY(-50%) scale(1.1)' : 'scale(1.1)';
@@ -333,7 +357,7 @@ Deno.serve(async (req) => {
                  box-sizing: border-box !important;
                  display: block !important;
                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-               " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'"></textarea>
+               " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">\${SITE_CONFIG.default_message || 'Mensagem:'}</textarea>
               \` : ''}
               
               <!-- Área para mensagens de erro -->

@@ -32,7 +32,8 @@ const SiteConfig = () => {
     field_capture_page: true,
     icon_type: "whatsapp",
     icon_position: "bottom",
-    is_active: true
+    is_active: true,
+    default_message: "Olá! Gostaria de mais informações sobre seus produtos/serviços."
   });
   const [loading, setLoading] = useState(true);
 
@@ -217,6 +218,18 @@ const SiteConfig = () => {
                       onChange={(e) => setConfig({ ...config, phone: e.target.value })}
                       placeholder="(99) 99999-9999"
                     />
+                  </div>
+                  <div>
+                    <Label htmlFor="default_message">Mensagem Padrão no Formulário</Label>
+                    <Input
+                      id="default_message"
+                      value={config.default_message}
+                      onChange={(e) => setConfig({ ...config, default_message: e.target.value })}
+                      placeholder="Mensagem que aparecerá pré-preenchida no campo de mensagem"
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Esta mensagem aparecerá como padrão no campo de mensagem do formulário, mas o usuário pode editá-la.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
