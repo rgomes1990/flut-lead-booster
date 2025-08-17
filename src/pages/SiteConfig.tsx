@@ -86,6 +86,8 @@ const SiteConfig = () => {
         .upsert({
           ...config,
           site_id: siteId
+        }, {
+          onConflict: 'site_id'
         });
 
       if (error) throw error;
