@@ -19,6 +19,7 @@ interface Lead {
   website_url: string;
   status: string;
   created_at: string;
+  campaign: string;
   client: {
     user_id: string;
     website_url: string;
@@ -119,7 +120,7 @@ const LeadsCaptured = () => {
   };
 
   const exportToCSV = () => {
-    const headers = ["ID", "Nome", "E-mail", "WhatsApp", "Site", "Usuário", "Mensagem", "Status", "Data"];
+    const headers = ["ID", "Nome", "E-mail", "WhatsApp", "Site", "Usuário", "Mensagem", "Status", "Data e Hora", "Campanha"];
     const csvContent = [
       headers.join(","),
       ...filteredLeads.map(lead =>
@@ -132,7 +133,8 @@ const LeadsCaptured = () => {
           `"${lead.profile?.name || 'N/A'}"`,
           `"${lead.message || 'Não especificada'}"`,
           lead.status,
-          formatDate(lead.created_at)
+          formatDate(lead.created_at),
+          `"${lead.campaign || 'Não informado'}"`
         ].join(",")
       )
     ].join("\n");
@@ -262,8 +264,8 @@ const LeadsCaptured = () => {
                       <TableHead>WhatsApp</TableHead>
                       <TableHead>E-mail</TableHead>
                       <TableHead>Mensagem</TableHead>
-                      <TableHead>Página</TableHead>
-                      <TableHead>Origem</TableHead>
+                      <TableHead>Data e Hora</TableHead>
+                      <TableHead>Campanha</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -303,10 +305,10 @@ const LeadsCaptured = () => {
                           <span className="text-sm">{lead.message || 'Não especificada'}</span>
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm">Não especificada</span>
+                          <span className="text-sm">{formatDate(lead.created_at)}</span>
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm">Meta</span>
+                          <span className="text-sm">{lead.campaign || 'Não informado'}</span>
                         </TableCell>
                       </TableRow>
                     ))}

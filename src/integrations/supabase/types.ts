@@ -46,6 +46,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          campaign: string | null
           client_id: string
           created_at: string
           email: string
@@ -58,6 +59,7 @@ export type Database = {
           website_url: string
         }
         Insert: {
+          campaign?: string | null
           client_id: string
           created_at?: string
           email: string
@@ -70,6 +72,7 @@ export type Database = {
           website_url: string
         }
         Update: {
+          campaign?: string | null
           client_id?: string
           created_at?: string
           email?: string
