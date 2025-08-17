@@ -144,7 +144,7 @@ const LeadsCaptured = () => {
   };
 
   const exportToCSV = () => {
-    const headers = ["ID", "Nome", "E-mail", "WhatsApp", "Site", "Usuário", "Mensagem", "Status", "Data e Hora", "Origem", "Campanha"];
+    const headers = ["ID", "Nome", "E-mail", "WhatsApp", "Site", "Usuário", "Status", "Data e Hora", "Origem", "Campanha"];
     const csvContent = [
       headers.join(","),
       ...filteredLeads.map(lead =>
@@ -155,7 +155,6 @@ const LeadsCaptured = () => {
           lead.phone,
           lead.website_url,
           `"${lead.profile?.name || 'N/A'}"`,
-          `"${lead.message || 'Não especificada'}"`,
           lead.status,
           formatDate(lead.created_at),
           `"${lead.origin || 'Não informado'}"`,
@@ -333,12 +332,11 @@ const LeadsCaptured = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-48">Atendimento / Nome</TableHead>
+                      <TableHead className="w-48">Nome</TableHead>
                       <TableHead>Site</TableHead>
                       {userProfile?.user_type === 'admin' && <TableHead>Usuário</TableHead>}
                       <TableHead>WhatsApp</TableHead>
                       <TableHead>E-mail</TableHead>
-                      <TableHead>Mensagem</TableHead>
                       <TableHead>Data e Hora</TableHead>
                       <TableHead>Origem</TableHead>
                       <TableHead>Campanha</TableHead>
@@ -386,9 +384,6 @@ const LeadsCaptured = () => {
                           <span className="text-sm">{lead.email}</span>
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm">{lead.message || 'Não especificada'}</span>
-                        </TableCell>
-                        <TableCell>
                           <span className="text-sm">{formatDate(lead.created_at)}</span>
                         </TableCell>
                         <TableCell>
@@ -398,14 +393,16 @@ const LeadsCaptured = () => {
                           <span className="text-sm">{lead.campaign || 'Não informado'}</span>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteClick(lead)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {userProfile?.user_type === 'admin' && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteClick(lead)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
