@@ -425,60 +425,6 @@ const Dashboard = () => {
           </Card>
         )}
 
-        {/* Leads Table */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Leads Recebidos</CardTitle>
-              <CardDescription>
-                Lista de todos os leads captados
-              </CardDescription>
-            </div>
-            <Button onClick={exportToCSV} variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Exportar CSV
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Mensagem</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Data</TableHead>
-                  {userProfile?.user_type === 'admin' && <TableHead>Cliente</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {leads.map((lead) => (
-                  <TableRow key={lead.id}>
-                    <TableCell className="font-medium">{lead.name}</TableCell>
-                    <TableCell>{lead.email}</TableCell>
-                    <TableCell>{lead.phone}</TableCell>
-                    <TableCell className="max-w-xs truncate">{lead.message || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={lead.status === 'new' ? 'default' : 'secondary'}>
-                        {lead.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{formatDate(lead.created_at)}</TableCell>
-                    {userProfile?.user_type === 'admin' && (
-                      <TableCell>{lead.clients?.website_url || 'Site não identificado'}</TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {leads.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                Nenhum lead encontrado
-              </div>
-            )}
-          </CardContent>
-        </Card>
         </div>
       </div>
     </div>
