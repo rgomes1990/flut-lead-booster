@@ -259,8 +259,7 @@ const LeadsCaptured = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">#</TableHead>
-                      <TableHead>Nome</TableHead>
+                      <TableHead className="w-48">Atendimento / Nome</TableHead>
                       <TableHead>Site</TableHead>
                       <TableHead>Usuário</TableHead>
                       <TableHead>WhatsApp</TableHead>
@@ -275,21 +274,21 @@ const LeadsCaptured = () => {
                     {filteredLeads.map((lead, index) => (
                       <TableRow key={lead.id}>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-300">
-                              Atendimento
-                            </Badge>
-                            <span className="text-sm text-muted-foreground">{index + 1}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
-                              <span className="text-xs font-medium">
-                                {lead.name.charAt(0).toUpperCase()}
-                              </span>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                                Atendimento
+                              </Badge>
+                              <span className="text-sm text-muted-foreground">#{index + 1}</span>
                             </div>
-                            <span className="font-medium">{lead.name}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 bg-muted rounded-full flex items-center justify-center">
+                                <span className="text-xs font-medium">
+                                  {lead.name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                              <span className="font-medium text-sm">{lead.name}</span>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
