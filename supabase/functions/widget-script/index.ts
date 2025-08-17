@@ -286,7 +286,20 @@ Deno.serve(async (req) => {
               " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2)'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1)'"></textarea>
               \` : ''}
               
-              <button type="submit" style="
+              <!-- Área para mensagens de erro -->
+              <div id="flut-error-message" style="
+                display: none;
+                background: #f8d7da;
+                color: #721c24;
+                padding: 12px 16px;
+                border-radius: 8px;
+                margin-bottom: 15px;
+                text-align: center;
+                font-size: 14px;
+                border: 1px solid #f5c6cb;
+              "></div>
+              
+              <button type="submit" id="flut-submit-btn" style="
                 padding: 15px;
                 background: linear-gradient(135deg, #128C7E 0%, #25D366 100%);
                 color: white;
@@ -351,9 +364,28 @@ Deno.serve(async (req) => {
     }
   }
 
+  function showErrorMessage(message) {
+    const errorDiv = document.getElementById('flut-error-message');
+    if (errorDiv) {
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    }
+  }
+
+  function hideErrorMessage() {
+    const errorDiv = document.getElementById('flut-error-message');
+    if (errorDiv) {
+      errorDiv.style.display = 'none';
+    }
+  }
+
   async function submitForm(e) {
     e.preventDefault();
     
+    // Limpar mensagens de erro anteriores
+    hideErrorMessage();
+    
+    const submitBtn = document.getElementById('flut-submit-btn');
     const phoneEl = document.getElementById('flut-phone');
     const emailEl = document.getElementById('flut-email');
     const nameEl = document.getElementById('flut-name');
@@ -371,9 +403,13 @@ Deno.serve(async (req) => {
 
     // Validar se pelo menos um campo obrigatório foi preenchido
     if (!leadData.phone && !leadData.email && !leadData.name) {
-      alert('Por favor, preencha pelo menos um campo de contato.');
+      showErrorMessage('Por favor, preencha pelo menos um campo de contato.');
       return;
     }
+
+    // Desabilitar botão e mostrar carregamento
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Enviando...';
 
     try {
       const response = await fetch(\`\${API_URL}/submit-site-lead\`, {
@@ -387,7 +423,7 @@ Deno.serve(async (req) => {
       if (response.ok) {
         const responseData = await response.json();
         
-        alert('Mensagem enviada com sucesso! Você será redirecionado para o WhatsApp.');
+        // Fechar modal e resetar formulário
         hideModal();
         document.getElementById('flut-form').reset();
         
@@ -400,7 +436,7 @@ Deno.serve(async (req) => {
         try {
           const errorData = await response.json();
           if (errorData.error === 'Plano inativo') {
-            alert('Plano Inativo: ' + (errorData.message || 'O plano de assinatura expirou. Entre em contato com o administrador do sistema.'));
+            showErrorMessage(errorData.message || 'O plano de assinatura expirou. Entre em contato com o administrador do sistema.');
             return;
           }
           throw new Error(errorData.error || 'Erro ao enviar mensagem');
@@ -413,7 +449,11 @@ Deno.serve(async (req) => {
       }
     } catch (error) {
       console.error('Erro:', error);
-      alert('Erro ao enviar mensagem. Tente novamente.');
+      showErrorMessage('Erro ao enviar mensagem. Tente novamente.');
+    } finally {
+      // Reabilitar botão
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Enviar';
     }
   }
 
