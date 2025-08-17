@@ -219,11 +219,63 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          client_id: string
+          created_at: string
+          end_date: string
+          id: string
+          is_active: boolean
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          is_active?: boolean
+          plan_type?: Database["public"]["Enums"]["plan_type"]
+          start_date?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          plan_type?: Database["public"]["Enums"]["plan_type"]
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      calculate_plan_end_date: {
+        Args: {
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          start_date?: string
+        }
+        Returns: string
+      }
+      client_has_active_plan: {
+        Args: { client_uuid: string }
+        Returns: boolean
+      }
       generate_script_id: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -234,6 +286,12 @@ export type Database = {
       }
     }
     Enums: {
+      plan_type:
+        | "free_7_days"
+        | "one_month"
+        | "three_months"
+        | "six_months"
+        | "one_year"
       user_type: "admin" | "client"
     }
     CompositeTypes: {
@@ -362,6 +420,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      plan_type: [
+        "free_7_days",
+        "one_month",
+        "three_months",
+        "six_months",
+        "one_year",
+      ],
       user_type: ["admin", "client"],
     },
   },
