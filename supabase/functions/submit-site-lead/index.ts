@@ -147,9 +147,7 @@ Deno.serve(async (req) => {
     
     // Criar mensagem para WhatsApp
     const whatsappMessage = `Olá ${attendantName}! Meu nome é ${name || 'Cliente'}. 
-${message ? `Mensagem: ${message}` : ''}
-${email !== 'Não informado' ? `Email: ${email}` : ''}
-${phone !== 'Não informado' ? `Telefone: ${phone}` : ''}`;
+${message ? `${message}` : ''}`;
 
     const responseData = {
       success: true,
