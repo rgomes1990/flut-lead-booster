@@ -60,9 +60,8 @@ export default function Plans() {
         .from('clients')
         .select(`
           *,
-          subscription_plans!inner(id, plan_type, start_date, end_date, is_active)
+          subscription_plans(id, plan_type, start_date, end_date, is_active)
         `)
-        .eq('subscription_plans.is_active', true)
         .order('created_at', { ascending: false });
 
       // Buscar profiles separadamente - apenas clientes
@@ -71,7 +70,7 @@ export default function Plans() {
         .select('user_id, name, email')
         .eq('user_type', 'client');
 
-      // Combinar dados e filtrar apenas clientes - transformar array em objeto único
+      // Combinar dados e filtrar apenas clientes - pegar o plano mais recente
       const clientsWithProfiles = data?.filter(client => {
         const profile = profilesData?.find(profile => profile.user_id === client.user_id);
         return profile !== undefined;
@@ -79,7 +78,7 @@ export default function Plans() {
         ...client,
         profiles: profilesData?.find(profile => profile.user_id === client.user_id) || null,
         subscription_plans: Array.isArray(client.subscription_plans) && client.subscription_plans.length > 0 
-          ? client.subscription_plans[0] 
+          ? client.subscription_plans.sort((a: any, b: any) => new Date(b.created_at || b.start_date).getTime() - new Date(a.created_at || a.start_date).getTime())[0]
           : null
       })) || [];
 
@@ -341,6 +340,8 @@ export default function Plans() {
                   {clients.map((client) => {
                     const activePlan = getActivePlan(client.subscription_plans);
                     const isExpired = activePlan ? isPlanExpired(activePlan.end_date) : true;
+                    const isManuallyDeactivated = activePlan ? !activePlan.is_active : false;
+                    const isInactive = isExpired || isManuallyDeactivated;
                     
                     return (
                       <TableRow key={client.id}>
@@ -359,8 +360,8 @@ export default function Plans() {
                           {activePlan ? formatDate(activePlan.end_date) : '-'}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={isExpired ? "destructive" : "default"}>
-                            {isExpired ? 'Expirado' : 'Ativo'}
+                          <Badge variant={isInactive ? "destructive" : "default"}>
+                            {isManuallyDeactivated ? 'Inativo' : (isExpired ? 'Expirado' : 'Ativo')}
                           </Badge>
                         </TableCell>
                         <TableCell>
