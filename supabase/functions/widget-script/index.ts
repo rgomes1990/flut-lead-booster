@@ -330,7 +330,7 @@ Deno.serve(async (req) => {
               ">
                 <div style="width: 12px; height: 12px; background: #25D366; border-radius: 50%;"></div>
                 Instale a Flut em seu website
-                <a href="#" style="color: #25D366; text-decoration: none; font-weight: 600;">clicando aqui</a>
+                <a href="https://flut.com.br/" target="_blank" style="color: #25D366; text-decoration: none; font-weight: 600;">clicando aqui</a>
               </div>
             </div>
           </div>
