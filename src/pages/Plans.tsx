@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Clock, Users, AlertTriangle } from 'lucide-react';
+import { Calendar, Clock, Users, AlertTriangle, Trash2, XCircle } from 'lucide-react';
 
 interface Client {
   id: string;
@@ -64,13 +64,17 @@ export default function Plans() {
         `)
         .order('created_at', { ascending: false });
 
-      // Buscar profiles separadamente
+      // Buscar profiles separadamente - apenas clientes
       const { data: profilesData } = await supabase
         .from('profiles')
-        .select('user_id, name, email');
+        .select('user_id, name, email')
+        .eq('user_type', 'client');
 
-      // Combinar dados
-      const clientsWithProfiles = data?.map(client => ({
+      // Combinar dados e filtrar apenas clientes
+      const clientsWithProfiles = data?.filter(client => {
+        const profile = profilesData?.find(profile => profile.user_id === client.user_id);
+        return profile !== undefined;
+      }).map(client => ({
         ...client,
         profiles: profilesData?.find(profile => profile.user_id === client.user_id) || null
       })) || [];
@@ -159,6 +163,56 @@ export default function Plans() {
 
   const getActivePlan = (plans: Client['subscription_plans']) => {
     return plans.find(plan => plan.is_active) || plans[plans.length - 1];
+  };
+
+  const deactivatePlan = async (planId: string) => {
+    try {
+      const { error } = await supabase
+        .from('subscription_plans')
+        .update({ is_active: false })
+        .eq('id', planId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Plano desativado com sucesso!",
+      });
+
+      loadClients();
+    } catch (error) {
+      console.error('Erro ao desativar plano:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao desativar plano.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deletePlan = async (planId: string) => {
+    try {
+      const { error } = await supabase
+        .from('subscription_plans')
+        .delete()
+        .eq('id', planId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Plano excluído com sucesso!",
+      });
+
+      loadClients();
+    } catch (error) {
+      console.error('Erro ao excluir plano:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir plano.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (userProfile?.user_type !== 'admin') {
@@ -276,6 +330,7 @@ export default function Plans() {
                     <TableHead>Início</TableHead>
                     <TableHead>Expiração</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -303,6 +358,28 @@ export default function Plans() {
                           <Badge variant={isExpired ? "destructive" : "default"}>
                             {isExpired ? 'Expirado' : 'Ativo'}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {activePlan && (
+                            <div className="flex gap-2">
+                              {activePlan.is_active && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => deactivatePlan(activePlan.id)}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => deletePlan(activePlan.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
