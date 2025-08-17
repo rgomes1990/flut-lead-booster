@@ -20,6 +20,7 @@ interface Lead {
   status: string;
   created_at: string;
   campaign: string;
+  origin: string;
   client: {
     user_id: string;
     website_url: string;
@@ -120,7 +121,7 @@ const LeadsCaptured = () => {
   };
 
   const exportToCSV = () => {
-    const headers = ["ID", "Nome", "E-mail", "WhatsApp", "Site", "Usuário", "Mensagem", "Status", "Data e Hora", "Campanha"];
+    const headers = ["ID", "Nome", "E-mail", "WhatsApp", "Site", "Usuário", "Mensagem", "Status", "Data e Hora", "Origem", "Campanha"];
     const csvContent = [
       headers.join(","),
       ...filteredLeads.map(lead =>
@@ -134,6 +135,7 @@ const LeadsCaptured = () => {
           `"${lead.message || 'Não especificada'}"`,
           lead.status,
           formatDate(lead.created_at),
+          `"${lead.origin || 'Não informado'}"`,
           `"${lead.campaign || 'Não informado'}"`
         ].join(",")
       )
@@ -265,6 +267,7 @@ const LeadsCaptured = () => {
                       <TableHead>E-mail</TableHead>
                       <TableHead>Mensagem</TableHead>
                       <TableHead>Data e Hora</TableHead>
+                      <TableHead>Origem</TableHead>
                       <TableHead>Campanha</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -306,6 +309,9 @@ const LeadsCaptured = () => {
                         </TableCell>
                         <TableCell>
                           <span className="text-sm">{formatDate(lead.created_at)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">{lead.origin || 'Não informado'}</span>
                         </TableCell>
                         <TableCell>
                           <span className="text-sm">{lead.campaign || 'Não informado'}</span>
