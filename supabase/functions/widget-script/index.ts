@@ -611,6 +611,14 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Event listener para botões com classe trigger-flut
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.trigger-flut')) {
+      e.preventDefault();
+      showModal();
+    }
+  });
+
   // Inicializar quando a página carregar
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', createWhatsAppButton);
