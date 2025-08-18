@@ -245,29 +245,27 @@ const Admin = () => {
   };
 
   const deleteClient = async (clientId: string, userId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este cliente?")) return;
+    if (!confirm("Tem certeza que deseja excluir este usuário? TODOS os dados relacionados (leads, planos, sites, etc.) serão removidos permanentemente.")) return;
 
     try {
-      // Deletar cliente (cascata deletará leads)
-      const { error: clientError } = await supabase
-        .from("clients")
-        .delete()
-        .eq("id", clientId);
+      // Chamar edge function para deletar completamente o usuário
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId }
+      });
 
-      if (clientError) throw clientError;
+      if (error) throw error;
 
-      // Nota: A deleção do usuário do auth deve ser feita via RPC ou edge function
-      // Por enquanto, apenas removemos o cliente da tabela clients
       toast({
-        title: "Cliente excluído com sucesso!",
-        description: "Os dados do cliente foram removidos. Para remover completamente do sistema de autenticação, isso deve ser feito via painel Supabase.",
+        title: "Usuário excluído com sucesso!",
+        description: "O usuário e todos os dados relacionados foram removidos completamente do sistema.",
       });
 
       loadUsers();
     } catch (error: any) {
+      console.error("Error deleting user:", error);
       toast({
-        title: "Erro ao excluir cliente",
-        description: error.message,
+        title: "Erro ao excluir usuário",
+        description: error.message || "Erro ao excluir usuário completamente",
         variant: "destructive",
       });
     }

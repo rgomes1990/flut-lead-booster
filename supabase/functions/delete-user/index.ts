@@ -1,0 +1,147 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const logStep = (step: string, details?: any) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  console.log(`[DELETE-USER] ${step}${detailsStr}`);
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    logStep("Function started");
+
+    // Use service role to perform admin operations
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("No authorization header provided");
+
+    // Verify the requesting user is admin
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    
+    const requestingUser = userData.user;
+    if (!requestingUser) throw new Error("User not authenticated");
+
+    // Check if requesting user is admin
+    const { data: adminProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('user_type')
+      .eq('user_id', requestingUser.id)
+      .single();
+
+    if (adminProfile?.user_type !== 'admin') {
+      throw new Error("Only admins can delete users");
+    }
+
+    const { userId } = await req.json();
+    if (!userId) throw new Error("User ID is required");
+
+    logStep("Admin verified, deleting user", { userId });
+
+    // 1. Delete all related data in order (respecting foreign key constraints)
+    
+    // Delete leads first (references clients)
+    const { error: leadsError } = await supabaseAdmin
+      .from('leads')
+      .delete()
+      .in('client_id', 
+        supabaseAdmin
+          .from('clients')
+          .select('id')
+          .eq('user_id', userId)
+      );
+    
+    if (leadsError) logStep("Error deleting leads", leadsError);
+
+    // Delete subscription plans (references clients)
+    const { error: plansError } = await supabaseAdmin
+      .from('subscription_plans')
+      .delete()
+      .in('client_id', 
+        supabaseAdmin
+          .from('clients')
+          .select('id')
+          .eq('user_id', userId)
+      );
+    
+    if (plansError) logStep("Error deleting subscription plans", plansError);
+
+    // Delete site configs (references sites)
+    const { error: configsError } = await supabaseAdmin
+      .from('site_configs')
+      .delete()
+      .in('site_id',
+        supabaseAdmin
+          .from('sites')
+          .select('id')
+          .eq('user_id', userId)
+      );
+    
+    if (configsError) logStep("Error deleting site configs", configsError);
+
+    // Delete sites
+    const { error: sitesError } = await supabaseAdmin
+      .from('sites')
+      .delete()
+      .eq('user_id', userId);
+    
+    if (sitesError) logStep("Error deleting sites", sitesError);
+
+    // Delete clients
+    const { error: clientsError } = await supabaseAdmin
+      .from('clients')
+      .delete()
+      .eq('user_id', userId);
+    
+    if (clientsError) logStep("Error deleting clients", clientsError);
+
+    // Delete profile
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .delete()
+      .eq('user_id', userId);
+    
+    if (profileError) logStep("Error deleting profile", profileError);
+
+    // Finally, delete the auth user
+    const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    
+    if (authDeleteError) {
+      logStep("Error deleting auth user", authDeleteError);
+      throw new Error(`Failed to delete auth user: ${authDeleteError.message}`);
+    }
+
+    logStep("User completely deleted", { userId });
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: "User and all related data deleted successfully" 
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logStep("ERROR in delete-user", { message: errorMessage });
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
+});
