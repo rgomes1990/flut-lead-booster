@@ -28,10 +28,15 @@ Deno.serve(async (req) => {
     const { site_id, name, email, phone, message, website_url, origin } = await req.json();
 
     // Usar a função de banco de dados para determinar origem
-    const { data: detectedOrigin } = await supabase
+    console.log('Website URL received:', website_url);
+    const { data: detectedOrigin, error: originError } = await supabase
       .rpc('determine_origin_from_url', { url: website_url });
-
-    const finalOrigin = (origin && origin !== 'Site Orgânico') ? origin : (detectedOrigin || 'Site Orgânico');
+    
+    console.log('Detected origin result:', { detectedOrigin, originError });
+    
+    // Sempre usar a origem detectada pela função, ignorando a origem passada
+    const finalOrigin = detectedOrigin || 'Site Orgânico';
+    console.log('Final origin:', finalOrigin);
 
     // Validar campos obrigatórios
     if (!site_id) {
