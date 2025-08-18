@@ -285,7 +285,7 @@ Deno.serve(async (req) => {
               \${SITE_CONFIG.field_phone !== false ? \`
                <input type="tel" id="flut-phone" required placeholder="DDD + Celular" style="
                  all: unset !important;
-                 padding: 15px !important;
+                 padding: 15px 20px !important;
                  border: none !important;
                  border-radius: 25px !important;
                  background: white !important;
@@ -294,9 +294,10 @@ Deno.serve(async (req) => {
                  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
                  outline: none !important;
                  transition: box-shadow 0.2s !important;
-                 width: calc(100% - 30px) !important;
+                 width: 100% !important;
                  box-sizing: border-box !important;
                  display: block !important;
+                 margin: 0 auto !important;
                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
                " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">
               \` : ''}
@@ -304,7 +305,7 @@ Deno.serve(async (req) => {
               \${SITE_CONFIG.field_email !== false ? \`
                <input type="email" id="flut-email" \${SITE_CONFIG.field_phone === false ? 'required' : ''} placeholder="E-mail" style="
                  all: unset !important;
-                 padding: 15px !important;
+                 padding: 15px 20px !important;
                  border: none !important;
                  border-radius: 25px !important;
                  background: white !important;
@@ -313,9 +314,10 @@ Deno.serve(async (req) => {
                  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
                  outline: none !important;
                  transition: box-shadow 0.2s !important;
-                 width: calc(100% - 30px) !important;
+                 width: 100% !important;
                  box-sizing: border-box !important;
                  display: block !important;
+                 margin: 0 auto !important;
                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
                " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">
               \` : ''}
@@ -323,7 +325,7 @@ Deno.serve(async (req) => {
               \${SITE_CONFIG.field_name !== false ? \`
                <input type="text" id="flut-name" \${!SITE_CONFIG.field_phone && !SITE_CONFIG.field_email ? 'required' : ''} placeholder="Nome Completo" style="
                  all: unset !important;
-                 padding: 15px !important;
+                 padding: 15px 20px !important;
                  border: none !important;
                  border-radius: 25px !important;
                  background: white !important;
@@ -332,9 +334,10 @@ Deno.serve(async (req) => {
                  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
                  outline: none !important;
                  transition: box-shadow 0.2s !important;
-                 width: calc(100% - 30px) !important;
+                 width: 100% !important;
                  box-sizing: border-box !important;
                  display: block !important;
+                 margin: 0 auto !important;
                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
                " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">
               \` : ''}
@@ -342,7 +345,7 @@ Deno.serve(async (req) => {
               \${SITE_CONFIG.field_message !== false ? \`
                <textarea id="flut-message" placeholder="Mensagem:" style="
                  all: unset !important;
-                 padding: 15px !important;
+                 padding: 15px 20px !important;
                  border: none !important;
                  border-radius: 15px !important;
                  background: white !important;
@@ -353,9 +356,10 @@ Deno.serve(async (req) => {
                  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
                  outline: none !important;
                  transition: box-shadow 0.2s !important;
-                 width: calc(100% - 30px) !important;
+                 width: 100% !important;
                  box-sizing: border-box !important;
                  display: block !important;
+                 margin: 0 auto !important;
                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
                " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">\${SITE_CONFIG.default_message || 'Mensagem:'}</textarea>
               \` : ''}
