@@ -184,6 +184,15 @@ const LeadsCaptured = () => {
     });
   };
 
+  const extractMainDomain = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      return `${urlObj.protocol}//${urlObj.hostname}`;
+    } catch {
+      return url;
+    }
+  };
+
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case "new":
@@ -413,9 +422,9 @@ const LeadsCaptured = () => {
                              </div>
                            </div>
                          </TableCell>
-                        <TableCell>
-                          <span className="text-sm">{lead.website_url}</span>
-                        </TableCell>
+                         <TableCell>
+                           <span className="text-sm">{extractMainDomain(lead.website_url)}</span>
+                         </TableCell>
                         {userProfile?.user_type === 'admin' && (
                           <TableCell>
                             <span className="font-medium">{lead.profile?.name || 'N/A'}</span>
@@ -502,16 +511,10 @@ const LeadsCaptured = () => {
                     </p>
                   </div>
 
-                  <div>
-                    <a 
-                      href={selectedLead.website_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline text-sm"
-                    >
-                      Página de Origem
-                    </a>
-                  </div>
+                   <div>
+                     <span className="text-xs text-gray-500">🌐 URL de Origem:</span>
+                     <p className="text-sm font-medium text-gray-800 break-all">{selectedLead.website_url}</p>
+                   </div>
 
                   {/* Botão de telefone */}
                   <div className="text-center">
