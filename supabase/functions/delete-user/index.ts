@@ -53,46 +53,58 @@ serve(async (req) => {
 
     logStep("Admin verified, deleting user", { userId });
 
-    // 1. Delete all related data in order (respecting foreign key constraints)
+    // 1. Get client IDs for this user first
+    const { data: clientsData } = await supabaseAdmin
+      .from('clients')
+      .select('id')
+      .eq('user_id', userId);
+
+    const clientIds = clientsData?.map(client => client.id) || [];
+    logStep("Found clients", { clientIds });
+
+    // 2. Get site IDs for this user
+    const { data: sitesData } = await supabaseAdmin
+      .from('sites')
+      .select('id')
+      .eq('user_id', userId);
+
+    const siteIds = sitesData?.map(site => site.id) || [];
+    logStep("Found sites", { siteIds });
+
+    // 3. Delete all related data in order (respecting foreign key constraints)
     
     // Delete leads first (references clients)
-    const { error: leadsError } = await supabaseAdmin
-      .from('leads')
-      .delete()
-      .in('client_id', 
-        supabaseAdmin
-          .from('clients')
-          .select('id')
-          .eq('user_id', userId)
-      );
-    
-    if (leadsError) logStep("Error deleting leads", leadsError);
+    if (clientIds.length > 0) {
+      const { error: leadsError } = await supabaseAdmin
+        .from('leads')
+        .delete()
+        .in('client_id', clientIds);
+      
+      if (leadsError) logStep("Error deleting leads", leadsError);
+      else logStep("Deleted leads for clients");
+    }
 
     // Delete subscription plans (references clients)
-    const { error: plansError } = await supabaseAdmin
-      .from('subscription_plans')
-      .delete()
-      .in('client_id', 
-        supabaseAdmin
-          .from('clients')
-          .select('id')
-          .eq('user_id', userId)
-      );
-    
-    if (plansError) logStep("Error deleting subscription plans", plansError);
+    if (clientIds.length > 0) {
+      const { error: plansError } = await supabaseAdmin
+        .from('subscription_plans')
+        .delete()
+        .in('client_id', clientIds);
+      
+      if (plansError) logStep("Error deleting subscription plans", plansError);
+      else logStep("Deleted subscription plans for clients");
+    }
 
     // Delete site configs (references sites)
-    const { error: configsError } = await supabaseAdmin
-      .from('site_configs')
-      .delete()
-      .in('site_id',
-        supabaseAdmin
-          .from('sites')
-          .select('id')
-          .eq('user_id', userId)
-      );
-    
-    if (configsError) logStep("Error deleting site configs", configsError);
+    if (siteIds.length > 0) {
+      const { error: configsError } = await supabaseAdmin
+        .from('site_configs')
+        .delete()
+        .in('site_id', siteIds);
+      
+      if (configsError) logStep("Error deleting site configs", configsError);
+      else logStep("Deleted site configs for sites");
+    }
 
     // Delete sites
     const { error: sitesError } = await supabaseAdmin
@@ -101,6 +113,7 @@ serve(async (req) => {
       .eq('user_id', userId);
     
     if (sitesError) logStep("Error deleting sites", sitesError);
+    else logStep("Deleted sites for user");
 
     // Delete clients
     const { error: clientsError } = await supabaseAdmin
@@ -109,6 +122,7 @@ serve(async (req) => {
       .eq('user_id', userId);
     
     if (clientsError) logStep("Error deleting clients", clientsError);
+    else logStep("Deleted clients for user");
 
     // Delete profile
     const { error: profileError } = await supabaseAdmin
@@ -117,6 +131,7 @@ serve(async (req) => {
       .eq('user_id', userId);
     
     if (profileError) logStep("Error deleting profile", profileError);
+    else logStep("Deleted profile for user");
 
     // Finally, delete the auth user
     const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
