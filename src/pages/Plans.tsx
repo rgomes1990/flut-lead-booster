@@ -78,7 +78,7 @@ export default function Plans() {
         .select('user_id, name, email')
         .eq('user_type', 'client');
 
-      // Combinar dados e filtrar apenas clientes - pegar o plano mais recente
+      // Combinar dados e filtrar apenas clientes - pegar o plano ativo mais recente
       const clientsWithProfiles = data?.filter(client => {
         const profile = profilesData?.find(profile => profile.user_id === client.user_id);
         return profile !== undefined;
@@ -86,7 +86,9 @@ export default function Plans() {
         ...client,
         profiles: profilesData?.find(profile => profile.user_id === client.user_id) || null,
         subscription_plans: Array.isArray(client.subscription_plans) && client.subscription_plans.length > 0 
-          ? client.subscription_plans.sort((a: any, b: any) => new Date(b.created_at || b.start_date).getTime() - new Date(a.created_at || a.start_date).getTime())[0]
+          ? client.subscription_plans
+              .filter((plan: any) => plan.is_active) // Apenas planos ativos
+              .sort((a: any, b: any) => new Date(b.created_at || b.start_date).getTime() - new Date(a.created_at || a.start_date).getTime())[0] || null
           : null
       })) || [];
 
