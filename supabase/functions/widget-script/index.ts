@@ -282,8 +282,8 @@ Deno.serve(async (req) => {
             </div>
             
             <form id="flut-form" style="display: flex; flex-direction: column; gap: 15px;">
-              \${SITE_CONFIG.field_phone !== false ? \`
-               <input type="tel" id="flut-phone" required placeholder="DDD + Celular" style="
+               \${SITE_CONFIG.field_phone !== false ? \`
+                <input type="tel" id="flut-phone" \${SITE_CONFIG.field_phone === true ? 'required' : ''} placeholder="DDD + Celular" style="
                  all: unset !important;
                  padding: 15px 20px !important;
                  border: none !important;
@@ -302,8 +302,8 @@ Deno.serve(async (req) => {
                " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">
               \` : ''}
               
-              \${SITE_CONFIG.field_email !== false ? \`
-               <input type="email" id="flut-email" \${SITE_CONFIG.field_phone === false ? 'required' : ''} placeholder="E-mail" style="
+               \${SITE_CONFIG.field_email !== false ? \`
+                <input type="email" id="flut-email" \${SITE_CONFIG.field_email === true ? 'required' : ''} placeholder="E-mail" style="
                  all: unset !important;
                  padding: 15px 20px !important;
                  border: none !important;
@@ -322,8 +322,8 @@ Deno.serve(async (req) => {
                " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">
               \` : ''}
               
-              \${SITE_CONFIG.field_name !== false ? \`
-               <input type="text" id="flut-name" \${!SITE_CONFIG.field_phone && !SITE_CONFIG.field_email ? 'required' : ''} placeholder="Nome Completo" style="
+               \${SITE_CONFIG.field_name !== false ? \`
+                <input type="text" id="flut-name" \${SITE_CONFIG.field_name === true ? 'required' : ''} placeholder="Nome Completo" style="
                  all: unset !important;
                  padding: 15px 20px !important;
                  border: none !important;
@@ -342,8 +342,8 @@ Deno.serve(async (req) => {
                " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">
               \` : ''}
               
-              \${SITE_CONFIG.field_message !== false ? \`
-               <textarea id="flut-message" placeholder="Mensagem:" style="
+               \${SITE_CONFIG.field_message !== false ? \`
+                <textarea id="flut-message" \${SITE_CONFIG.field_message === true ? 'required' : ''} placeholder="\${SITE_CONFIG.default_message && SITE_CONFIG.default_message.trim() !== '' ? 'Mensagem:' : 'Digite sua mensagem...'}" style="
                  all: unset !important;
                  padding: 15px 20px !important;
                  border: none !important;
@@ -361,7 +361,7 @@ Deno.serve(async (req) => {
                  display: block !important;
                  margin: 0 auto !important;
                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-               " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">\${SITE_CONFIG.default_message || 'Mensagem:'}</textarea>
+               " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">\${SITE_CONFIG.default_message && SITE_CONFIG.default_message.trim() !== '' ? SITE_CONFIG.default_message : ''}</textarea>
               \` : ''}
               
               <!-- Área para mensagens de erro -->
