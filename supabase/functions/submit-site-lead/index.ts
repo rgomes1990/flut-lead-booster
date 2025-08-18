@@ -27,6 +27,36 @@ Deno.serve(async (req) => {
     // Parse request body
     const { site_id, name, email, phone, message, website_url, origin } = await req.json();
 
+    // Determinar origem com base na URL
+    const determineOrigin = (url: string, providedOrigin?: string) => {
+      if (providedOrigin && providedOrigin !== 'Site Orgânico') {
+        return providedOrigin;
+      }
+      
+      if (!url) return 'Site Orgânico';
+      
+      try {
+        const urlObj = new URL(url);
+        const params = urlObj.searchParams;
+        
+        // Verificar Google Ads
+        if (params.has('gad_source') || params.has('gclid')) {
+          return 'Google Ads';
+        }
+        
+        // Verificar Meta Ads
+        if (params.get('utm_source') === 'Meta') {
+          return 'Meta Ads';
+        }
+        
+        return 'Site Orgânico';
+      } catch {
+        return 'Site Orgânico';
+      }
+    };
+
+    const detectedOrigin = determineOrigin(website_url, origin);
+
     // Validar campos obrigatórios
     if (!site_id) {
       return new Response('Site ID is required', { 
@@ -129,7 +159,7 @@ Deno.serve(async (req) => {
         phone: phone || 'Não informado',
         message: message || '',
         website_url: website_url || '',
-        origin: origin || 'Site Orgânico',
+        origin: detectedOrigin,
         status: 'new'
       });
 
