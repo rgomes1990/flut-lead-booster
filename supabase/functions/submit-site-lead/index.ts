@@ -27,16 +27,28 @@ Deno.serve(async (req) => {
     // Parse request body
     const { site_id, name, email, phone, message, website_url, origin } = await req.json();
 
+    console.log('Lead submission data:', { 
+      site_id, 
+      name, 
+      email, 
+      phone, 
+      website_url, 
+      origin 
+    });
+
     // Usar a função de banco de dados para determinar origem
-    console.log('Website URL received:', website_url);
     const { data: detectedOrigin, error: originError } = await supabase
       .rpc('determine_origin_from_url', { url: website_url });
-    
-    console.log('Detected origin result:', { detectedOrigin, originError });
-    
-    // Sempre usar a origem detectada pela função, ignorando a origem passada
+
+    console.log('Origin detection result:', { 
+      website_url, 
+      detectedOrigin, 
+      originError 
+    });
+
     const finalOrigin = detectedOrigin || 'Site Orgânico';
-    console.log('Final origin:', finalOrigin);
+
+    console.log('Final origin assigned:', finalOrigin);
 
     // Validar campos obrigatórios
     if (!site_id) {
@@ -151,6 +163,8 @@ Deno.serve(async (req) => {
         headers: corsHeaders 
       });
     }
+
+    console.log('Lead saved successfully with origin:', finalOrigin);
 
     // Preparar resposta com dados para redirecionamento do WhatsApp
     const whatsappPhone = siteConfig?.phone || '';
