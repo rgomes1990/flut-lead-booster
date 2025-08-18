@@ -279,6 +279,10 @@ export type Database = {
         Args: { client_uuid: string }
         Returns: boolean
       }
+      determine_origin_from_url: {
+        Args: { url: string }
+        Returns: string
+      }
       generate_script_id: {
         Args: Record<PropertyKey, never>
         Returns: string
