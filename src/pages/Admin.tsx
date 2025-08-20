@@ -147,7 +147,7 @@ const Admin = () => {
 
       if (profileError) throw profileError;
 
-      // Se for cliente, criar registro na tabela clients
+      // APENAS se for cliente, criar registro na tabela clients
       if (newClient.user_type === "client") {
         const { error: clientError } = await supabase
           .from("clients")
