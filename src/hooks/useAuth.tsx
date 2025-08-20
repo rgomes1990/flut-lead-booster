@@ -71,22 +71,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('Starting signout process');
       
-      // Fazer logout no Supabase PRIMEIRO
+      // Limpar estados locais PRIMEIRO
+      setUser(null);
+      setSession(null);
+      setUserProfile(null);
+      
+      // Fazer logout no Supabase
       await supabase.auth.signOut();
       
       // Limpar localStorage e sessionStorage
       localStorage.clear();
       sessionStorage.clear();
       
-      // Limpar estados locais
-      setUser(null);
-      setSession(null);
-      setUserProfile(null);
-      
       console.log('Signout completed, redirecting...');
       
-      // Redirecionar para a página de login
-      window.location.replace('/auth');
+      // Pequeno delay para garantir que tudo foi limpo
+      setTimeout(() => {
+        window.location.replace('/auth');
+      }, 100);
+      
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       // Mesmo com erro, limpar estados e redirecionar
