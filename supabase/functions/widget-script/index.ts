@@ -283,23 +283,32 @@ Deno.serve(async (req) => {
             
             <form id="flut-form" style="display: flex; flex-direction: column; gap: 15px;">
                 \${SITE_CONFIG.field_phone !== false ? \`
-                 <input type="tel" id="flut-phone" \${SITE_CONFIG.field_phone === true ? 'required' : ''} placeholder="DDD + Celular" maxlength="15" style="
-                  all: unset !important;
-                  padding: 15px 20px !important;
-                  border: none !important;
-                  border-radius: 25px !important;
-                  background: white !important;
-                  color: #333 !important;
-                  font-size: 14px !important;
-                  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
-                  outline: none !important;
-                  transition: box-shadow 0.2s !important;
-                  width: 100% !important;
-                  box-sizing: border-box !important;
-                  display: block !important;
-                  margin: 0 auto !important;
-                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-                " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">
+                 <div>
+                   <input type="tel" id="flut-phone" \${SITE_CONFIG.field_phone === true ? 'required' : ''} placeholder="DDD + Celular" maxlength="15" style="
+                    all: unset !important;
+                    padding: 15px 20px !important;
+                    border: none !important;
+                    border-radius: 25px !important;
+                    background: white !important;
+                    color: #333 !important;
+                    font-size: 14px !important;
+                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
+                    outline: none !important;
+                    transition: box-shadow 0.2s !important;
+                    width: 100% !important;
+                    box-sizing: border-box !important;
+                    display: block !important;
+                    margin: 0 auto !important;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+                  " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">
+                   <div id="flut-phone-error" style="
+                     display: none;
+                     color: #dc3545;
+                     font-size: 12px;
+                     margin-top: 5px;
+                     padding-left: 15px;
+                   "></div>
+                 </div>
                \` : ''}
               
                \${SITE_CONFIG.field_email !== false ? \`
@@ -592,6 +601,30 @@ Deno.serve(async (req) => {
       origin: origin,
       campaign: campaign
     };
+
+    // Validar telefone se preenchido
+    if (leadData.phone) {
+      const phoneNumbers = leadData.phone.replace(/[^\d]/g, '');
+      if (phoneNumbers.length < 10 || phoneNumbers.length > 11) {
+        const phoneError = document.getElementById('flut-phone-error');
+        if (phoneError) {
+          phoneError.textContent = 'Telefone deve ter 8 ou 9 dígitos após o DDD';
+          phoneError.style.display = 'block';
+          // Adicionar estilo de erro ao campo
+          phoneEl.style.boxShadow = 'inset 0 2px 8px rgba(220, 53, 69, 0.2) !important';
+          phoneEl.style.border = '1px solid #dc3545 !important';
+        }
+        return;
+      } else {
+        // Limpar erro se válido
+        const phoneError = document.getElementById('flut-phone-error');
+        if (phoneError) {
+          phoneError.style.display = 'none';
+          phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
+          phoneEl.style.border = 'none !important';
+        }
+      }
+    }
 
     // Validar se pelo menos um campo obrigatório foi preenchido
     if (!leadData.phone && !leadData.email && !leadData.name) {
