@@ -300,14 +300,7 @@ Deno.serve(async (req) => {
                     display: block !important;
                     margin: 0 auto !important;
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-                  " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">
-                   <div id="flut-phone-error" style="
-                     display: none;
-                     color: #dc3545;
-                     font-size: 12px;
-                     margin-top: 5px;
-                     padding-left: 15px;
-                   "></div>
+                   " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">
                  </div>
                \` : ''}
               
@@ -451,8 +444,7 @@ Deno.serve(async (req) => {
           e.target.value = '(' + value.slice(0, 2) + ') ' + value.slice(2, 7) + '-' + value.slice(7);
         }
         
-        // Validação dinâmica do telefone
-        validatePhoneField();
+        // Máscara aplicada, sem validação
       });
       
       phoneInput.addEventListener('keydown', function(e) {
@@ -469,11 +461,6 @@ Deno.serve(async (req) => {
         if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
           e.preventDefault();
         }
-      });
-      
-      // Validação no blur também
-      phoneInput.addEventListener('blur', function(e) {
-        validatePhoneField();
       });
     }
     
@@ -585,50 +572,6 @@ Deno.serve(async (req) => {
     return { origin, campaign };
   }
 
-  // Função para validação dinâmica do telefone
-  function validatePhoneField() {
-    const phoneEl = document.getElementById('flut-phone');
-    const phoneError = document.getElementById('flut-phone-error');
-    
-    console.log('validatePhoneField called');
-    
-    if (!phoneEl || !phoneError) {
-      console.log('Phone element or error element not found');
-      return false;
-    }
-    
-    const phoneValue = phoneEl.value.trim();
-    const phoneNumbers = phoneValue.replace(/[^\d]/g, '');
-    
-    console.log('Phone value:', phoneValue, 'Digits only:', phoneNumbers, 'Length:', phoneNumbers.length);
-    
-    // Se campo está vazio, limpar erros e aceitar (campo opcional)
-    if (phoneValue === '') {
-      console.log('Phone field is empty, clearing errors');
-      phoneError.style.display = 'none';
-      phoneEl.style.removeProperty('box-shadow');
-      phoneEl.style.removeProperty('border');
-      return true;
-    }
-    
-    // Se campo tem conteúdo, validar se tem 10 ou 11 dígitos
-    if (phoneNumbers.length >= 10 && phoneNumbers.length <= 11) {
-      // Telefone válido - limpar erros
-      console.log('Phone is valid, clearing errors');
-      phoneError.style.display = 'none';
-      phoneEl.style.removeProperty('box-shadow');
-      phoneEl.style.removeProperty('border');
-      return true;
-    } else {
-      // Telefone inválido - mostrar erro
-      console.log('Phone is invalid, showing error');
-      phoneError.textContent = 'Telefone deve ter 8 ou 9 dígitos após o DDD';
-      phoneError.style.display = 'block';
-      phoneEl.style.setProperty('box-shadow', 'inset 0 2px 8px rgba(220, 53, 69, 0.2)', 'important');
-      phoneEl.style.setProperty('border', '1px solid #dc3545', 'important');
-      return false;
-    }
-  }
 
   async function submitForm(e) {
     e.preventDefault();
@@ -656,13 +599,6 @@ Deno.serve(async (req) => {
       campaign: campaign
     };
 
-    // Validar telefone antes do envio se campo existe
-    if (phoneEl && phoneEl.value.trim() !== '') {
-      const isPhoneValid = validatePhoneField();
-      if (!isPhoneValid) {
-        return; // Parar envio se telefone inválido
-      }
-    }
 
     // Validar se pelo menos um campo obrigatório foi preenchido
     if (!leadData.phone && !leadData.email && !leadData.name) {
