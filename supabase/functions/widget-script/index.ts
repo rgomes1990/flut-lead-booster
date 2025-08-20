@@ -598,8 +598,8 @@ Deno.serve(async (req) => {
     // Se campo está vazio, limpar erros e aceitar (campo opcional)
     if (phoneValue === '') {
       phoneError.style.display = 'none';
-      phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
-      phoneEl.style.border = 'none !important';
+      phoneEl.style.setProperty('box-shadow', 'inset 0 2px 4px rgba(0,0,0,0.1)', 'important');
+      phoneEl.style.setProperty('border', 'none', 'important');
       return true;
     }
     
@@ -607,15 +607,15 @@ Deno.serve(async (req) => {
     if (phoneNumbers.length >= 10 && phoneNumbers.length <= 11) {
       // Telefone válido - limpar erros
       phoneError.style.display = 'none';
-      phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
-      phoneEl.style.border = 'none !important';
+      phoneEl.style.setProperty('box-shadow', 'inset 0 2px 4px rgba(0,0,0,0.1)', 'important');
+      phoneEl.style.setProperty('border', 'none', 'important');
       return true;
     } else {
       // Telefone inválido - mostrar erro
       phoneError.textContent = 'Telefone deve ter 8 ou 9 dígitos após o DDD';
       phoneError.style.display = 'block';
-      phoneEl.style.boxShadow = 'inset 0 2px 8px rgba(220, 53, 69, 0.2) !important';
-      phoneEl.style.border = '1px solid #dc3545 !important';
+      phoneEl.style.setProperty('box-shadow', 'inset 0 2px 8px rgba(220, 53, 69, 0.2)', 'important');
+      phoneEl.style.setProperty('border', '1px solid #dc3545', 'important');
       return false;
     }
   }
