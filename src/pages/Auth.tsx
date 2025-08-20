@@ -83,20 +83,11 @@ const Auth = () => {
           description: "Redirecionando...",
         });
         
-        // Redireciona baseado no tipo de usuário após buscar o perfil
-        setTimeout(async () => {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("user_type")
-            .eq("user_id", data.user.id)
-            .single();
-          
-          if (profile?.user_type === 'admin') {
-            navigate("/admin");
-          } else {
-            navigate("/dashboard");
-          }
-        }, 1500);
+        // Aguarda um pouco para que o AuthProvider processe a sessão
+        // e então redireciona para a página inicial que fará o roteamento correto
+        setTimeout(() => {
+          navigate("/", { replace: true });
+        }, 500);
       }
     } catch (error: any) {
       console.error("Erro no login:", error);
