@@ -283,7 +283,7 @@ Deno.serve(async (req) => {
             
             <form id="flut-form" style="display: flex; flex-direction: column; gap: 15px;">
                 \${SITE_CONFIG.field_phone !== false ? \`
-                 <input type="tel" id="flut-phone" \${SITE_CONFIG.field_phone === true ? 'required' : ''} placeholder="(11) 97062-0020" maxlength="15" style="
+                 <input type="tel" id="flut-phone" \${SITE_CONFIG.field_phone === true ? 'required' : ''} placeholder="DDD + Celular" maxlength="15" style="
                   all: unset !important;
                   padding: 15px 20px !important;
                   border: none !important;
