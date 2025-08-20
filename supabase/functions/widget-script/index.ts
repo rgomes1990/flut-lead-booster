@@ -426,20 +426,20 @@ Deno.serve(async (req) => {
     const phoneInput = document.getElementById('flut-phone');
     if (phoneInput) {
       phoneInput.addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\D/g, '');
+        let value = e.target.value.replace(/\\D/g, '');
         
         if (value.length <= 2) {
           e.target.value = value;
         } else if (value.length <= 7) {
-          e.target.value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+          e.target.value = '(' + value.slice(0, 2) + ') ' + value.slice(2);
         } else if (value.length <= 10) {
-          e.target.value = `(${value.slice(0, 2)}) ${value.slice(2, 6)}-${value.slice(6)}`;
+          e.target.value = '(' + value.slice(0, 2) + ') ' + value.slice(2, 6) + '-' + value.slice(6);
         } else if (value.length === 11) {
-          e.target.value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+          e.target.value = '(' + value.slice(0, 2) + ') ' + value.slice(2, 7) + '-' + value.slice(7);
         } else {
           // Limitar a 11 dígitos
           value = value.slice(0, 11);
-          e.target.value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+          e.target.value = '(' + value.slice(0, 2) + ') ' + value.slice(2, 7) + '-' + value.slice(7);
         }
       });
       
