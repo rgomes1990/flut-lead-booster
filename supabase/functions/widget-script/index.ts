@@ -450,9 +450,6 @@ Deno.serve(async (req) => {
           value = value.slice(0, 11);
           e.target.value = '(' + value.slice(0, 2) + ') ' + value.slice(2, 7) + '-' + value.slice(7);
         }
-        
-        // Validação dinâmica do telefone
-        validatePhoneField();
       });
       
       phoneInput.addEventListener('keydown', function(e) {
@@ -469,11 +466,6 @@ Deno.serve(async (req) => {
         if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
           e.preventDefault();
         }
-      });
-      
-      // Validação no blur também
-      phoneInput.addEventListener('blur', function(e) {
-        validatePhoneField();
       });
     }
     
@@ -585,29 +577,6 @@ Deno.serve(async (req) => {
     return { origin, campaign };
   }
 
-  // Função para validação dinâmica do telefone
-  function validatePhoneField() {
-    const phoneEl = document.getElementById('flut-phone');
-    const phoneError = document.getElementById('flut-phone-error');
-    
-    if (!phoneEl || !phoneError) return;
-    
-    const phoneValue = phoneEl.value.trim();
-    const phoneNumbers = phoneValue.replace(/[^\d]/g, '');
-    
-    // Limpar erros primeiro
-    phoneError.style.display = 'none';
-    phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
-    phoneEl.style.border = 'none !important';
-    
-    // Se campo não está vazio, validar
-    if (phoneValue !== '' && (phoneNumbers.length < 10 || phoneNumbers.length > 11)) {
-      phoneError.textContent = 'Telefone deve ter 8 ou 9 dígitos após o DDD';
-      phoneError.style.display = 'block';
-      phoneEl.style.boxShadow = 'inset 0 2px 8px rgba(220, 53, 69, 0.2) !important';
-      phoneEl.style.border = '1px solid #dc3545 !important';
-    }
-  }
 
   async function submitForm(e) {
     e.preventDefault();
@@ -635,12 +604,28 @@ Deno.serve(async (req) => {
       campaign: campaign
     };
 
-    // Verificar se há erro de validação visível no telefone
-    if (phoneError && phoneError.style.display === 'block') {
-      // Se há erro visível, executar validação novamente para ter certeza
-      validatePhoneField();
-      // Se ainda há erro depois da validação, não enviar
-      if (phoneError.style.display === 'block') {
+    // Limpar todas as mensagens de erro visuais primeiro
+    const phoneError = document.getElementById('flut-phone-error');
+    if (phoneError) {
+      phoneError.style.display = 'none';
+    }
+    if (phoneEl) {
+      phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
+      phoneEl.style.border = 'none !important';
+    }
+
+    // Validar telefone apenas se preenchido
+    if (leadData.phone && leadData.phone.trim() !== '') {
+      const phoneNumbers = leadData.phone.replace(/[^\d]/g, '');
+      if (phoneNumbers.length < 10 || phoneNumbers.length > 11) {
+        if (phoneError) {
+          phoneError.textContent = 'Telefone deve ter 8 ou 9 dígitos após o DDD';
+          phoneError.style.display = 'block';
+        }
+        if (phoneEl) {
+          phoneEl.style.boxShadow = 'inset 0 2px 8px rgba(220, 53, 69, 0.2) !important';
+          phoneEl.style.border = '1px solid #dc3545 !important';
+        }
         return;
       }
     }
