@@ -106,77 +106,42 @@ const Admin = () => {
         return;
       }
 
-      // Criar usuário no auth usando signUp com autoConfirm
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newClient.email,
-        password: newClient.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: { 
-            name: newClient.name,
-            email_confirm: true // Força confirmação automática
-          }
+      // Usar edge function para criar usuário sem afetar sessão atual do admin
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          name: newClient.name,
+          email: newClient.email,
+          password: newClient.password,
+          website_url: newClient.website_url,
+          whatsapp: newClient.whatsapp,
+          user_type: newClient.user_type
         }
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("Falha ao criar usuário");
+      if (error) throw error;
 
-      // Se o usuário não foi confirmado automaticamente, tentar confirmar via admin
-      if (!authData.user.email_confirmed_at) {
-        // Usar função administrativa para confirmar o email
-        const { error: confirmError } = await supabase.auth.admin.updateUserById(
-          authData.user.id,
-          { email_confirm: true }
-        );
-        
-        if (confirmError) {
-          console.warn("Não foi possível confirmar automaticamente o email:", confirmError);
-          toast({
-            title: "Usuário criado",
-            description: "Usuário criado com sucesso, mas será necessário confirmar o email manualmente.",
-            variant: "default",
-          });
-        }
+      if (data.success) {
+        toast({
+          title: data.message,
+          description: newClient.user_type === 'client' && newClient.website_url 
+            ? "Site e configurações foram criados automaticamente." 
+            : "O usuário foi criado e pode fazer login imediatamente.",
+        });
+
+        setNewClient({ 
+          name: "", 
+          email: "", 
+          password: "", 
+          confirmPassword: "", 
+          website_url: "",
+          whatsapp: "",
+          user_type: "client" 
+        });
+        setDialogOpen(false);
+        loadUsers();
+      } else {
+        throw new Error(data.error || "Erro desconhecido");
       }
-
-      // Atualizar perfil do usuário com o tipo selecionado
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ user_type: newClient.user_type })
-        .eq("user_id", authData.user.id);
-
-      if (profileError) throw profileError;
-
-      // APENAS se for cliente, criar registro na tabela clients
-      if (newClient.user_type === "client") {
-        const { error: clientError } = await supabase
-          .from("clients")
-          .insert({
-            user_id: authData.user.id,
-            website_url: newClient.website_url,
-            script_id: '' // Será sobrescrito pelo trigger
-          });
-
-        if (clientError) throw clientError;
-      }
-
-      toast({
-        title: `${newClient.user_type === 'admin' ? 'Administrador' : 'Cliente'} criado com sucesso!`,
-        description: "O usuário foi criado e pode fazer login imediatamente.",
-      });
-
-      setNewClient({ 
-        name: "", 
-        email: "", 
-        password: "", 
-        confirmPassword: "", 
-        website_url: "",
-        whatsapp: "",
-        user_type: "client" 
-      });
-      setDialogOpen(false);
-      loadUsers();
     } catch (error: any) {
       toast({
         title: "Erro ao criar usuário",
