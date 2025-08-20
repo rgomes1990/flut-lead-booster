@@ -18,19 +18,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
+    let isDestroyed = false;
+
     // Configurar listener de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.email);
         
-        // Se estamos fazendo logout, não processar a sessão
-        if (isSigningOut) {
-          console.log('Ignoring auth change during signout');
-          return;
-        }
+        if (isDestroyed) return;
 
         setSession(session);
         setUser(session?.user ?? null);
@@ -38,12 +35,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (session?.user) {
           // Buscar perfil do usuário
           setTimeout(async () => {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("user_id", session.user.id)
-              .single();
-            setUserProfile(profile);
+            if (!isDestroyed) {
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("*")
+                .eq("user_id", session.user.id)
+                .single();
+              setUserProfile(profile);
+            }
           }, 0);
         } else {
           setUserProfile(null);
@@ -55,45 +54,48 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Verificar sessão existente
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!isSigningOut) {
+      if (!isDestroyed) {
         setSession(session);
         setUser(session?.user ?? null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, [isSigningOut]);
+    return () => {
+      isDestroyed = true;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const signOut = async () => {
     try {
       console.log('Starting signout process');
-      setIsSigningOut(true);
       
-      // Limpar estados locais primeiro
+      // Fazer logout no Supabase PRIMEIRO
+      await supabase.auth.signOut();
+      
+      // Limpar localStorage e sessionStorage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Limpar estados locais
       setUser(null);
       setSession(null);
       setUserProfile(null);
-      
-      // Fazer logout no Supabase
-      await supabase.auth.signOut();
-      
-      // Aguardar um pouco para garantir que o logout foi processado
-      await new Promise(resolve => setTimeout(resolve, 100));
       
       console.log('Signout completed, redirecting...');
       
       // Redirecionar para a página de login
-      window.location.href = '/auth';
+      window.location.replace('/auth');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       // Mesmo com erro, limpar estados e redirecionar
+      localStorage.clear();
+      sessionStorage.clear();
       setUser(null);
       setSession(null);
       setUserProfile(null);
-      window.location.href = '/auth';
-    } finally {
-      setIsSigningOut(false);
+      window.location.replace('/auth');
     }
   };
 
