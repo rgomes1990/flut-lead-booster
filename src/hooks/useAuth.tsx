@@ -83,24 +83,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.clear();
       sessionStorage.clear();
       
-      console.log('Signout completed, redirecting...');
-      
-      // Usar history.pushState para navegar sem reload
-      window.history.pushState({}, '', '/auth');
-      
-      // Disparar evento popstate para que o React Router detecte a mudança
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      console.log('Signout completed');
       
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
-      // Mesmo com erro, limpar estados e redirecionar
+      // Mesmo com erro, limpar estados
       localStorage.clear();
       sessionStorage.clear();
       setUser(null);
       setSession(null);
       setUserProfile(null);
-      window.history.pushState({}, '', '/auth');
-      window.dispatchEvent(new PopStateEvent('popstate'));
     }
   };
 

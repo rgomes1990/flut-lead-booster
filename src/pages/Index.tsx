@@ -1,21 +1,27 @@
+
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
-  const { user, loading } = useAuth();
+  const { user, userProfile, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!loading) {
-      if (user) {
-        // Redireciona para dashboard ou admin baseado no tipo de usuário
-        navigate("/dashboard");
-      } else {
-        navigate("/auth");
+      if (user && userProfile) {
+        console.log('Redirecting based on user type:', userProfile.user_type);
+        // Redireciona baseado no tipo de usuário
+        if (userProfile.user_type === 'admin') {
+          navigate("/admin", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
+      } else if (!user) {
+        navigate("/auth", { replace: true });
       }
     }
-  }, [user, loading, navigate]);
+  }, [user, userProfile, loading, navigate]);
 
   if (loading) {
     return (
