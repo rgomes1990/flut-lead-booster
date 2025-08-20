@@ -629,6 +629,7 @@ Deno.serve(async (req) => {
     const emailEl = document.getElementById('flut-email');
     const nameEl = document.getElementById('flut-name');
     const messageEl = document.getElementById('flut-message');
+    const phoneError = document.getElementById('flut-phone-error');
     
     const { origin, campaign } = detectOriginAndCampaign();
     
@@ -643,30 +644,9 @@ Deno.serve(async (req) => {
       campaign: campaign
     };
 
-    // Validar telefone se preenchido
-    const phoneError = document.getElementById('flut-phone-error');
-    if (leadData.phone && leadData.phone.trim() !== '') {
-      const phoneNumbers = leadData.phone.replace(/[^\d]/g, '');
-      if (phoneNumbers.length < 10 || phoneNumbers.length > 11) {
-        if (phoneError) {
-          phoneError.textContent = 'Telefone deve ter 8 ou 9 dígitos após o DDD';
-          phoneError.style.display = 'block';
-        }
-        if (phoneEl) {
-          phoneEl.style.boxShadow = 'inset 0 2px 8px rgba(220, 53, 69, 0.2) !important';
-          phoneEl.style.border = '1px solid #dc3545 !important';
-        }
-        return;
-      }
-    }
-
-    // Limpar erros se chegou até aqui (validação passou)
-    if (phoneError) {
-      phoneError.style.display = 'none';
-    }
-    if (phoneEl) {
-      phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
-      phoneEl.style.border = 'none !important';
+    // Verificar se há erro de validação visível - se sim, não enviar
+    if (phoneError && phoneError.style.display === 'block') {
+      return;
     }
 
     // Validar se pelo menos um campo obrigatório foi preenchido
