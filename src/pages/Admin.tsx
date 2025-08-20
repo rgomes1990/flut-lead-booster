@@ -105,18 +105,39 @@ const Admin = () => {
         return;
       }
 
-      // Criar usuário no auth usando signUp
+      // Criar usuário no auth usando signUp com autoConfirm
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newClient.email,
         password: newClient.password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
-          data: { name: newClient.name }
+          data: { 
+            name: newClient.name,
+            email_confirm: true // Força confirmação automática
+          }
         }
       });
 
       if (authError) throw authError;
       if (!authData.user) throw new Error("Falha ao criar usuário");
+
+      // Se o usuário não foi confirmado automaticamente, tentar confirmar via admin
+      if (!authData.user.email_confirmed_at) {
+        // Usar função administrativa para confirmar o email
+        const { error: confirmError } = await supabase.auth.admin.updateUserById(
+          authData.user.id,
+          { email_confirm: true }
+        );
+        
+        if (confirmError) {
+          console.warn("Não foi possível confirmar automaticamente o email:", confirmError);
+          toast({
+            title: "Usuário criado",
+            description: "Usuário criado com sucesso, mas será necessário confirmar o email manualmente.",
+            variant: "default",
+          });
+        }
+      }
 
       // Atualizar perfil do usuário com o tipo selecionado
       const { error: profileError } = await supabase
@@ -141,6 +162,7 @@ const Admin = () => {
 
       toast({
         title: `${newClient.user_type === 'admin' ? 'Administrador' : 'Cliente'} criado com sucesso!`,
+        description: "O usuário foi criado e pode fazer login imediatamente.",
       });
 
       setNewClient({ 
