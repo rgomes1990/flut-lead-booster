@@ -85,10 +85,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       console.log('Signout completed, redirecting...');
       
-      // Pequeno delay para garantir que tudo foi limpo
-      setTimeout(() => {
-        window.location.replace('/auth');
-      }, 100);
+      // Usar history.pushState para navegar sem reload
+      window.history.pushState({}, '', '/auth');
+      
+      // Disparar evento popstate para que o React Router detecte a mudança
+      window.dispatchEvent(new PopStateEvent('popstate'));
       
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
@@ -98,7 +99,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(null);
       setSession(null);
       setUserProfile(null);
-      window.location.replace('/auth');
+      window.history.pushState({}, '', '/auth');
+      window.dispatchEvent(new PopStateEvent('popstate'));
     }
   };
 
