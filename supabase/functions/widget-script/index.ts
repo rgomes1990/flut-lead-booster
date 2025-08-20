@@ -450,6 +450,9 @@ Deno.serve(async (req) => {
           value = value.slice(0, 11);
           e.target.value = '(' + value.slice(0, 2) + ') ' + value.slice(2, 7) + '-' + value.slice(7);
         }
+        
+        // Validação dinâmica do telefone
+        validatePhoneField();
       });
       
       phoneInput.addEventListener('keydown', function(e) {
@@ -466,6 +469,11 @@ Deno.serve(async (req) => {
         if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
           e.preventDefault();
         }
+      });
+      
+      // Validação no blur também
+      phoneInput.addEventListener('blur', function(e) {
+        validatePhoneField();
       });
     }
     
@@ -575,6 +583,39 @@ Deno.serve(async (req) => {
     }
     
     return { origin, campaign };
+  }
+
+  // Função para validação dinâmica do telefone
+  function validatePhoneField() {
+    const phoneEl = document.getElementById('flut-phone');
+    const phoneError = document.getElementById('flut-phone-error');
+    
+    if (!phoneEl || !phoneError) return;
+    
+    const phoneValue = phoneEl.value.trim();
+    
+    if (phoneValue === '') {
+      // Campo vazio - limpar erros
+      phoneError.style.display = 'none';
+      phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
+      phoneEl.style.border = 'none !important';
+      return;
+    }
+    
+    const phoneNumbers = phoneValue.replace(/[^\d]/g, '');
+    
+    if (phoneNumbers.length < 10 || phoneNumbers.length > 11) {
+      // Telefone inválido
+      phoneError.textContent = 'Telefone deve ter 8 ou 9 dígitos após o DDD';
+      phoneError.style.display = 'block';
+      phoneEl.style.boxShadow = 'inset 0 2px 8px rgba(220, 53, 69, 0.2) !important';
+      phoneEl.style.border = '1px solid #dc3545 !important';
+    } else {
+      // Telefone válido - limpar erros
+      phoneError.style.display = 'none';
+      phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
+      phoneEl.style.border = 'none !important';
+    }
   }
 
   async function submitForm(e) {
