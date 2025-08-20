@@ -21,7 +21,8 @@ const Admin = () => {
     email: "", 
     password: "", 
     confirmPassword: "", 
-    website_url: "", 
+    website_url: "",
+    whatsapp: "",
     user_type: "client" as "admin" | "client" 
   });
   const [editingClient, setEditingClient] = useState<any>(null);
@@ -170,7 +171,8 @@ const Admin = () => {
         email: "", 
         password: "", 
         confirmPassword: "", 
-        website_url: "", 
+        website_url: "",
+        whatsapp: "",
         user_type: "client" 
       });
       setDialogOpen(false);
@@ -385,15 +387,26 @@ const Admin = () => {
                   </Select>
                 </div>
                 {newClient.user_type === "client" && (
-                  <div>
-                    <Label htmlFor="website">Site (opcional)</Label>
-                    <Input
-                      id="website"
-                      value={newClient.website_url}
-                      onChange={(e) => setNewClient({ ...newClient, website_url: e.target.value })}
-                      placeholder="https://exemplo.com"
-                    />
-                  </div>
+                  <>
+                    <div>
+                      <Label htmlFor="website">Site (opcional)</Label>
+                      <Input
+                        id="website"
+                        value={newClient.website_url}
+                        onChange={(e) => setNewClient({ ...newClient, website_url: e.target.value })}
+                        placeholder="https://exemplo.com"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="whatsapp">WhatsApp (opcional)</Label>
+                      <Input
+                        id="whatsapp"
+                        value={newClient.whatsapp}
+                        onChange={(e) => setNewClient({ ...newClient, whatsapp: e.target.value })}
+                        placeholder="(11) 99999-9999"
+                      />
+                    </div>
+                  </>
                 )}
                 <Button onClick={createClient} className="w-full">
                   Criar {newClient.user_type === 'admin' ? 'Administrador' : 'Cliente'}
