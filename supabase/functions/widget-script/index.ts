@@ -451,8 +451,8 @@ Deno.serve(async (req) => {
           e.target.value = '(' + value.slice(0, 2) + ') ' + value.slice(2, 7) + '-' + value.slice(7);
         }
         
-        // Validação dinâmica do telefone após a formatação
-        setTimeout(() => validatePhoneField(), 0);
+        // Validação dinâmica do telefone
+        validatePhoneField();
       });
       
       phoneInput.addEventListener('keydown', function(e) {
@@ -593,30 +593,19 @@ Deno.serve(async (req) => {
     if (!phoneEl || !phoneError) return;
     
     const phoneValue = phoneEl.value.trim();
-    
-    if (phoneValue === '') {
-      // Campo vazio - limpar erros
-      phoneError.style.display = 'none';
-      phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
-      phoneEl.style.border = 'none !important';
-      return;
-    }
-    
     const phoneNumbers = phoneValue.replace(/[^\d]/g, '');
-    console.log('Validando telefone:', phoneValue, 'Números:', phoneNumbers, 'Length:', phoneNumbers.length);
     
-    if (phoneNumbers.length < 10 || phoneNumbers.length > 11) {
-      // Telefone inválido
+    // Limpar erros primeiro
+    phoneError.style.display = 'none';
+    phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
+    phoneEl.style.border = 'none !important';
+    
+    // Se campo não está vazio, validar
+    if (phoneValue !== '' && (phoneNumbers.length < 10 || phoneNumbers.length > 11)) {
       phoneError.textContent = 'Telefone deve ter 8 ou 9 dígitos após o DDD';
       phoneError.style.display = 'block';
       phoneEl.style.boxShadow = 'inset 0 2px 8px rgba(220, 53, 69, 0.2) !important';
       phoneEl.style.border = '1px solid #dc3545 !important';
-    } else {
-      // Telefone válido - limpar erros
-      console.log('Telefone válido, limpando erros');
-      phoneError.style.display = 'none';
-      phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
-      phoneEl.style.border = 'none !important';
     }
   }
 
@@ -646,9 +635,14 @@ Deno.serve(async (req) => {
       campaign: campaign
     };
 
-    // Verificar se há erro de validação visível - se sim, não enviar
+    // Verificar se há erro de validação visível no telefone
     if (phoneError && phoneError.style.display === 'block') {
-      return;
+      // Se há erro visível, executar validação novamente para ter certeza
+      validatePhoneField();
+      // Se ainda há erro depois da validação, não enviar
+      if (phoneError.style.display === 'block') {
+        return;
+      }
     }
 
     // Validar se pelo menos um campo obrigatório foi preenchido
