@@ -451,8 +451,8 @@ Deno.serve(async (req) => {
           e.target.value = '(' + value.slice(0, 2) + ') ' + value.slice(2, 7) + '-' + value.slice(7);
         }
         
-        // Validação dinâmica do telefone
-        validatePhoneField();
+        // Validação dinâmica do telefone após a formatação
+        setTimeout(() => validatePhoneField(), 0);
       });
       
       phoneInput.addEventListener('keydown', function(e) {
@@ -603,6 +603,7 @@ Deno.serve(async (req) => {
     }
     
     const phoneNumbers = phoneValue.replace(/[^\d]/g, '');
+    console.log('Validando telefone:', phoneValue, 'Números:', phoneNumbers, 'Length:', phoneNumbers.length);
     
     if (phoneNumbers.length < 10 || phoneNumbers.length > 11) {
       // Telefone inválido
@@ -612,6 +613,7 @@ Deno.serve(async (req) => {
       phoneEl.style.border = '1px solid #dc3545 !important';
     } else {
       // Telefone válido - limpar erros
+      console.log('Telefone válido, limpando erros');
       phoneError.style.display = 'none';
       phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
       phoneEl.style.border = 'none !important';
