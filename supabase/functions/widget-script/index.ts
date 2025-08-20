@@ -282,25 +282,25 @@ Deno.serve(async (req) => {
             </div>
             
             <form id="flut-form" style="display: flex; flex-direction: column; gap: 15px;">
-               \${SITE_CONFIG.field_phone !== false ? \`
-                <input type="tel" id="flut-phone" \${SITE_CONFIG.field_phone === true ? 'required' : ''} placeholder="DDD + Celular" style="
-                 all: unset !important;
-                 padding: 15px 20px !important;
-                 border: none !important;
-                 border-radius: 25px !important;
-                 background: white !important;
-                 color: #333 !important;
-                 font-size: 14px !important;
-                 box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
-                 outline: none !important;
-                 transition: box-shadow 0.2s !important;
-                 width: 100% !important;
-                 box-sizing: border-box !important;
-                 display: block !important;
-                 margin: 0 auto !important;
-                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-               " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">
-              \` : ''}
+                \${SITE_CONFIG.field_phone !== false ? \`
+                 <input type="tel" id="flut-phone" \${SITE_CONFIG.field_phone === true ? 'required' : ''} placeholder="(11) 97062-0020" maxlength="15" style="
+                  all: unset !important;
+                  padding: 15px 20px !important;
+                  border: none !important;
+                  border-radius: 25px !important;
+                  background: white !important;
+                  color: #333 !important;
+                  font-size: 14px !important;
+                  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
+                  outline: none !important;
+                  transition: box-shadow 0.2s !important;
+                  width: 100% !important;
+                  box-sizing: border-box !important;
+                  display: block !important;
+                  margin: 0 auto !important;
+                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+                " onfocus="this.style.boxShadow='inset 0 2px 8px rgba(37,211,102,0.2) !important'" onblur="this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.1) !important'">
+               \` : ''}
               
                \${SITE_CONFIG.field_email !== false ? \`
                 <input type="email" id="flut-email" \${SITE_CONFIG.field_email === true ? 'required' : ''} placeholder="E-mail" style="
@@ -421,6 +421,44 @@ Deno.serve(async (req) => {
     // Event listeners
     document.getElementById('flut-close').addEventListener('click', hideModal);
     document.getElementById('flut-form').addEventListener('submit', submitForm);
+    
+    // Adicionar máscara de telefone se o campo existe
+    const phoneInput = document.getElementById('flut-phone');
+    if (phoneInput) {
+      phoneInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        
+        if (value.length <= 2) {
+          e.target.value = value;
+        } else if (value.length <= 7) {
+          e.target.value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+        } else if (value.length <= 10) {
+          e.target.value = `(${value.slice(0, 2)}) ${value.slice(2, 6)}-${value.slice(6)}`;
+        } else if (value.length === 11) {
+          e.target.value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+        } else {
+          // Limitar a 11 dígitos
+          value = value.slice(0, 11);
+          e.target.value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+        }
+      });
+      
+      phoneInput.addEventListener('keydown', function(e) {
+        // Permitir: backspace, delete, tab, escape, enter
+        if ([8, 9, 27, 13, 46].indexOf(e.keyCode) !== -1 ||
+            // Permitir: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+            (e.keyCode === 65 && e.ctrlKey === true) ||
+            (e.keyCode === 67 && e.ctrlKey === true) ||
+            (e.keyCode === 86 && e.ctrlKey === true) ||
+            (e.keyCode === 88 && e.ctrlKey === true)) {
+          return;
+        }
+        // Garantir que é um número
+        if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+          e.preventDefault();
+        }
+      });
+    }
     
     // Fechar modal ao clicar fora
     modal.addEventListener('click', (e) => {
