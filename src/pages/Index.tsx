@@ -9,7 +9,8 @@ const Index = () => {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        navigate("/");
+        // Redireciona para dashboard ou admin baseado no tipo de usuário
+        navigate("/dashboard");
       } else {
         navigate("/auth");
       }
