@@ -595,26 +595,29 @@ Deno.serve(async (req) => {
     const phoneValue = phoneEl.value.trim();
     const phoneNumbers = phoneValue.replace(/[^\d]/g, '');
     
-    // Limpar erros primeiro
-    phoneError.style.display = 'none';
-    phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
-    phoneEl.style.border = 'none !important';
-    
-    // Se campo está vazio, não validar (campo opcional pode estar vazio)
+    // Se campo está vazio, limpar erros e aceitar (campo opcional)
     if (phoneValue === '') {
+      phoneError.style.display = 'none';
+      phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
+      phoneEl.style.border = 'none !important';
       return true;
     }
     
-    // Se campo não está vazio, validar se tem 10 ou 11 dígitos
-    if (phoneNumbers.length < 10 || phoneNumbers.length > 11) {
+    // Se campo tem conteúdo, validar se tem 10 ou 11 dígitos
+    if (phoneNumbers.length >= 10 && phoneNumbers.length <= 11) {
+      // Telefone válido - limpar erros
+      phoneError.style.display = 'none';
+      phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
+      phoneEl.style.border = 'none !important';
+      return true;
+    } else {
+      // Telefone inválido - mostrar erro
       phoneError.textContent = 'Telefone deve ter 8 ou 9 dígitos após o DDD';
       phoneError.style.display = 'block';
       phoneEl.style.boxShadow = 'inset 0 2px 8px rgba(220, 53, 69, 0.2) !important';
       phoneEl.style.border = '1px solid #dc3545 !important';
       return false;
     }
-    
-    return true;
   }
 
   async function submitForm(e) {
