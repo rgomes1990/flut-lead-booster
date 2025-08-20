@@ -10,14 +10,16 @@ const Index = () => {
   useEffect(() => {
     if (!loading) {
       if (user && userProfile) {
-        console.log('Redirecting based on user type:', userProfile.user_type);
+        console.log('User authenticated. Type:', userProfile.user_type);
+        
         // Redireciona baseado no tipo de usuário
         if (userProfile.user_type === 'admin') {
           navigate("/admin", { replace: true });
-        } else {
+        } else if (userProfile.user_type === 'client') {
           navigate("/dashboard", { replace: true });
         }
       } else if (!user) {
+        console.log('User not authenticated, redirecting to auth');
         navigate("/auth", { replace: true });
       }
     }
@@ -34,7 +36,15 @@ const Index = () => {
     );
   }
 
-  return null;
+  // Exibe uma tela de carregamento enquanto processa o redirecionamento
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center">
+        <h1 className="text-2xl font-semibold mb-2">FLUT</h1>
+        <p className="text-muted-foreground">Redirecionando...</p>
+      </div>
+    </div>
+  );
 };
 
 export default Index;

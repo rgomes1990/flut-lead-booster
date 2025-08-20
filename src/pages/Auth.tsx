@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FlutLogo } from "@/components/FlutLogo";
+import { { FlutLogo } from "@/components/FlutLogo";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
@@ -37,8 +37,6 @@ const Auth = () => {
           title: "Login realizado com sucesso!",
           description: "Bem-vindo de volta!",
         });
-        
-        // Não redireciona automaticamente - deixa o AuthProvider e ProtectedRoute cuidarem disso
       }
     } catch (error: any) {
       console.error("Erro no login:", error);
@@ -60,9 +58,10 @@ const Auth = () => {
       if (!name || !email || !password || !website) {
         toast({
           title: "Erro",
-          description: "Todos os campos são obrigatórios",
+          description: "Todos os campos obrigatórios devem ser preenchidos",
           variant: "destructive",
         });
+        setLoading(false);
         return;
       }
 
@@ -79,13 +78,17 @@ const Auth = () => {
           description: "Por favor, insira um domínio válido (ex: exemplo.com)",
           variant: "destructive",
         });
+        setLoading(false);
         return;
       }
+
+      const redirectUrl = `${window.location.origin}/`;
 
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: redirectUrl,
           data: {
             name,
             website: domain,
@@ -97,9 +100,11 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
-        // Aguardar um pouco para o perfil ser criado pelo trigger
+        // Aguardar um pouco para garantir que o perfil seja criado pelo trigger
         setTimeout(async () => {
           try {
+            console.log("Criando site para o usuário:", data.user.id);
+            
             // Criar o site automaticamente
             const { data: siteData, error: siteError } = await supabase
               .from("sites")
@@ -113,6 +118,8 @@ const Auth = () => {
             if (siteError) {
               console.error("Erro ao criar site:", siteError);
             } else if (siteData) {
+              console.log("Site criado:", siteData);
+              
               // Criar configurações do site automaticamente
               const { error: configError } = await supabase
                 .from("site_configs")
@@ -126,6 +133,8 @@ const Auth = () => {
 
               if (configError) {
                 console.error("Erro ao criar configurações do site:", configError);
+              } else {
+                console.log("Configurações do site criadas com sucesso");
               }
             }
           } catch (error) {
@@ -135,7 +144,7 @@ const Auth = () => {
 
         toast({
           title: "Cadastro realizado com sucesso!",
-          description: "Verifique seu email para confirmar a conta.",
+          description: "Verifique seu email para confirmar a conta. O site e configurações foram criados automaticamente.",
         });
       }
     } catch (error: any) {
@@ -200,27 +209,29 @@ const Auth = () => {
             <TabsContent value="register">
               <form onSubmit={handleRegister} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="register-name">Nome</Label>
+                  <Label htmlFor="register-name">Nome *</Label>
                   <Input
                     id="register-name"
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    placeholder="Seu nome completo"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="register-email">Email</Label>
+                  <Label htmlFor="register-email">Email *</Label>
                   <Input
                     id="register-email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    placeholder="seu@email.com"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="register-website">Site/Domínio</Label>
+                  <Label htmlFor="register-website">Site/Domínio *</Label>
                   <Input
                     id="register-website"
                     type="text"
@@ -231,7 +242,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="register-whatsapp">WhatsApp (opcional)</Label>
+                  <Label htmlFor="register-whatsapp">WhatsApp</Label>
                   <Input
                     id="register-whatsapp"
                     type="tel"
@@ -239,20 +250,28 @@ const Auth = () => {
                     onChange={(e) => setWhatsapp(e.target.value)}
                     placeholder="(11) 99999-9999"
                   />
+                  <p className="text-sm text-muted-foreground">
+                    Opcional - será usado como contato padrão no site
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="register-password">Senha</Label>
+                  <Label htmlFor="register-password">Senha *</Label>
                   <Input
                     id="register-password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
                     required
+                    minLength={6}
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Cadastrando..." : "Cadastrar"}
                 </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  * Campos obrigatórios
+                </p>
               </form>
             </TabsContent>
           </Tabs>
