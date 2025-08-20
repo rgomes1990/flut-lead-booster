@@ -590,7 +590,7 @@ Deno.serve(async (req) => {
     const phoneEl = document.getElementById('flut-phone');
     const phoneError = document.getElementById('flut-phone-error');
     
-    if (!phoneEl || !phoneError) return;
+    if (!phoneEl || !phoneError) return false;
     
     const phoneValue = phoneEl.value.trim();
     const phoneNumbers = phoneValue.replace(/[^\d]/g, '');
@@ -600,13 +600,21 @@ Deno.serve(async (req) => {
     phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
     phoneEl.style.border = 'none !important';
     
-    // Se campo não está vazio, validar
-    if (phoneValue !== '' && (phoneNumbers.length < 10 || phoneNumbers.length > 11)) {
+    // Se campo está vazio, não validar (campo opcional pode estar vazio)
+    if (phoneValue === '') {
+      return true;
+    }
+    
+    // Se campo não está vazio, validar se tem 10 ou 11 dígitos
+    if (phoneNumbers.length < 10 || phoneNumbers.length > 11) {
       phoneError.textContent = 'Telefone deve ter 8 ou 9 dígitos após o DDD';
       phoneError.style.display = 'block';
       phoneEl.style.boxShadow = 'inset 0 2px 8px rgba(220, 53, 69, 0.2) !important';
       phoneEl.style.border = '1px solid #dc3545 !important';
+      return false;
     }
+    
+    return true;
   }
 
   async function submitForm(e) {
@@ -635,13 +643,11 @@ Deno.serve(async (req) => {
       campaign: campaign
     };
 
-    // Verificar se há erro de validação visível no telefone
-    if (phoneError && phoneError.style.display === 'block') {
-      // Se há erro visível, executar validação novamente para ter certeza
-      validatePhoneField();
-      // Se ainda há erro depois da validação, não enviar
-      if (phoneError.style.display === 'block') {
-        return;
+    // Validar telefone antes do envio se campo existe
+    if (phoneEl && phoneEl.value.trim() !== '') {
+      const isPhoneValid = validatePhoneField();
+      if (!isPhoneValid) {
+        return; // Parar envio se telefone inválido
       }
     }
 
