@@ -590,28 +590,38 @@ Deno.serve(async (req) => {
     const phoneEl = document.getElementById('flut-phone');
     const phoneError = document.getElementById('flut-phone-error');
     
-    if (!phoneEl || !phoneError) return false;
+    console.log('validatePhoneField called');
+    
+    if (!phoneEl || !phoneError) {
+      console.log('Phone element or error element not found');
+      return false;
+    }
     
     const phoneValue = phoneEl.value.trim();
     const phoneNumbers = phoneValue.replace(/[^\d]/g, '');
     
+    console.log('Phone value:', phoneValue, 'Digits only:', phoneNumbers, 'Length:', phoneNumbers.length);
+    
     // Se campo está vazio, limpar erros e aceitar (campo opcional)
     if (phoneValue === '') {
+      console.log('Phone field is empty, clearing errors');
       phoneError.style.display = 'none';
-      phoneEl.style.setProperty('box-shadow', 'inset 0 2px 4px rgba(0,0,0,0.1)', 'important');
-      phoneEl.style.setProperty('border', 'none', 'important');
+      phoneEl.style.removeProperty('box-shadow');
+      phoneEl.style.removeProperty('border');
       return true;
     }
     
     // Se campo tem conteúdo, validar se tem 10 ou 11 dígitos
     if (phoneNumbers.length >= 10 && phoneNumbers.length <= 11) {
       // Telefone válido - limpar erros
+      console.log('Phone is valid, clearing errors');
       phoneError.style.display = 'none';
-      phoneEl.style.setProperty('box-shadow', 'inset 0 2px 4px rgba(0,0,0,0.1)', 'important');
-      phoneEl.style.setProperty('border', 'none', 'important');
+      phoneEl.style.removeProperty('box-shadow');
+      phoneEl.style.removeProperty('border');
       return true;
     } else {
       // Telefone inválido - mostrar erro
+      console.log('Phone is invalid, showing error');
       phoneError.textContent = 'Telefone deve ter 8 ou 9 dígitos após o DDD';
       phoneError.style.display = 'block';
       phoneEl.style.setProperty('box-shadow', 'inset 0 2px 8px rgba(220, 53, 69, 0.2)', 'important');
