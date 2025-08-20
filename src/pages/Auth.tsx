@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,20 +9,34 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { FlutLogo } from "@/components/FlutLogo";
+import { useAuth } from "@/hooks/useAuth";
 
 const Auth = () => {
+  const { user, userProfile, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [website, setWebsite] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Redirecionar automaticamente se usuário já estiver logado
+  useEffect(() => {
+    if (!loading && user && userProfile) {
+      console.log('Usuário logado detectado, redirecionando...', userProfile.user_type);
+      if (userProfile.user_type === 'admin') {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [user, userProfile, loading, navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setLoginLoading(true);
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -37,6 +51,7 @@ const Auth = () => {
           title: "Login realizado com sucesso!",
           description: "Bem-vindo de volta!",
         });
+        // O redirecionamento será feito pelo useEffect quando o userProfile for carregado
       }
     } catch (error: any) {
       console.error("Erro no login:", error);
@@ -46,13 +61,13 @@ const Auth = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setLoginLoading(false);
     }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setLoginLoading(true);
 
     try {
       if (!name || !email || !password || !website) {
@@ -61,7 +76,7 @@ const Auth = () => {
           description: "Todos os campos obrigatórios devem ser preenchidos",
           variant: "destructive",
         });
-        setLoading(false);
+        setLoginLoading(false);
         return;
       }
 
@@ -78,7 +93,7 @@ const Auth = () => {
           description: "Por favor, insira um domínio válido (ex: exemplo.com)",
           variant: "destructive",
         });
-        setLoading(false);
+        setLoginLoading(false);
         return;
       }
 
@@ -155,7 +170,7 @@ const Auth = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setLoginLoading(false);
     }
   };
 
@@ -200,8 +215,8 @@ const Auth = () => {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Entrando..." : "Entrar"}
+                <Button type="submit" className="w-full" disabled={loginLoading}>
+                  {loginLoading ? "Entrando..." : "Entrar"}
                 </Button>
               </form>
             </TabsContent>
@@ -266,8 +281,8 @@ const Auth = () => {
                     minLength={6}
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Cadastrando..." : "Cadastrar"}
+                <Button type="submit" className="w-full" disabled={loginLoading}>
+                  {loginLoading ? "Cadastrando..." : "Cadastrar"}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
                   * Campos obrigatórios
