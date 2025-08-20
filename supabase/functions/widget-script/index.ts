@@ -602,29 +602,30 @@ Deno.serve(async (req) => {
       campaign: campaign
     };
 
-    // Limpar erros anteriores primeiro
-    const phoneError = document.getElementById('flut-phone-error');
-    if (phoneError) {
-      phoneError.style.display = 'none';
-    }
-    if (phoneEl) {
-      phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
-      phoneEl.style.border = 'none !important';
-    }
-
     // Validar telefone se preenchido
+    const phoneError = document.getElementById('flut-phone-error');
     if (leadData.phone && leadData.phone.trim() !== '') {
       const phoneNumbers = leadData.phone.replace(/[^\d]/g, '');
       if (phoneNumbers.length < 10 || phoneNumbers.length > 11) {
         if (phoneError) {
           phoneError.textContent = 'Telefone deve ter 8 ou 9 dígitos após o DDD';
           phoneError.style.display = 'block';
-          // Adicionar estilo de erro ao campo
+        }
+        if (phoneEl) {
           phoneEl.style.boxShadow = 'inset 0 2px 8px rgba(220, 53, 69, 0.2) !important';
           phoneEl.style.border = '1px solid #dc3545 !important';
         }
         return;
       }
+    }
+
+    // Limpar erros se chegou até aqui (validação passou)
+    if (phoneError) {
+      phoneError.style.display = 'none';
+    }
+    if (phoneEl) {
+      phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
+      phoneEl.style.border = 'none !important';
     }
 
     // Validar se pelo menos um campo obrigatório foi preenchido
