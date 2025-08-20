@@ -602,11 +602,20 @@ Deno.serve(async (req) => {
       campaign: campaign
     };
 
+    // Limpar erros anteriores primeiro
+    const phoneError = document.getElementById('flut-phone-error');
+    if (phoneError) {
+      phoneError.style.display = 'none';
+    }
+    if (phoneEl) {
+      phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
+      phoneEl.style.border = 'none !important';
+    }
+
     // Validar telefone se preenchido
-    if (leadData.phone) {
+    if (leadData.phone && leadData.phone.trim() !== '') {
       const phoneNumbers = leadData.phone.replace(/[^\d]/g, '');
       if (phoneNumbers.length < 10 || phoneNumbers.length > 11) {
-        const phoneError = document.getElementById('flut-phone-error');
         if (phoneError) {
           phoneError.textContent = 'Telefone deve ter 8 ou 9 dígitos após o DDD';
           phoneError.style.display = 'block';
@@ -615,14 +624,6 @@ Deno.serve(async (req) => {
           phoneEl.style.border = '1px solid #dc3545 !important';
         }
         return;
-      } else {
-        // Limpar erro se válido
-        const phoneError = document.getElementById('flut-phone-error');
-        if (phoneError) {
-          phoneError.style.display = 'none';
-          phoneEl.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1) !important';
-          phoneEl.style.border = 'none !important';
-        }
       }
     }
 
