@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext, useContext } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,11 +18,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
     // Configurar listener de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email);
+        
+        // Se estamos fazendo logout, não processar a sessão
+        if (isSigningOut) {
+          console.log('Ignoring auth change during signout');
+          return;
+        }
+
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -45,21 +55,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Verificar sessão existente
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+      if (!isSigningOut) {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isSigningOut]);
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
-      // Limpar estados locais explicitamente
+      console.log('Starting signout process');
+      setIsSigningOut(true);
+      
+      // Limpar estados locais primeiro
       setUser(null);
       setSession(null);
       setUserProfile(null);
+      
+      // Fazer logout no Supabase
+      await supabase.auth.signOut();
+      
+      // Aguardar um pouco para garantir que o logout foi processado
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      console.log('Signout completed, redirecting...');
+      
       // Redirecionar para a página de login
       window.location.href = '/auth';
     } catch (error) {
@@ -69,6 +92,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(null);
       setUserProfile(null);
       window.location.href = '/auth';
+    } finally {
+      setIsSigningOut(false);
     }
   };
 
