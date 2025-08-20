@@ -92,9 +92,9 @@ const Auth = () => {
             .single();
           
           if (profile?.user_type === 'admin') {
-            window.location.href = "/admin";
+            navigate("/admin");
           } else {
-            window.location.href = "/dashboard";
+            navigate("/dashboard");
           }
         }, 1500);
       }
