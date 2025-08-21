@@ -638,8 +638,7 @@ const LeadsCaptured = () => {
                 Excluir
               </AlertDialogAction>
             </AlertDialogFooter>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+          </AlertDialogContent>
         </AlertDialog>
       </div>
     </div>
