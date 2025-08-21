@@ -48,13 +48,13 @@ interface LeadsFiltersProps {
 
 const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) => {
   const [filters, setFilters] = useState({
+    client: "",
     dateFrom: "",
     dateTo: "",
     origin: "",
     campaign: "",
     adContent: "",
-    audience: "",
-    client: ""
+    audience: ""
   });
 
   const [clients, setClients] = useState<Client[]>([]);
@@ -104,6 +104,13 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
   const applyFilters = () => {
     let filtered = [...leads];
 
+    // Filtro por cliente (apenas para admin) - PRIMEIRO
+    if (filters.client && filters.client !== "all" && userType === 'admin') {
+      filtered = filtered.filter(lead => 
+        lead.client?.user_id === filters.client
+      );
+    }
+
     // Filtro por data
     if (filters.dateFrom) {
       const fromDate = new Date(filters.dateFrom);
@@ -144,36 +151,51 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
       );
     }
 
-    // Filtro por cliente (apenas para admin)
-    if (filters.client && filters.client !== "all" && userType === 'admin') {
-      filtered = filtered.filter(lead => 
-        lead.client?.user_id === filters.client
-      );
-    }
-
     setFilteredCount(filtered.length);
     onFilteredLeads(filtered);
   };
 
   const clearAllFilters = () => {
     setFilters({
+      client: "",
       dateFrom: "",
       dateTo: "",
       origin: "",
       campaign: "",
       adContent: "",
-      audience: "",
-      client: ""
+      audience: ""
     });
   };
 
   const hasActiveFilters = Object.values(filters).some(value => value !== "");
 
-  // Obter valores únicos para os selects
-  const uniqueOrigins = [...new Set(leads.map(lead => lead.origin).filter(Boolean))];
-  const uniqueCampaigns = [...new Set(leads.map(lead => lead.campaign).filter(Boolean))];
-  const uniqueAdContents = [...new Set(leads.map(lead => lead.ad_content).filter(Boolean))];
-  const uniqueAudiences = [...new Set(leads.map(lead => lead.audience).filter(Boolean))];
+  // Obter leads filtrados pelo cliente selecionado (para filtros subsequentes)
+  const getLeadsForCurrentClient = () => {
+    if (filters.client && filters.client !== "all" && userType === 'admin') {
+      return leads.filter(lead => lead.client?.user_id === filters.client);
+    }
+    return leads;
+  };
+
+  // Obter valores únicos baseados no cliente selecionado
+  const currentLeads = getLeadsForCurrentClient();
+  const uniqueOrigins = [...new Set(currentLeads.map(lead => lead.origin).filter(Boolean))];
+  const uniqueCampaigns = [...new Set(currentLeads.map(lead => lead.campaign).filter(Boolean))];
+  const uniqueAdContents = [...new Set(currentLeads.map(lead => lead.ad_content).filter(Boolean))];
+  const uniqueAudiences = [...new Set(currentLeads.map(lead => lead.audience).filter(Boolean))];
+
+  // Limpar filtros subsequentes quando cliente mudar
+  const handleClientChange = (value: string) => {
+    setFilters(prev => ({ 
+      ...prev, 
+      client: value === "all" ? "" : value,
+      // Limpar outros filtros quando cliente mudar
+      origin: "",
+      campaign: "",
+      adContent: "",
+      audience: ""
+    }));
+  };
 
   return (
     <div className="space-y-4">
@@ -214,6 +236,29 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
         <Card>
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {/* Filtro por Cliente (apenas para admin) - PRIMEIRO FILTRO */}
+              {userType === 'admin' && (
+                <div className="space-y-2">
+                  <Label htmlFor="client">Cliente</Label>
+                  <Select
+                    value={filters.client || "all"}
+                    onValueChange={handleClientChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos os clientes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os clientes</SelectItem>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.user_id}>
+                          {client.profile.name} ({client.profile.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {/* Filtro por Data */}
               <div className="space-y-2">
                 <Label htmlFor="dateFrom">Data Inicial</Label>
@@ -318,29 +363,6 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Filtro por Cliente (apenas para admin) */}
-              {userType === 'admin' && (
-                <div className="space-y-2">
-                  <Label htmlFor="client">Cliente</Label>
-                  <Select
-                    value={filters.client || "all"}
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, client: value === "all" ? "" : value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos os clientes" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os clientes</SelectItem>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.user_id}>
-                          {client.profile.name} ({client.profile.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
