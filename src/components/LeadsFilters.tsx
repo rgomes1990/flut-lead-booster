@@ -117,35 +117,35 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
     }
 
     // Filtro por origem
-    if (filters.origin) {
+    if (filters.origin && filters.origin !== "all") {
       filtered = filtered.filter(lead => 
         lead.origin?.toLowerCase().includes(filters.origin.toLowerCase())
       );
     }
 
     // Filtro por campanha
-    if (filters.campaign) {
+    if (filters.campaign && filters.campaign !== "all") {
       filtered = filtered.filter(lead => 
         lead.campaign?.toLowerCase().includes(filters.campaign.toLowerCase())
       );
     }
 
     // Filtro por anúncio
-    if (filters.adContent) {
+    if (filters.adContent && filters.adContent !== "all") {
       filtered = filtered.filter(lead => 
         lead.ad_content?.toLowerCase().includes(filters.adContent.toLowerCase())
       );
     }
 
     // Filtro por público
-    if (filters.audience) {
+    if (filters.audience && filters.audience !== "all") {
       filtered = filtered.filter(lead => 
         lead.audience?.toLowerCase().includes(filters.audience.toLowerCase())
       );
     }
 
     // Filtro por cliente (apenas para admin)
-    if (filters.client && userType === 'admin') {
+    if (filters.client && filters.client !== "all" && userType === 'admin') {
       filtered = filtered.filter(lead => 
         lead.client?.user_id === filters.client
       );
@@ -239,14 +239,14 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
               <div className="space-y-2">
                 <Label htmlFor="origin">Origem</Label>
                 <Select
-                  value={filters.origin}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, origin: value }))}
+                  value={filters.origin || "all"}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, origin: value === "all" ? "" : value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todas as origens" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as origens</SelectItem>
+                    <SelectItem value="all">Todas as origens</SelectItem>
                     {uniqueOrigins.map((origin) => (
                       <SelectItem key={origin} value={origin}>
                         {origin}
@@ -260,14 +260,14 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
               <div className="space-y-2">
                 <Label htmlFor="campaign">Campanha</Label>
                 <Select
-                  value={filters.campaign}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, campaign: value }))}
+                  value={filters.campaign || "all"}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, campaign: value === "all" ? "" : value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todas as campanhas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as campanhas</SelectItem>
+                    <SelectItem value="all">Todas as campanhas</SelectItem>
                     {uniqueCampaigns.map((campaign) => (
                       <SelectItem key={campaign} value={campaign}>
                         {campaign}
@@ -281,14 +281,14 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
               <div className="space-y-2">
                 <Label htmlFor="adContent">Anúncio</Label>
                 <Select
-                  value={filters.adContent}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, adContent: value }))}
+                  value={filters.adContent || "all"}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, adContent: value === "all" ? "" : value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todos os anúncios" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os anúncios</SelectItem>
+                    <SelectItem value="all">Todos os anúncios</SelectItem>
                     {uniqueAdContents.map((adContent) => (
                       <SelectItem key={adContent} value={adContent}>
                         {adContent}
@@ -302,14 +302,14 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
               <div className="space-y-2">
                 <Label htmlFor="audience">Público</Label>
                 <Select
-                  value={filters.audience}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, audience: value }))}
+                  value={filters.audience || "all"}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, audience: value === "all" ? "" : value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todos os públicos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os públicos</SelectItem>
+                    <SelectItem value="all">Todos os públicos</SelectItem>
                     {uniqueAudiences.map((audience) => (
                       <SelectItem key={audience} value={audience}>
                         {audience}
@@ -324,14 +324,14 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
                 <div className="space-y-2">
                   <Label htmlFor="client">Cliente</Label>
                   <Select
-                    value={filters.client}
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, client: value }))}
+                    value={filters.client || "all"}
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, client: value === "all" ? "" : value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Todos os clientes" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todos os clientes</SelectItem>
+                      <SelectItem value="all">Todos os clientes</SelectItem>
                       {clients.map((client) => (
                         <SelectItem key={client.id} value={client.user_id}>
                           {client.profile.name} ({client.profile.email})
