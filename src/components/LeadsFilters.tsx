@@ -1,0 +1,352 @@
+
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { X, Filter } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Lead {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+  website_url: string;
+  status: string;
+  created_at: string;
+  campaign: string;
+  ad_content: string;
+  audience: string;
+  origin: string;
+  client: {
+    user_id: string;
+    website_url: string;
+  };
+  profile: {
+    name: string;
+    email: string;
+  };
+}
+
+interface Client {
+  id: string;
+  user_id: string;
+  profile: {
+    name: string;
+    email: string;
+  };
+}
+
+interface LeadsFiltersProps {
+  leads: Lead[];
+  onFilteredLeads: (filteredLeads: Lead[]) => void;
+  userType: string;
+}
+
+const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) => {
+  const [filters, setFilters] = useState({
+    dateFrom: "",
+    dateTo: "",
+    origin: "",
+    campaign: "",
+    adContent: "",
+    audience: "",
+    client: ""
+  });
+
+  const [clients, setClients] = useState<Client[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filteredCount, setFilteredCount] = useState(leads.length);
+
+  // Carregar clientes se for admin
+  useEffect(() => {
+    if (userType === 'admin') {
+      loadClients();
+    }
+  }, [userType]);
+
+  const loadClients = async () => {
+    try {
+      const { data: clientsData, error } = await supabase
+        .from("clients")
+        .select(`
+          id,
+          user_id,
+          profiles!inner(name, email)
+        `)
+        .order("profiles.name");
+
+      if (error) throw error;
+
+      const transformedClients = clientsData?.map((client: any) => ({
+        id: client.id,
+        user_id: client.user_id,
+        profile: {
+          name: client.profiles?.name || 'N/A',
+          email: client.profiles?.email || 'N/A'
+        }
+      })) || [];
+
+      setClients(transformedClients);
+    } catch (error) {
+      console.error("Erro ao carregar clientes:", error);
+    }
+  };
+
+  // Aplicar filtros sempre que os filtros ou leads mudarem
+  useEffect(() => {
+    applyFilters();
+  }, [filters, leads]);
+
+  const applyFilters = () => {
+    let filtered = [...leads];
+
+    // Filtro por data
+    if (filters.dateFrom) {
+      const fromDate = new Date(filters.dateFrom);
+      filtered = filtered.filter(lead => new Date(lead.created_at) >= fromDate);
+    }
+
+    if (filters.dateTo) {
+      const toDate = new Date(filters.dateTo);
+      toDate.setHours(23, 59, 59, 999); // Incluir todo o dia
+      filtered = filtered.filter(lead => new Date(lead.created_at) <= toDate);
+    }
+
+    // Filtro por origem
+    if (filters.origin) {
+      filtered = filtered.filter(lead => 
+        lead.origin?.toLowerCase().includes(filters.origin.toLowerCase())
+      );
+    }
+
+    // Filtro por campanha
+    if (filters.campaign) {
+      filtered = filtered.filter(lead => 
+        lead.campaign?.toLowerCase().includes(filters.campaign.toLowerCase())
+      );
+    }
+
+    // Filtro por anúncio
+    if (filters.adContent) {
+      filtered = filtered.filter(lead => 
+        lead.ad_content?.toLowerCase().includes(filters.adContent.toLowerCase())
+      );
+    }
+
+    // Filtro por público
+    if (filters.audience) {
+      filtered = filtered.filter(lead => 
+        lead.audience?.toLowerCase().includes(filters.audience.toLowerCase())
+      );
+    }
+
+    // Filtro por cliente (apenas para admin)
+    if (filters.client && userType === 'admin') {
+      filtered = filtered.filter(lead => 
+        lead.client?.user_id === filters.client
+      );
+    }
+
+    setFilteredCount(filtered.length);
+    onFilteredLeads(filtered);
+  };
+
+  const clearAllFilters = () => {
+    setFilters({
+      dateFrom: "",
+      dateTo: "",
+      origin: "",
+      campaign: "",
+      adContent: "",
+      audience: "",
+      client: ""
+    });
+  };
+
+  const hasActiveFilters = Object.values(filters).some(value => value !== "");
+
+  // Obter valores únicos para os selects
+  const uniqueOrigins = [...new Set(leads.map(lead => lead.origin).filter(Boolean))];
+  const uniqueCampaigns = [...new Set(leads.map(lead => lead.campaign).filter(Boolean))];
+  const uniqueAdContents = [...new Set(leads.map(lead => lead.ad_content).filter(Boolean))];
+  const uniqueAudiences = [...new Set(leads.map(lead => lead.audience).filter(Boolean))];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <Button
+          variant="outline"
+          onClick={() => setShowFilters(!showFilters)}
+          className="flex items-center gap-2"
+        >
+          <Filter className="h-4 w-4" />
+          Filtros
+          {hasActiveFilters && (
+            <span className="bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs">
+              Ativo
+            </span>
+          )}
+        </Button>
+
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium">
+            Total de leads: <span className="text-primary">{filteredCount}</span>
+          </span>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearAllFilters}
+              className="flex items-center gap-1"
+            >
+              <X className="h-4 w-4" />
+              Limpar Filtros
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {showFilters && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {/* Filtro por Data */}
+              <div className="space-y-2">
+                <Label htmlFor="dateFrom">Data Inicial</Label>
+                <Input
+                  id="dateFrom"
+                  type="date"
+                  value={filters.dateFrom}
+                  onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dateTo">Data Final</Label>
+                <Input
+                  id="dateTo"
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                />
+              </div>
+
+              {/* Filtro por Origem */}
+              <div className="space-y-2">
+                <Label htmlFor="origin">Origem</Label>
+                <Select
+                  value={filters.origin}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, origin: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas as origens" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todas as origens</SelectItem>
+                    {uniqueOrigins.map((origin) => (
+                      <SelectItem key={origin} value={origin}>
+                        {origin}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtro por Campanha */}
+              <div className="space-y-2">
+                <Label htmlFor="campaign">Campanha</Label>
+                <Select
+                  value={filters.campaign}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, campaign: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas as campanhas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todas as campanhas</SelectItem>
+                    {uniqueCampaigns.map((campaign) => (
+                      <SelectItem key={campaign} value={campaign}>
+                        {campaign}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtro por Anúncio */}
+              <div className="space-y-2">
+                <Label htmlFor="adContent">Anúncio</Label>
+                <Select
+                  value={filters.adContent}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, adContent: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os anúncios" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todos os anúncios</SelectItem>
+                    {uniqueAdContents.map((adContent) => (
+                      <SelectItem key={adContent} value={adContent}>
+                        {adContent}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtro por Público */}
+              <div className="space-y-2">
+                <Label htmlFor="audience">Público</Label>
+                <Select
+                  value={filters.audience}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, audience: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os públicos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todos os públicos</SelectItem>
+                    {uniqueAudiences.map((audience) => (
+                      <SelectItem key={audience} value={audience}>
+                        {audience}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtro por Cliente (apenas para admin) */}
+              {userType === 'admin' && (
+                <div className="space-y-2">
+                  <Label htmlFor="client">Cliente</Label>
+                  <Select
+                    value={filters.client}
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, client: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos os clientes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Todos os clientes</SelectItem>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.user_id}>
+                          {client.profile.name} ({client.profile.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
+
+export default LeadsFilters;

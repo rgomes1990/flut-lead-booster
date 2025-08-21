@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import AdminNavigation from "@/components/AdminNavigation";
+import LeadsFilters from "@/components/LeadsFilters";
 import { extractUTMFromUrl, updateLeadWithUTMData } from "@/utils/utmExtractor";
 
 interface Lead {
@@ -55,7 +56,7 @@ const LeadsCaptured = () => {
   }, [userProfile]);
 
   useEffect(() => {
-    const filtered = leads.filter(lead =>
+    const filtered = filteredLeads.filter(lead =>
       lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.phone.includes(searchTerm) ||
@@ -63,7 +64,7 @@ const LeadsCaptured = () => {
       lead.profile?.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredLeads(filtered);
-  }, [searchTerm, leads]);
+  }, [searchTerm]);
 
   const loadLeads = async () => {
     try {
@@ -137,6 +138,7 @@ const LeadsCaptured = () => {
       }) || [];
 
       setLeads(transformedLeads);
+      setFilteredLeads(transformedLeads);
       
       // Atualizar leads existentes no banco com dados UTM se necessário
       await updateExistingLeadsWithUTM(transformedLeads);
@@ -357,6 +359,10 @@ const LeadsCaptured = () => {
     setLeadToDelete(null);
   };
 
+  const handleFilteredLeads = (filtered: Lead[]) => {
+    setFilteredLeads(filtered);
+  };
+
   if (!userProfile || (userProfile.user_type !== "admin" && userProfile.user_type !== "client")) {
     return (
       <div className="min-h-screen bg-background">
@@ -396,7 +402,14 @@ const LeadsCaptured = () => {
             </div>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-6">
+            {/* Componente de Filtros */}
+            <LeadsFilters
+              leads={leads}
+              onFilteredLeads={handleFilteredLeads}
+              userType={userProfile.user_type}
+            />
+
+            <div className="flex items-center justify-between mb-6 mt-6">
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
