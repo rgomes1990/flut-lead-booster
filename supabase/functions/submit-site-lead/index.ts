@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0'
 
 const corsHeaders = {
@@ -49,6 +50,35 @@ Deno.serve(async (req) => {
     const finalOrigin = detectedOrigin || 'Site Orgânico';
 
     console.log('Final origin assigned:', finalOrigin);
+
+    // Extrair dados UTM da URL
+    const extractUTMFromUrl = (url: string) => {
+      if (!url) return { campaign: null, content: null, medium: null };
+
+      try {
+        const urlObj = new URL(url);
+        const params = urlObj.searchParams;
+        
+        return {
+          campaign: params.get('utm_campaign') || null,
+          content: params.get('utm_content') || null,
+          medium: params.get('utm_medium') || null,
+        };
+      } catch {
+        // Se a URL for inválida, tentar extrair com regex
+        const campaignMatch = url.match(/[?&]utm_campaign=([^&]*)/);
+        const contentMatch = url.match(/[?&]utm_content=([^&]*)/);
+        const mediumMatch = url.match(/[?&]utm_medium=([^&]*)/);
+        
+        return {
+          campaign: campaignMatch ? decodeURIComponent(campaignMatch[1]) : null,
+          content: contentMatch ? decodeURIComponent(contentMatch[1]) : null,
+          medium: mediumMatch ? decodeURIComponent(mediumMatch[1]) : null,
+        };
+      }
+    };
+
+    const utmData = extractUTMFromUrl(website_url);
 
     // Validar campos obrigatórios
     if (!site_id) {
@@ -142,7 +172,7 @@ Deno.serve(async (req) => {
       .eq('site_id', site_id)
       .single();
 
-    // Inserir lead na tabela leads
+    // Inserir lead na tabela leads com dados UTM
     const { error: leadError } = await supabase
       .from('leads')
       .insert({
@@ -153,6 +183,9 @@ Deno.serve(async (req) => {
         message: message || '',
         website_url: website_url || '',
         origin: finalOrigin,
+        campaign: utmData.campaign || 'Não informado',
+        ad_content: utmData.content || 'Não informado',
+        audience: utmData.medium || 'Não informado',
         status: 'new'
       });
 
@@ -164,7 +197,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('Lead saved successfully with origin:', finalOrigin);
+    console.log('Lead saved successfully with origin:', finalOrigin, 'and UTM data:', utmData);
 
     // Preparar resposta com dados para redirecionamento do WhatsApp
     const whatsappPhone = siteConfig?.phone || '';

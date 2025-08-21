@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +11,7 @@ import { ChartContainer, ChartConfig, ChartTooltip, ChartTooltipContent } from "
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import AdminNavigation from "@/components/AdminNavigation";
 import DashboardStatsCards from "@/components/DashboardStatsCards";
+import { updateLeadWithUTMData } from "@/utils/utmExtractor";
 
 const Dashboard = () => {
   const { user, userProfile, signOut } = useAuth();
@@ -84,28 +84,31 @@ const Dashboard = () => {
         }
       }
 
+      // Processar leads com dados UTM
+      const processedLeads = allLeads.map(lead => updateLeadWithUTMData(lead));
+
       // Calcular estatísticas
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       
-      const leadsToday = allLeads.filter(lead => 
+      const leadsToday = processedLeads.filter(lead => 
         new Date(lead.created_at) >= today
       ).length;
       
-      const leadsThisMonth = allLeads.filter(lead => 
+      const leadsThisMonth = processedLeads.filter(lead => 
         new Date(lead.created_at) >= thisMonth
       ).length;
 
-      const readLeads = allLeads.filter(lead => lead.status === 'read').length;
-      const unreadLeads = allLeads.filter(lead => lead.status === 'new').length;
+      const readLeads = processedLeads.filter(lead => lead.status === 'read').length;
+      const unreadLeads = processedLeads.filter(lead => lead.status === 'new').length;
       
       const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
       const currentDay = now.getDate();
       const dailyAverage = currentDay > 0 ? Math.round(leadsThisMonth / currentDay * 10) / 10 : 0;
 
       setStats({
-        totalLeads: allLeads.length,
+        totalLeads: processedLeads.length,
         newLeads: unreadLeads,
         leadsToday,
         leadsThisMonth,
@@ -115,7 +118,7 @@ const Dashboard = () => {
       });
 
       // Calcular estatísticas por origem
-      const originCounts = allLeads.reduce((acc, lead) => {
+      const originCounts = processedLeads.reduce((acc, lead) => {
         const origin = lead.origin || 'Não informado';
         acc[origin] = (acc[origin] || 0) + 1;
         return acc;
@@ -124,7 +127,7 @@ const Dashboard = () => {
       setOriginStats(originCounts);
 
       console.log('Dashboard - Estatísticas calculadas:', {
-        totalLeads: allLeads.length,
+        totalLeads: processedLeads.length,
         newLeads: unreadLeads,
         leadsToday,
         leadsThisMonth,
@@ -133,7 +136,7 @@ const Dashboard = () => {
         dailyAverage,
         originStats: originCounts
       });
-      await prepareChartData(allLeads);
+      await prepareChartData(processedLeads);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     }
@@ -159,7 +162,7 @@ const Dashboard = () => {
       });
     }
 
-    // Gráfico 2: Histórico por mês (últimos 12 meses)
+    // Gráfico 2: Histórico mensal (últimos 12 meses)
     const monthlyHistoryData = [];
     for (let i = 11; i >= 0; i--) {
       const date = new Date();
@@ -334,7 +337,7 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Gráfico 3: Leads por site (apenas admin) */}
+        {/* Gráfico 3: Leads por site (apenas admin) - agora com gráfico de barras */}
         {userProfile?.user_type === 'admin' && chartData.leadsBySite.length > 0 && (
           <Card>
             <CardHeader>
