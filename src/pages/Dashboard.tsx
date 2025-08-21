@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ChartContainer, ChartConfig, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import AdminNavigation from "@/components/AdminNavigation";
+import DashboardStatsCards from "@/components/DashboardStatsCards";
 
 const Dashboard = () => {
   const { user, userProfile, signOut } = useAuth();
@@ -24,6 +26,7 @@ const Dashboard = () => {
     unreadLeads: 0,
     dailyAverage: 0
   });
+  const [originStats, setOriginStats] = useState<{[key: string]: number}>({});
   const [chartData, setChartData] = useState({
     last30Days: [],
     monthlyHistory: [],
@@ -111,6 +114,15 @@ const Dashboard = () => {
         dailyAverage
       });
 
+      // Calcular estatísticas por origem
+      const originCounts = allLeads.reduce((acc, lead) => {
+        const origin = lead.origin || 'Não informado';
+        acc[origin] = (acc[origin] || 0) + 1;
+        return acc;
+      }, {});
+      
+      setOriginStats(originCounts);
+
       console.log('Dashboard - Estatísticas calculadas:', {
         totalLeads: allLeads.length,
         newLeads: unreadLeads,
@@ -118,7 +130,8 @@ const Dashboard = () => {
         leadsThisMonth,
         readLeads,
         unreadLeads,
-        dailyAverage
+        dailyAverage,
+        originStats: originCounts
       });
       await prepareChartData(allLeads);
     } catch (error) {
@@ -259,74 +272,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
-          <Card className="border-l-4 border-l-accent hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Hoje</CardTitle>
-              <Calendar className="h-4 w-4 text-accent" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-primary">{stats.leadsToday}</div>
-              <p className="text-xs text-muted-foreground mt-1">leads captados</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-l-4 border-l-primary hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Este Mês</CardTitle>
-              <TrendingUp className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-primary">{stats.leadsThisMonth}</div>
-              <p className="text-xs text-muted-foreground mt-1">leads no mês</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-accent hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
-              <Users className="h-4 w-4 text-accent" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-primary">{stats.totalLeads}</div>
-              <p className="text-xs text-muted-foreground mt-1">todos os leads</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-primary hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Lidos</CardTitle>
-              <Eye className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-primary">{stats.readLeads}</div>
-              <p className="text-xs text-muted-foreground mt-1">leads lidos</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-accent hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Não Lidos</CardTitle>
-              <EyeOff className="h-4 w-4 text-accent" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-primary">{stats.unreadLeads}</div>
-              <p className="text-xs text-muted-foreground mt-1">aguardando</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-primary hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Média</CardTitle>
-              <Clock className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-primary">{stats.dailyAverage}</div>
-              <p className="text-xs text-muted-foreground mt-1">leads/dia</p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Stats Cards */}
+        <DashboardStatsCards stats={stats} originStats={originStats} />
 
         {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -405,9 +352,9 @@ const Dashboard = () => {
                 className="h-80"
               >
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData.leadsBySite} layout="horizontal">
-                    <XAxis type="number" />
-                    <YAxis dataKey="site" type="category" width={150} />
+                  <BarChart data={chartData.leadsBySite}>
+                    <XAxis dataKey="site" />
+                    <YAxis />
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Bar dataKey="leads" fill="var(--color-leads)" />
                   </BarChart>

@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import AdminNavigation from "@/components/AdminNavigation";
+import { extractUTMFromUrl, updateLeadWithUTMData } from "@/utils/utmExtractor";
 
 interface Lead {
   id: string;
@@ -22,6 +23,8 @@ interface Lead {
   status: string;
   created_at: string;
   campaign: string;
+  ad_content: string;
+  audience: string;
   origin: string;
   client: {
     user_id: string;
@@ -112,12 +115,12 @@ const LeadsCaptured = () => {
 
       if (profilesError) throw profilesError;
 
-      // Combinar os dados
+      // Combinar os dados e atualizar com UTM
       const transformedLeads = leadsData?.map((lead: any) => {
         const client = clientsData?.find(c => c.id === lead.client_id);
         const profile = profilesData?.find(p => p.user_id === client?.user_id);
         
-        return {
+        const baseData = {
           ...lead,
           client: {
             user_id: client?.user_id,
@@ -128,9 +131,16 @@ const LeadsCaptured = () => {
             email: profile?.email || 'N/A',
           }
         };
+
+        // Atualizar com dados UTM
+        return updateLeadWithUTMData(baseData);
       }) || [];
 
       setLeads(transformedLeads);
+      
+      // Atualizar leads existentes no banco com dados UTM se necessário
+      await updateExistingLeadsWithUTM(transformedLeads);
+      
     } catch (error) {
       console.error("Erro ao carregar leads:", error);
       toast({
@@ -143,8 +153,52 @@ const LeadsCaptured = () => {
     }
   };
 
+  const updateExistingLeadsWithUTM = async (leads: any[]) => {
+    try {
+      const leadsToUpdate = leads.filter(lead => {
+        const utmData = extractUTMFromUrl(lead.website_url);
+        // Verificar se há dados UTM e se os campos não estão preenchidos
+        return (utmData.campaign || utmData.content || utmData.medium) && 
+               (!lead.ad_content || !lead.audience || lead.campaign === 'Não informado');
+      });
+
+      if (leadsToUpdate.length > 0) {
+        console.log(`Atualizando ${leadsToUpdate.length} leads com dados UTM...`);
+        
+        for (const lead of leadsToUpdate) {
+          const utmData = extractUTMFromUrl(lead.website_url);
+          
+          const updateData: any = {};
+          if (utmData.campaign && lead.campaign === 'Não informado') {
+            updateData.campaign = utmData.campaign;
+          }
+          if (utmData.content && !lead.ad_content) {
+            updateData.ad_content = utmData.content;
+          }
+          if (utmData.medium && !lead.audience) {
+            updateData.audience = utmData.medium;
+          }
+
+          if (Object.keys(updateData).length > 0) {
+            await supabase
+              .from("leads")
+              .update(updateData)
+              .eq("id", lead.id);
+          }
+        }
+        
+        toast({
+          title: "Dados atualizados",
+          description: `${leadsToUpdate.length} leads foram atualizados com informações UTM`,
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar leads com UTM:", error);
+    }
+  };
+
   const exportToCSV = () => {
-    const headers = ["ID", "Nome", "E-mail", "WhatsApp", "Site", "Usuário", "Status", "Data e Hora", "Origem", "Campanha"];
+    const headers = ["ID", "Nome", "E-mail", "WhatsApp", "Site", "Usuário", "Status", "Data e Hora", "Origem", "Campanha", "Anúncio", "Público"];
     const csvContent = [
       headers.join(","),
       ...filteredLeads.map(lead =>
@@ -158,7 +212,9 @@ const LeadsCaptured = () => {
           lead.status,
           formatDate(lead.created_at),
           `"${lead.origin || 'Não informado'}"`,
-          `"${lead.campaign || 'Não informado'}"`
+          `"${lead.campaign || 'Não informado'}"`,
+          `"${lead.ad_content || 'Não informado'}"`,
+          `"${lead.audience || 'Não informado'}"`
         ].join(",")
       )
     ].join("\n");
@@ -380,6 +436,8 @@ const LeadsCaptured = () => {
                       <TableHead>Data e Hora</TableHead>
                       <TableHead>Origem</TableHead>
                       <TableHead>Campanha</TableHead>
+                      <TableHead>Anúncio</TableHead>
+                      <TableHead>Público</TableHead>
                       <TableHead className="w-20">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -444,6 +502,12 @@ const LeadsCaptured = () => {
                         </TableCell>
                         <TableCell>
                           <span className="text-sm">{lead.campaign || 'Não informado'}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">{lead.ad_content || 'Não informado'}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">{lead.audience || 'Não informado'}</span>
                         </TableCell>
                         <TableCell>
                           {userProfile?.user_type === 'admin' && (
