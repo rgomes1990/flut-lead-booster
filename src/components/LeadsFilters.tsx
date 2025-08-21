@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,29 +69,60 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
 
   const loadClients = async () => {
     try {
-      const { data: clientsData, error } = await supabase
-        .from("clients")
-        .select(`
-          id,
-          user_id,
-          profiles!inner(name, email)
-        `)
-        .order("profiles.name");
+      console.log("Carregando clientes...");
+      
+      // Buscar todos os perfis de usuários do tipo cliente
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, name, email, user_type")
+        .eq("user_type", "client")
+        .order("name");
 
-      if (error) throw error;
+      if (profilesError) {
+        console.error("Erro ao buscar profiles:", profilesError);
+        throw profilesError;
+      }
 
-      const transformedClients = clientsData?.map((client: any) => ({
-        id: client.id,
-        user_id: client.user_id,
-        profile: {
-          name: client.profiles?.name || 'N/A',
-          email: client.profiles?.email || 'N/A'
+      console.log("Profiles encontrados:", profilesData);
+
+      // Buscar dados dos clientes correspondentes
+      const userIds = profilesData?.map(profile => profile.user_id) || [];
+      
+      if (userIds.length > 0) {
+        const { data: clientsData, error: clientsError } = await supabase
+          .from("clients")
+          .select("id, user_id")
+          .in("user_id", userIds);
+
+        if (clientsError) {
+          console.error("Erro ao buscar clients:", clientsError);
+          throw clientsError;
         }
-      })) || [];
 
-      setClients(transformedClients);
+        console.log("Clients encontrados:", clientsData);
+
+        // Combinar os dados
+        const transformedClients = profilesData?.map((profile: any) => {
+          const client = clientsData?.find(c => c.user_id === profile.user_id);
+          return {
+            id: client?.id || profile.user_id,
+            user_id: profile.user_id,
+            profile: {
+              name: profile.name || 'Sem nome',
+              email: profile.email || 'Sem email'
+            }
+          };
+        }) || [];
+
+        console.log("Clientes transformados:", transformedClients);
+        setClients(transformedClients);
+      } else {
+        console.log("Nenhum perfil de cliente encontrado");
+        setClients([]);
+      }
     } catch (error) {
       console.error("Erro ao carregar clientes:", error);
+      setClients([]);
     }
   };
 
