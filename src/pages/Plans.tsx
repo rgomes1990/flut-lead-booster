@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,7 +15,7 @@ import EditPlanDialog from "@/components/EditPlanDialog";
 interface SubscriptionPlan {
   id: string;
   client_id: string;
-  plan_type: string;
+  plan_type: "free_7_days" | "one_month" | "three_months" | "six_months" | "one_year";
   start_date: string;
   end_date: string;
   is_active: boolean;
