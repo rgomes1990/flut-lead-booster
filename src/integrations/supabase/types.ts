@@ -305,6 +305,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      update_subscription_plan: {
+        Args: {
+          new_is_active?: boolean
+          new_plan_type: Database["public"]["Enums"]["plan_type"]
+          plan_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       plan_type:

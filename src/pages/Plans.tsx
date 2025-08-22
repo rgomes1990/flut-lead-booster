@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,8 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Edit } from "lucide-react";
 import AdminNavigation from "@/components/AdminNavigation";
+import EditPlanDialog from "@/components/EditPlanDialog";
 
 interface SubscriptionPlan {
   id: string;
@@ -37,7 +37,9 @@ const Plans = () => {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [planToDelete, setPlanToDelete] = useState<SubscriptionPlan | null>(null);
+  const [planToEdit, setPlanToEdit] = useState<SubscriptionPlan | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { userProfile } = useAuth();
   const { toast } = useToast();
 
@@ -151,6 +153,20 @@ const Plans = () => {
     return "Ativo";
   };
 
+  const handleEditClick = (plan: SubscriptionPlan) => {
+    setPlanToEdit(plan);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditClose = () => {
+    setIsEditDialogOpen(false);
+    setPlanToEdit(null);
+  };
+
+  const handlePlanUpdated = () => {
+    loadPlans();
+  };
+
   const handleDeleteClick = (plan: SubscriptionPlan) => {
     setPlanToDelete(plan);
     setIsDeleteDialogOpen(true);
@@ -246,7 +262,7 @@ const Plans = () => {
                       <TableHead>Data Início</TableHead>
                       <TableHead>Data Fim</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="w-20">Ações</TableHead>
+                      <TableHead className="w-32">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -288,14 +304,24 @@ const Plans = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteClick(plan)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditClick(plan)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteClick(plan)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -311,6 +337,14 @@ const Plans = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Dialog de edição de plano */}
+        <EditPlanDialog
+          plan={planToEdit}
+          isOpen={isEditDialogOpen}
+          onClose={handleEditClose}
+          onPlanUpdated={handlePlanUpdated}
+        />
 
         {/* Dialog de confirmação de exclusão */}
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
