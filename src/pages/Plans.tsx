@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -161,6 +162,7 @@ const Plans = () => {
 
       if (error) throw error;
 
+      // Criar novo plano como ativo por padrão
       const { error: insertError } = await supabase
         .from("subscription_plans")
         .insert({
@@ -200,12 +202,13 @@ const Plans = () => {
         return;
       }
 
+      // Atualizar plano (sempre ativo agora)
       const { error } = await supabase
         .from("subscription_plans")
         .update({
           client_id: editingPlan.client_id,
           plan_type: editingPlan.plan_type,
-          is_active: editingPlan.is_active
+          is_active: true // Sempre ativo conforme solicitado
         })
         .eq("id", editingPlan.id);
 
@@ -404,8 +407,8 @@ const Plans = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={plan.is_active ? 'default' : 'secondary'}>
-                          {plan.is_active ? 'Ativo' : 'Inativo'}
+                        <Badge variant="default">
+                          Ativo
                         </Badge>
                       </TableCell>
                       {userProfile?.user_type === 'admin' && (
@@ -484,14 +487,10 @@ const Plans = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="edit-plan-active"
-                        checked={editingPlan.is_active}
-                        onChange={(e) => setEditingPlan({ ...editingPlan, is_active: e.target.checked })}
-                      />
-                      <Label htmlFor="edit-plan-active">Plano Ativo</Label>
+                    <div className="bg-muted p-3 rounded-md">
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Nota:</strong> Todos os planos são mantidos como ativos automaticamente.
+                      </p>
                     </div>
                     <Button onClick={updatePlan} className="w-full">
                       Atualizar Plano
