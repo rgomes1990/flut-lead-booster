@@ -1,5 +1,4 @@
 
-
 interface UTMData {
   campaign?: string;
   content?: string;
@@ -39,9 +38,9 @@ export const detectOriginFromUrl = (url: string): string => {
     const urlObj = new URL(url);
     const params = urlObj.searchParams;
     
-    // Verificar Facebook (parâmetro fbclid)
+    // Verificar Facebook (parâmetro fbclid) - ALTERADO para Meta Ads
     if (params.has('fbclid') || url.includes('fbclid=')) {
-      return 'Facebook';
+      return 'Meta Ads';
     }
     
     // Verificar Instagram (parâmetro utm_source=instagram)
@@ -77,8 +76,8 @@ export const detectOriginFromUrl = (url: string): string => {
     
     return 'Site Orgânico';
   } catch {
-    // Se a URL for inválida, usar regex - CORRIGIDO para case insensitive
-    if (url.match(/[?&]fbclid=/)) return 'Facebook';
+    // Se a URL for inválida, usar regex - ALTERADO para Meta Ads
+    if (url.match(/[?&]fbclid=/)) return 'Meta Ads';
     if (url.match(/[?&]utm_source=instagram(&|$)/i)) return 'Instagram';
     if (url.match(/[?&]utm_source=meta(&|$)/i)) return 'Meta Ads'; // CORRIGIDO
     if (url.match(/[?&]srsltid=/)) return 'Tráfego Orgânico';

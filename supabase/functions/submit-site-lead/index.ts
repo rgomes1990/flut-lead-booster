@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0'
 
 const corsHeaders = {
@@ -45,9 +44,9 @@ Deno.serve(async (req) => {
         const urlObj = new URL(url);
         const params = urlObj.searchParams;
         
-        // Verificar Facebook (parâmetro fbclid)
+        // Verificar Facebook (parâmetro fbclid) - ALTERADO para Meta Ads
         if (params.has('fbclid') || url.includes('fbclid=')) {
-          return 'Facebook';
+          return 'Meta Ads';
         }
         
         // Verificar Instagram (parâmetro utm_source=instagram)
@@ -83,8 +82,8 @@ Deno.serve(async (req) => {
         
         return 'Site Orgânico';
       } catch {
-        // Se a URL for inválida, usar regex
-        if (url.match(/[?&]fbclid=/)) return 'Facebook';
+        // Se a URL for inválida, usar regex - ALTERADO para Meta Ads
+        if (url.match(/[?&]fbclid=/)) return 'Meta Ads';
         if (url.match(/[?&]utm_source=instagram(&|$)/i)) return 'Instagram';
         if (url.match(/[?&]utm_source=meta(&|$)/i)) return 'Meta Ads'; // CORRIGIDO
         if (url.match(/[?&]srsltid=/)) return 'Tráfego Orgânico'; // CORRIGIDO
