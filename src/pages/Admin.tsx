@@ -101,11 +101,11 @@ const Admin = () => {
         return;
       }
 
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/create-user`, {
+      const response = await fetch(`https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/create-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.supabaseKey}`,
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3aXNubmlwZGpxbXhwZ2Z2aGlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxMjQ2NzcsImV4cCI6MjA3MDcwMDY3N30.xMOfCDIniXTn5TnlOdcUiQycp-5yPetalylgzm2_VeQ`,
         },
         body: JSON.stringify(newUser),
       });
@@ -204,11 +204,11 @@ const Admin = () => {
     if (!confirm("Tem certeza que deseja excluir este usuário?")) return;
 
     try {
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/delete-user`, {
+      const response = await fetch(`https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/delete-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.supabaseKey}`,
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3aXNubmlwZGpxbXhwZ2Z2aGlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxMjQ2NzcsImV4cCI6MjA3MDcwMDY3N30.xMOfCDIniXTn5TnlOdcUiQycp-5yPetalylgzm2_VeQ`,
         },
         body: JSON.stringify({ user_id: userId }),
       });
