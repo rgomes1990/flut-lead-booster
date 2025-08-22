@@ -96,10 +96,15 @@ const Plans = () => {
           start_date: plan.start_date,
           end_date: plan.end_date,
           is_active: plan.is_active,
-          status: plan.status,
+          status: plan.status || 'active',
           created_at: plan.created_at,
           updated_at: plan.updated_at,
-          clients: plan.clients
+          clients: plan.clients ? {
+            profiles: plan.clients.profiles ? {
+              name: plan.clients.profiles.name || 'N/A',
+              email: plan.clients.profiles.email || 'N/A'
+            } : null
+          } : null
         }));
       
       setPlans(validPlans);

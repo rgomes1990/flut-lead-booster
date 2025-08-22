@@ -49,12 +49,12 @@ export const detectOriginFromUrl = (url: string): string => {
       return 'Instagram';
     }
     
-    // Verificar Meta Ads (parâmetro utm_source=meta)
+    // Verificar Meta Ads (parâmetro utm_source=meta) - CORRIGIDO
     if (utmSource === 'meta') {
       return 'Meta Ads';
     }
     
-    // Verificar Tráfego Orgânico (parâmetro srsltid)
+    // Verificar Tráfego Orgânico (parâmetro srsltid) - CORRIGIDO
     if (params.has('srsltid')) {
       return 'Tráfego Orgânico';
     }
@@ -79,8 +79,8 @@ export const detectOriginFromUrl = (url: string): string => {
     // Se a URL for inválida, usar regex
     if (url.match(/[?&]fbclid=/)) return 'Facebook';
     if (url.match(/[?&]utm_source=instagram(&|$)/i)) return 'Instagram';
-    if (url.match(/[?&]utm_source=meta(&|$)/i)) return 'Meta Ads';
-    if (url.match(/[?&]srsltid=/)) return 'Tráfego Orgânico';
+    if (url.match(/[?&]utm_source=meta(&|$)/i)) return 'Meta Ads'; // CORRIGIDO
+    if (url.match(/[?&]srsltid=/)) return 'Tráfego Orgânico'; // CORRIGIDO
     if (url.match(/[?&](gclid|gad_source)=/)) return 'Google Ads';
     if (url.match(/[?&]utm_source=/)) return 'UTM Campaign';
     

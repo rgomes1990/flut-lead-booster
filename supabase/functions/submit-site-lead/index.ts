@@ -37,14 +37,74 @@ Deno.serve(async (req) => {
       origin 
     });
 
-    // Usar a função de banco de dados para determinar origem
-    const { data: detectedOrigin, error: originError } = await supabase
-      .rpc('determine_origin_from_url', { url: website_url });
+    // Função melhorada para detectar origem
+    const detectOriginFromUrl = (url: string): string => {
+      if (!url) return 'Tráfego Direto';
+
+      try {
+        const urlObj = new URL(url);
+        const params = urlObj.searchParams;
+        
+        // Verificar Facebook (parâmetro fbclid)
+        if (params.has('fbclid') || url.includes('fbclid=')) {
+          return 'Facebook';
+        }
+        
+        // Verificar Instagram (parâmetro utm_source=instagram)
+        const utmSource = params.get('utm_source')?.toLowerCase();
+        if (utmSource === 'instagram') {
+          return 'Instagram';
+        }
+        
+        // Verificar Meta Ads (parâmetro utm_source=meta) - CORRIGIDO
+        if (utmSource === 'meta') {
+          return 'Meta Ads';
+        }
+        
+        // Verificar Tráfego Orgânico (parâmetro srsltid) - CORRIGIDO
+        if (params.has('srsltid')) {
+          return 'Tráfego Orgânico';
+        }
+        
+        // Verificar Google Ads (parâmetros gclid ou gad_source)
+        if (params.has('gclid') || params.has('gad_source')) {
+          return 'Google Ads';
+        }
+        
+        // Verificar outros UTM sources
+        if (utmSource) {
+          return 'UTM Campaign';
+        }
+        
+        // Se não tem parâmetros na URL, é tráfego direto
+        if (!url.includes('?') && !url.includes('&')) {
+          return 'Tráfego Direto';
+        }
+        
+        return 'Site Orgânico';
+      } catch {
+        // Se a URL for inválida, usar regex
+        if (url.match(/[?&]fbclid=/)) return 'Facebook';
+        if (url.match(/[?&]utm_source=instagram(&|$)/i)) return 'Instagram';
+        if (url.match(/[?&]utm_source=meta(&|$)/i)) return 'Meta Ads'; // CORRIGIDO
+        if (url.match(/[?&]srsltid=/)) return 'Tráfego Orgânico'; // CORRIGIDO
+        if (url.match(/[?&](gclid|gad_source)=/)) return 'Google Ads';
+        if (url.match(/[?&]utm_source=/)) return 'UTM Campaign';
+        
+        // Se não tem parâmetros na URL, é tráfego direto
+        if (!url.includes('?') && !url.includes('&')) {
+          return 'Tráfego Direto';
+        }
+        
+        return 'Site Orgânico';
+      }
+    };
+
+    const detectedOrigin = detectOriginFromUrl(website_url);
 
     console.log('Origin detection result:', { 
       website_url, 
-      detectedOrigin, 
-      originError 
+      detectedOrigin
     });
 
     const finalOrigin = detectedOrigin || 'Site Orgânico';
