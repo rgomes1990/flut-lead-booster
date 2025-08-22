@@ -1,5 +1,3 @@
-
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -88,10 +86,21 @@ const Plans = () => {
 
       if (error) throw error;
       
-      // Cast the data to our SubscriptionPlan type and filter out any invalid entries
-      const validPlans = (data || []).filter((plan: any) => {
-        return plan && typeof plan.id === 'string';
-      }) as SubscriptionPlan[];
+      // Map the data to our SubscriptionPlan type with proper type handling
+      const validPlans: SubscriptionPlan[] = (data || [])
+        .filter((plan: any) => plan && typeof plan.id === 'string')
+        .map((plan: any) => ({
+          id: plan.id,
+          client_id: plan.client_id,
+          plan_type: plan.plan_type as PlanType,
+          start_date: plan.start_date,
+          end_date: plan.end_date,
+          is_active: plan.is_active,
+          status: plan.status,
+          created_at: plan.created_at,
+          updated_at: plan.updated_at,
+          clients: plan.clients
+        }));
       
       setPlans(validPlans);
     } catch (error: any) {
@@ -126,7 +135,7 @@ const Plans = () => {
         .from('subscription_plans')
         .insert({
           client_id: newPlan.client_id,
-          plan_type: newPlan.plan_type,
+          plan_type: newPlan.plan_type as PlanType,
           start_date: newPlan.start_date,
           end_date: newPlan.end_date,
         });
