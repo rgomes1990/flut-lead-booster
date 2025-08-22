@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { MessageSquare, Phone, Mail, User } from "lucide-react";
+import { Phone, Mail, User } from "lucide-react";
+import PulsatingWhatsAppButton from "./PulsatingWhatsAppButton";
 
 interface LeadCaptureWidgetProps {
   scriptId: string;
@@ -75,17 +77,14 @@ const LeadCaptureWidget = ({ scriptId, companyName = "Empresa", websiteUrl = win
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button 
-          className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-shadow"
-          size="lg"
-        >
-          <MessageSquare className="h-6 w-6" />
-        </Button>
+        <div className="fixed bottom-4 right-4 z-50">
+          <PulsatingWhatsAppButton onClick={() => setOpen(true)} />
+        </div>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-primary" />
+            <PulsatingWhatsAppButton onClick={() => {}} className="h-8 w-8" />
             Fale Conosco - {companyName}
           </DialogTitle>
           <DialogDescription>

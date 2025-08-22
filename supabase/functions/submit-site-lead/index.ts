@@ -1,5 +1,4 @@
 
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0'
 
 const corsHeaders = {
@@ -167,20 +166,24 @@ Deno.serve(async (req) => {
       .eq('site_id', site_id)
       .single();
 
-    // Inserir lead na tabela leads apenas com as colunas que existem
-    const { error: leadError } = await supabase
+    // Inserir lead na tabela leads
+    const leadData = {
+      client_id: client.id,
+      name: name || 'Não informado',
+      email: email || 'Não informado',
+      phone: phone || 'Não informado',
+      message: message || '',
+      website_url: website_url || '',
+      origin: finalOrigin,
+      campaign: utmData.campaign || 'Não informado',
+      status: 'new'
+    };
+
+    const { data: insertedLead, error: leadError } = await supabase
       .from('leads')
-      .insert({
-        client_id: client.id,
-        name: name || 'Não informado',
-        email: email || 'Não informado',
-        phone: phone || 'Não informado',
-        message: message || '',
-        website_url: website_url || '',
-        origin: finalOrigin,
-        campaign: utmData.campaign || 'Não informado',
-        status: 'new'
-      });
+      .insert(leadData)
+      .select()
+      .single();
 
     if (leadError) {
       console.error('Lead insertion error:', leadError);
@@ -191,6 +194,17 @@ Deno.serve(async (req) => {
     }
 
     console.log('Lead saved successfully with origin:', finalOrigin, 'and UTM data:', utmData);
+
+    // Enviar alerta por email (não blocking)
+    try {
+      await supabase.functions.invoke('send-lead-alert', {
+        body: { leadData: { ...leadData, created_at: insertedLead.created_at } }
+      });
+      console.log('Lead alert sent successfully');
+    } catch (alertError) {
+      console.error('Erro ao enviar alerta de lead:', alertError);
+      // Não falhar a operação principal por causa do alerta
+    }
 
     // Preparar resposta com dados para redirecionamento do WhatsApp
     const whatsappPhone = siteConfig?.phone || '';
@@ -225,4 +239,3 @@ ${message ? `${message}` : ''}`;
     });
   }
 });
-

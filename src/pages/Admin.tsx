@@ -158,7 +158,21 @@ const Admin = () => {
       const result = await response.json();
 
       if (!result.success) {
-        throw new Error(result.error || 'Erro ao criar usuário');
+        // Melhor tratamento de erro para email duplicado
+        if (result.error && result.error.includes('already registered') || result.error.includes('duplicate') || result.error.includes('email')) {
+          toast({
+            title: "Email já cadastrado",
+            description: "Este email já está sendo usado por outro usuário. Tente um email diferente.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Erro ao criar usuário",
+            description: result.error || 'Erro desconhecido ao criar usuário',
+            variant: "destructive",
+          });
+        }
+        return;
       }
 
       toast({
@@ -179,7 +193,7 @@ const Admin = () => {
     } catch (error: any) {
       toast({
         title: "Erro ao criar usuário",
-        description: error.message,
+        description: error.message || "Erro de conexão. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -232,7 +246,10 @@ const Admin = () => {
         })
         .eq("user_id", editingUser.user_id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile update error:', profileError);
+        throw new Error(`Erro ao atualizar perfil: ${profileError.message}`);
+      }
 
       // Se for cliente, atualizar dados do cliente
       if (editingUser.user_type === 'client') {
@@ -253,7 +270,10 @@ const Admin = () => {
             })
             .eq("user_id", editingUser.user_id);
 
-          if (clientError) throw clientError;
+          if (clientError) {
+            console.error('Client update error:', clientError);
+            throw new Error(`Erro ao atualizar dados do cliente: ${clientError.message}`);
+          }
         } else {
           // Criar novo registro de cliente
           const { error: clientError } = await supabase
@@ -265,7 +285,10 @@ const Admin = () => {
               script_id: '' // Será preenchido pelo trigger
             });
 
-          if (clientError) throw clientError;
+          if (clientError) {
+            console.error('Client creation error:', clientError);
+            throw new Error(`Erro ao criar dados do cliente: ${clientError.message}`);
+          }
         }
       }
 
@@ -283,9 +306,10 @@ const Admin = () => {
         loadUsers();
       }
     } catch (error: any) {
+      console.error('Update user error:', error);
       toast({
         title: "Erro ao atualizar usuário",
-        description: error.message,
+        description: error.message || "Erro desconhecido ao atualizar usuário",
         variant: "destructive",
       });
     } finally {
@@ -294,7 +318,7 @@ const Admin = () => {
   };
 
   const deleteUser = async (userId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este usuário?")) return;
+    if (!confirm("Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.")) return;
 
     try {
       const response = await fetch(`https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/delete-user`, {
@@ -305,6 +329,11 @@ const Admin = () => {
         },
         body: JSON.stringify({ user_id: userId }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro na requisição: ${response.status} - ${errorText}`);
+      }
 
       const result = await response.json();
 
@@ -318,9 +347,10 @@ const Admin = () => {
 
       loadUsers();
     } catch (error: any) {
+      console.error('Delete user error:', error);
       toast({
         title: "Erro ao excluir usuário",
-        description: error.message,
+        description: error.message || "Erro de conexão. Tente novamente.",
         variant: "destructive",
       });
     }

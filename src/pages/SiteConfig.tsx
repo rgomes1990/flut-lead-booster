@@ -25,15 +25,14 @@ const SiteConfig = () => {
     email: "",
     phone: "",
     attendant_name: "",
-    field_phone: true,
+    default_message: "",
     field_name: true,
     field_email: true,
+    field_phone: true,
     field_message: true,
     field_capture_page: true,
-    icon_type: "whatsapp",
-    icon_position: "bottom",
-    is_active: true,
-    default_message: "Olá! Gostaria de mais informações sobre seus produtos/serviços."
+    icon_type: "whatsapp" as const,
+    icon_position: "bottom" as const,
   });
   const [loading, setLoading] = useState(true);
 

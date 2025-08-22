@@ -31,11 +31,65 @@ export const extractUTMFromUrl = (url: string): UTMData => {
   }
 };
 
+export const detectOriginFromUrl = (url: string): string => {
+  if (!url) return 'Tráfego Direto';
+
+  try {
+    const urlObj = new URL(url);
+    const params = urlObj.searchParams;
+    
+    // Verificar Facebook (parâmetro fbclid)
+    if (params.has('fbclid') || url.includes('fbclid=')) {
+      return 'Facebook';
+    }
+    
+    // Verificar Instagram (parâmetro utm_source=instagram)
+    const utmSource = params.get('utm_source')?.toLowerCase();
+    if (utmSource === 'instagram') {
+      return 'Instagram';
+    }
+    
+    // Verificar Google Ads (parâmetros gclid ou gad_source)
+    if (params.has('gclid') || params.has('gad_source')) {
+      return 'Google Ads';
+    }
+    
+    // Verificar Google Orgânico (parâmetro srsltid)
+    if (params.has('srsltid')) {
+      return 'Google Orgânico';
+    }
+    
+    // Verificar Meta Ads
+    if (utmSource === 'meta' || utmSource === 'facebook') {
+      return 'Meta Ads';
+    }
+    
+    // Outros UTM sources
+    if (utmSource) {
+      return 'UTM Campaign';
+    }
+    
+    return 'Site Orgânico';
+  } catch {
+    // Se a URL for inválida, usar regex
+    if (url.match(/[?&]fbclid=/)) return 'Facebook';
+    if (url.match(/[?&]utm_source=instagram(&|$)/i)) return 'Instagram';
+    if (url.match(/[?&](gclid|gad_source)=/)) return 'Google Ads';
+    if (url.match(/[?&]srsltid=/)) return 'Google Orgânico';
+    if (url.match(/[?&]utm_source=(meta|facebook)(&|$)/i)) return 'Meta Ads';
+    if (url.match(/[?&]utm_source=/)) return 'UTM Campaign';
+    
+    return url.includes('?') || url.includes('&') ? 'Site Orgânico' : 'Tráfego Direto';
+  }
+};
+
 export const updateLeadWithUTMData = (lead: any) => {
   const utmData = extractUTMFromUrl(lead.website_url);
+  const origin = detectOriginFromUrl(lead.website_url);
   
   return {
     ...lead,
+    origin: origin,
     campaign: utmData.campaign || lead.campaign || 'Não informado',
     ad_content: utmData.content || 'Não informado',
     audience: utmData.medium || 'Não informado',

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -202,17 +201,21 @@ const Plans = () => {
         return;
       }
 
-      // Atualizar plano (sempre ativo agora)
+      // Atualizar plano com status configurável
       const { error } = await supabase
         .from("subscription_plans")
         .update({
           client_id: editingPlan.client_id,
           plan_type: editingPlan.plan_type,
-          is_active: true // Sempre ativo conforme solicitado
+          is_active: editingPlan.is_active,
+          status: editingPlan.status || 'active'
         })
         .eq("id", editingPlan.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Plan update error:', error);
+        throw new Error(`Erro ao atualizar plano: ${error.message}`);
+      }
 
       toast({
         title: "Plano atualizado com sucesso!",
@@ -222,9 +225,39 @@ const Plans = () => {
       setEditingPlan(null);
       loadPlans();
     } catch (error: any) {
+      console.error('Update plan error:', error);
       toast({
         title: "Erro ao atualizar plano",
-        description: error.message,
+        description: error.message || "Erro desconhecido ao atualizar plano",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deactivatePlan = async (planId: string) => {
+    if (!confirm("Tem certeza que deseja desativar este plano?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("subscription_plans")
+        .update({
+          is_active: false,
+          status: 'inactive'
+        })
+        .eq("id", planId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Plano desativado com sucesso!",
+      });
+
+      loadPlans();
+    } catch (error: any) {
+      console.error('Deactivate plan error:', error);
+      toast({
+        title: "Erro ao desativar plano",
+        description: error.message || "Erro desconhecido ao desativar plano",
         variant: "destructive",
       });
     }
@@ -423,6 +456,16 @@ const Plans = () => {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
+                          {plan.is_active && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => deactivatePlan(plan.id)}
+                              title="Desativar plano"
+                            >
+                              <Clock className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="destructive"
@@ -487,9 +530,29 @@ const Plans = () => {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div>
+                      <Label htmlFor="edit-status">Status do Plano</Label>
+                      <Select 
+                        value={editingPlan.status || 'active'} 
+                        onValueChange={(value) => setEditingPlan({ 
+                          ...editingPlan, 
+                          status: value,
+                          is_active: value === 'active'
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o status" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border shadow-lg">
+                          <SelectItem value="active">Ativo</SelectItem>
+                          <SelectItem value="inactive">Inativo</SelectItem>
+                          <SelectItem value="cancelled">Cancelado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="bg-muted p-3 rounded-md">
                       <p className="text-sm text-muted-foreground">
-                        <strong>Nota:</strong> Todos os planos são mantidos como ativos automaticamente.
+                        <strong>Status:</strong> Controla se o plano está ativo ou não. Planos inativos não permitem captura de leads.
                       </p>
                     </div>
                     <Button onClick={updatePlan} className="w-full">
