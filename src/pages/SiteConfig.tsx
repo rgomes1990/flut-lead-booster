@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,6 +14,24 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminNavigation from "@/components/AdminNavigation";
 
+type IconType = "whatsapp" | "whatsapp-alt";
+type IconPosition = "top" | "center" | "bottom";
+
+interface SiteConfig {
+  company_name: string;
+  email: string;
+  phone: string;
+  attendant_name: string;
+  default_message: string;
+  field_name: boolean;
+  field_email: boolean;
+  field_phone: boolean;
+  field_message: boolean;
+  field_capture_page: boolean;
+  icon_type: IconType;
+  icon_position: IconPosition;
+}
+
 const SiteConfig = () => {
   const { siteId } = useParams();
   const navigate = useNavigate();
@@ -20,7 +39,7 @@ const SiteConfig = () => {
   const { toast } = useToast();
   
   const [site, setSite] = useState<any>(null);
-  const [config, setConfig] = useState({
+  const [config, setConfig] = useState<SiteConfig>({
     company_name: "",
     email: "",
     phone: "",
@@ -31,8 +50,8 @@ const SiteConfig = () => {
     field_phone: true,
     field_message: true,
     field_capture_page: true,
-    icon_type: "whatsapp" as const,
-    icon_position: "bottom" as const,
+    icon_type: "whatsapp",
+    icon_position: "bottom",
   });
   const [loading, setLoading] = useState(true);
 
@@ -62,7 +81,20 @@ const SiteConfig = () => {
         .maybeSingle();
 
       if (configData) {
-        setConfig(configData);
+        setConfig({
+          company_name: configData.company_name || "",
+          email: configData.email || "",
+          phone: configData.phone || "",
+          attendant_name: configData.attendant_name || "",
+          default_message: configData.default_message || "",
+          field_name: configData.field_name,
+          field_email: configData.field_email,
+          field_phone: configData.field_phone,
+          field_message: configData.field_message,
+          field_capture_page: configData.field_capture_page,
+          icon_type: (configData.icon_type as IconType) || "whatsapp",
+          icon_position: (configData.icon_position as IconPosition) || "bottom",
+        });
       } else if (configError) {
         throw configError;
       }
@@ -224,10 +256,10 @@ const SiteConfig = () => {
                       id="default_message"
                       value={config.default_message}
                       onChange={(e) => setConfig({ ...config, default_message: e.target.value })}
-                      placeholder="Mensagem que aparecerá pré-preenchida no campo de mensagem"
+                      placeholder="Deixe em branco para não exibir mensagem padrão"
                     />
                     <p className="text-sm text-muted-foreground mt-1">
-                      Esta mensagem aparecerá como padrão no campo de mensagem do formulário, mas o usuário pode editá-la.
+                      Esta mensagem aparecerá como padrão no campo de mensagem do formulário, mas o usuário pode editá-la. Deixe em branco para não exibir mensagem padrão.
                     </p>
                   </div>
                 </CardContent>
@@ -340,7 +372,7 @@ const SiteConfig = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="flex gap-4">
-                    {['top', 'center', 'bottom'].map((position) => (
+                    {(['top', 'center', 'bottom'] as IconPosition[]).map((position) => (
                       <button
                         key={position}
                         className={`px-4 py-2 rounded-lg border transition-colors ${
