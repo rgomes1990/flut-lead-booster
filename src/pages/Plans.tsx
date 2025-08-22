@@ -1,4 +1,5 @@
 
+
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +24,7 @@ interface SubscriptionPlan {
   start_date: string;
   end_date: string;
   is_active: boolean;
+  status?: string;
   created_at: string;
   updated_at: string;
   clients?: {
@@ -86,10 +88,10 @@ const Plans = () => {
 
       if (error) throw error;
       
-      // Filter out any plans with invalid client data and ensure proper typing
-      const validPlans = (data || []).filter((plan): plan is SubscriptionPlan => {
+      // Cast the data to our SubscriptionPlan type and filter out any invalid entries
+      const validPlans = (data || []).filter((plan: any) => {
         return plan && typeof plan.id === 'string';
-      });
+      }) as SubscriptionPlan[];
       
       setPlans(validPlans);
     } catch (error: any) {
