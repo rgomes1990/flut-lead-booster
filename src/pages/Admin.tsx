@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -184,7 +183,7 @@ const Admin = () => {
             user_id: editingUser.user_id,
             website_url: editingUser.website_url || '',
             whatsapp: editingUser.whatsapp || '',
-            script_id: existingClient?.script_id || '' // Usar script_id existente ou string vazia
+            script_id: existingClient?.script_id || ''
           });
 
         if (clientError) throw clientError;
@@ -413,7 +412,11 @@ const Admin = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            setEditingUser(user);
+                            console.log("Setting editing user with whatsapp:", user.whatsapp);
+                            setEditingUser({
+                              ...user,
+                              whatsapp: user.whatsapp || '' // Garantir que o WhatsApp seja carregado
+                            });
                             setEditDialogOpen(true);
                           }}
                         >
@@ -495,7 +498,10 @@ const Admin = () => {
                         <Input
                           id="edit-whatsapp"
                           value={editingUser.whatsapp || ''}
-                          onChange={(e) => setEditingUser({ ...editingUser, whatsapp: e.target.value })}
+                          onChange={(e) => {
+                            console.log("Updating whatsapp field:", e.target.value);
+                            setEditingUser({ ...editingUser, whatsapp: e.target.value });
+                          }}
                           placeholder="(11) 99999-9999"
                         />
                       </div>

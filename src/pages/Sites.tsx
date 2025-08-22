@@ -169,6 +169,9 @@ const Sites = () => {
         .eq("user_id", newSite.user_id)
         .single();
 
+      console.log("User data for site config:", userData);
+      console.log("Client data for site config:", clientData);
+
       // Buscar o site recém-criado para obter o ID
       const { data: siteData } = await supabase
         .from("sites")
@@ -181,24 +184,34 @@ const Sites = () => {
 
       if (siteData) {
         // Criar configuração automática do site com dados do usuário incluindo WhatsApp
-        await supabase
+        const configData = {
+          site_id: siteData.id,
+          company_name: userData?.name || '',
+          email: userData?.email || '',
+          phone: clientData?.whatsapp || '', // Usar WhatsApp do cliente como phone
+          attendant_name: userData?.name || '',
+          field_name: true,
+          field_email: true,
+          field_phone: true,
+          field_message: true,
+          field_capture_page: true,
+          is_active: true,
+          icon_type: 'whatsapp',
+          icon_position: 'bottom',
+          default_message: 'Olá! Gostaria de mais informações sobre seus produtos/serviços.'
+        };
+
+        console.log("Creating site config with data:", configData);
+
+        const { error: configError } = await supabase
           .from("site_configs")
-          .insert({
-            site_id: siteData.id,
-            company_name: userData?.name || '',
-            email: userData?.email || '',
-            phone: clientData?.whatsapp || '', // Usar WhatsApp do cliente
-            attendant_name: userData?.name || '',
-            field_name: true,
-            field_email: true,
-            field_phone: true,
-            field_message: true,
-            field_capture_page: true,
-            is_active: true,
-            icon_type: 'whatsapp',
-            icon_position: 'bottom',
-            default_message: 'Olá! Gostaria de mais informações sobre seus produtos/serviços.'
-          });
+          .insert(configData);
+
+        if (configError) {
+          console.error("Error creating site config:", configError);
+        } else {
+          console.log("Site config created successfully with WhatsApp:", clientData?.whatsapp);
+        }
       }
 
       toast({
@@ -210,6 +223,7 @@ const Sites = () => {
       setDialogOpen(false);
       loadSites();
     } catch (error: any) {
+      console.error("Error creating site:", error);
       toast({
         title: "Erro ao criar site",
         description: error.message,
