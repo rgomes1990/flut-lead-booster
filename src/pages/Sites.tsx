@@ -180,14 +180,14 @@ const Sites = () => {
         .single();
 
       if (siteData) {
-        // Criar configuração automática do site com dados do usuário
+        // Criar configuração automática do site com dados do usuário incluindo WhatsApp
         await supabase
           .from("site_configs")
           .insert({
             site_id: siteData.id,
             company_name: userData?.name || '',
             email: userData?.email || '',
-            phone: '',
+            phone: clientData?.whatsapp || '', // Usar WhatsApp do cliente
             attendant_name: userData?.name || '',
             field_name: true,
             field_email: true,
@@ -203,7 +203,7 @@ const Sites = () => {
 
       toast({
         title: "Site criado com sucesso!",
-        description: "As configurações foram preenchidas automaticamente com seus dados.",
+        description: "As configurações foram preenchidas automaticamente com seus dados incluindo WhatsApp.",
       });
 
       setNewSite({ domain: "", user_id: userProfile?.user_type === 'client' ? userProfile.user_id : "" });

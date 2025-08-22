@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -54,12 +55,13 @@ serve(async (req) => {
         domain = domain.replace(/\/$/, '')
       }
 
-      // Criar registro na tabela clients
+      // Criar registro na tabela clients incluindo WhatsApp
       const { error: clientError } = await supabaseClient
         .from("clients")
         .insert({
           user_id: userData.user.id,
           website_url: domain || '',
+          whatsapp: whatsapp || '', // Incluir WhatsApp
           script_id: '' // Será sobrescrito pelo trigger
         })
 
@@ -81,7 +83,7 @@ serve(async (req) => {
         } else if (siteData) {
           console.log("Site criado automaticamente:", siteData)
           
-          // Criar configurações do site automaticamente
+          // Criar configurações do site automaticamente incluindo WhatsApp
           const { error: configError } = await supabaseClient
             .from("site_configs")
             .insert({
@@ -89,7 +91,7 @@ serve(async (req) => {
               company_name: name,
               attendant_name: name,
               email: email,
-              phone: whatsapp || null,
+              phone: whatsapp || null, // Usar WhatsApp como telefone
             })
 
           if (configError) {
