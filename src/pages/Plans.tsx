@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,10 +14,12 @@ import { Badge } from "@/components/ui/badge";
 import { Edit, Plus } from "lucide-react";
 import AdminNavigation from "@/components/AdminNavigation";
 
+type PlanType = 'free_7_days' | 'one_month' | 'three_months' | 'six_months' | 'one_year';
+
 interface SubscriptionPlan {
   id: string;
   client_id: string;
-  plan_type: 'free_7_days' | 'one_month' | 'three_months' | 'six_months' | 'one_year';
+  plan_type: PlanType;
   start_date: string;
   end_date: string;
   is_active: boolean;
@@ -26,14 +29,14 @@ interface SubscriptionPlan {
     profiles?: {
       name: string;
       email: string;
-    };
-  };
+    } | null;
+  } | null;
 }
 
 interface EditForm {
   id: string;
   client_id: string;
-  plan_type: 'free_7_days' | 'one_month' | 'three_months' | 'six_months' | 'one_year';
+  plan_type: PlanType;
   start_date: string;
   end_date: string;
   is_active: boolean;
@@ -48,14 +51,14 @@ const Plans = () => {
   const [loading, setLoading] = useState(false);
   const [newPlan, setNewPlan] = useState({
     client_id: '',
-    plan_type: 'free_7_days',
+    plan_type: 'free_7_days' as PlanType,
     start_date: new Date().toISOString().split('T')[0],
     end_date: new Date().toISOString().split('T')[0],
   });
   const [editForm, setEditForm] = useState<EditForm>({
     id: '',
     client_id: '',
-    plan_type: 'free_7_days',
+    plan_type: 'free_7_days' as PlanType,
     start_date: new Date().toISOString().split('T')[0],
     end_date: new Date().toISOString().split('T')[0],
     is_active: true
@@ -82,7 +85,13 @@ const Plans = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPlans(data || []);
+      
+      // Filter out any plans with invalid client data and ensure proper typing
+      const validPlans = (data || []).filter((plan): plan is SubscriptionPlan => {
+        return plan && typeof plan.id === 'string';
+      });
+      
+      setPlans(validPlans);
     } catch (error: any) {
       toast({
         title: "Erro ao buscar planos",
@@ -111,7 +120,7 @@ const Plans = () => {
         return;
       }
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('subscription_plans')
         .insert({
           client_id: newPlan.client_id,
@@ -223,7 +232,7 @@ const Plans = () => {
 
                 <div>
                   <Label htmlFor="plan-type">Tipo do Plano</Label>
-                  <Select value={newPlan.plan_type} onValueChange={(value) => setNewPlan({...newPlan, plan_type: value as any})}>
+                  <Select value={newPlan.plan_type} onValueChange={(value) => setNewPlan({...newPlan, plan_type: value as PlanType})}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -305,7 +314,7 @@ const Plans = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Dialog>
+                      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
                         <DialogTrigger asChild>
                           <Button
                             variant="outline"
@@ -335,7 +344,7 @@ const Plans = () => {
                           <div className="space-y-4">
                             <div>
                               <Label htmlFor="edit-plan-type">Tipo do Plano</Label>
-                              <Select value={editForm.plan_type} onValueChange={(value) => setEditForm({...editForm, plan_type: value as any})}>
+                              <Select value={editForm.plan_type} onValueChange={(value) => setEditForm({...editForm, plan_type: value as PlanType})}>
                                 <SelectTrigger>
                                   <SelectValue />
                                 </SelectTrigger>
