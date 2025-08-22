@@ -163,15 +163,6 @@ const Sites = () => {
         .eq("user_id", newSite.user_id)
         .single();
 
-      const { data: clientData } = await supabase
-        .from("clients")
-        .select("*")
-        .eq("user_id", newSite.user_id)
-        .single();
-
-      console.log("User data for site config:", userData);
-      console.log("Client data for site config:", clientData);
-
       // Buscar o site recém-criado para obter o ID
       const { data: siteData } = await supabase
         .from("sites")
@@ -183,12 +174,13 @@ const Sites = () => {
         .single();
 
       if (siteData) {
-        // Criar configuração automática do site com dados do usuário incluindo WhatsApp
+        // Criar configuração automática do site com dados do usuário
+        // Não usar o WhatsApp do usuário automaticamente - deixar vazio para edição independente
         const configData = {
           site_id: siteData.id,
           company_name: userData?.name || '',
           email: userData?.email || '',
-          phone: clientData?.whatsapp || '', // Usar WhatsApp do cliente como phone
+          phone: '', // Deixar vazio - o usuário pode configurar independentemente
           attendant_name: userData?.name || '',
           field_name: true,
           field_email: true,
@@ -210,13 +202,13 @@ const Sites = () => {
         if (configError) {
           console.error("Error creating site config:", configError);
         } else {
-          console.log("Site config created successfully with WhatsApp:", clientData?.whatsapp);
+          console.log("Site config created successfully");
         }
       }
 
       toast({
         title: "Site criado com sucesso!",
-        description: "As configurações foram preenchidas automaticamente com seus dados incluindo WhatsApp.",
+        description: "As configurações foram criadas. Você pode configurar o WhatsApp nas configurações do site.",
       });
 
       setNewSite({ domain: "", user_id: userProfile?.user_type === 'client' ? userProfile.user_id : "" });

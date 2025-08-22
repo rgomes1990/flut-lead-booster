@@ -170,23 +170,37 @@ const Admin = () => {
 
       // Se for cliente, atualizar dados do cliente
       if (editingUser.user_type === 'client') {
-        // Primeiro, verificar se já existe um registro de cliente
+        // Verificar se já existe um registro de cliente
         const { data: existingClient } = await supabase
           .from("clients")
-          .select("script_id")
+          .select("*")
           .eq("user_id", editingUser.user_id)
           .single();
 
-        const { error: clientError } = await supabase
-          .from("clients")
-          .upsert({
-            user_id: editingUser.user_id,
-            website_url: editingUser.website_url || '',
-            whatsapp: editingUser.whatsapp || '',
-            script_id: existingClient?.script_id || ''
-          });
+        if (existingClient) {
+          // Atualizar registro existente
+          const { error: clientError } = await supabase
+            .from("clients")
+            .update({
+              website_url: editingUser.website_url || '',
+              whatsapp: editingUser.whatsapp || ''
+            })
+            .eq("user_id", editingUser.user_id);
 
-        if (clientError) throw clientError;
+          if (clientError) throw clientError;
+        } else {
+          // Criar novo registro de cliente
+          const { error: clientError } = await supabase
+            .from("clients")
+            .insert({
+              user_id: editingUser.user_id,
+              website_url: editingUser.website_url || '',
+              whatsapp: editingUser.whatsapp || '',
+              script_id: '' // Será preenchido pelo trigger
+            });
+
+          if (clientError) throw clientError;
+        }
       }
 
       toast({
@@ -415,7 +429,7 @@ const Admin = () => {
                             console.log("Setting editing user with whatsapp:", user.whatsapp);
                             setEditingUser({
                               ...user,
-                              whatsapp: user.whatsapp || '' // Garantir que o WhatsApp seja carregado
+                              whatsapp: user.whatsapp || ''
                             });
                             setEditDialogOpen(true);
                           }}
@@ -494,7 +508,7 @@ const Admin = () => {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="edit-whatsapp">WhatsApp</Label>
+                        <Label htmlFor="edit-whatsapp">WhatsApp do Usuário</Label>
                         <Input
                           id="edit-whatsapp"
                           value={editingUser.whatsapp || ''}
@@ -504,6 +518,9 @@ const Admin = () => {
                           }}
                           placeholder="(11) 99999-9999"
                         />
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Este é o WhatsApp do usuário. Cada site pode ter seu próprio WhatsApp nas configurações.
+                        </p>
                       </div>
                     </>
                   )}
