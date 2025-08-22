@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,24 +77,28 @@ const Plans = () => {
 
       if (plansError) throw plansError;
 
-      // Carregar dados dos clientes para exibição
+      // Carregar dados dos clientes separadamente
       const { data: clientsData, error: clientsError } = await supabase
         .from("clients")
-        .select(`
-          id,
-          user_id,
-          profiles!inner(name, email)
-        `);
+        .select("id, user_id");
 
       if (clientsError) throw clientsError;
 
-      // Combinar dados
+      // Carregar dados dos profiles separadamente
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, name, email");
+
+      if (profilesError) throw profilesError;
+
+      // Combinar dados manualmente
       const plansWithClients = plansData?.map(plan => {
         const client = clientsData?.find(c => c.id === plan.client_id);
+        const profile = profilesData?.find(p => p.user_id === client?.user_id);
         return {
           ...plan,
-          client_name: client?.profiles?.name || 'N/A',
-          client_email: client?.profiles?.email || 'N/A'
+          client_name: profile?.name || 'N/A',
+          client_email: profile?.email || 'N/A'
         };
       }) || [];
 
@@ -107,23 +110,31 @@ const Plans = () => {
 
   const loadClients = async () => {
     try {
-      const { data: clientsData, error } = await supabase
+      // Carregar clientes separadamente
+      const { data: clientsData, error: clientsError } = await supabase
         .from("clients")
-        .select(`
-          id,
-          user_id,
-          profiles!inner(name, email)
-        `)
-        .order("profiles.name");
+        .select("id, user_id");
 
-      if (error) throw error;
+      if (clientsError) throw clientsError;
 
-      const transformedClients = clientsData?.map((client: any) => ({
-        id: client.id,
-        user_id: client.user_id,
-        name: client.profiles?.name || 'N/A',
-        email: client.profiles?.email || 'N/A'
-      })) || [];
+      // Carregar profiles separadamente
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, name, email")
+        .order("name");
+
+      if (profilesError) throw profilesError;
+
+      // Combinar dados manualmente
+      const transformedClients = clientsData?.map((client: any) => {
+        const profile = profilesData?.find(p => p.user_id === client.user_id);
+        return {
+          id: client.id,
+          user_id: client.user_id,
+          name: profile?.name || 'N/A',
+          email: profile?.email || 'N/A'
+        };
+      }) || [];
 
       setClients(transformedClients);
     } catch (error) {

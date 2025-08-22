@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -188,7 +187,7 @@ const Sites = () => {
             site_id: siteData.id,
             company_name: userData?.name || '',
             email: userData?.email || '',
-            phone: clientData?.whatsapp || '',
+            phone: '',
             attendant_name: userData?.name || '',
             field_name: true,
             field_email: true,
