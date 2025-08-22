@@ -171,12 +171,20 @@ const Admin = () => {
 
       // Se for cliente, atualizar dados do cliente
       if (editingUser.user_type === 'client') {
+        // Primeiro, verificar se já existe um registro de cliente
+        const { data: existingClient } = await supabase
+          .from("clients")
+          .select("script_id")
+          .eq("user_id", editingUser.user_id)
+          .single();
+
         const { error: clientError } = await supabase
           .from("clients")
           .upsert({
             user_id: editingUser.user_id,
             website_url: editingUser.website_url || '',
-            whatsapp: editingUser.whatsapp || ''
+            whatsapp: editingUser.whatsapp || '',
+            script_id: existingClient?.script_id || '' // Usar script_id existente ou string vazia
           });
 
         if (clientError) throw clientError;
