@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -156,10 +157,17 @@ const Sites = () => {
 
       if (error) throw error;
 
-      // Buscar dados do usuário para auto-preencher configurações do site
+      // Buscar dados do usuário E dados do cliente para pegar o WhatsApp
       const { data: userData } = await supabase
         .from("profiles")
         .select("*")
+        .eq("user_id", newSite.user_id)
+        .single();
+
+      // Buscar dados do cliente para pegar o WhatsApp
+      const { data: clientData } = await supabase
+        .from("clients")
+        .select("whatsapp")
         .eq("user_id", newSite.user_id)
         .single();
 
@@ -175,12 +183,14 @@ const Sites = () => {
 
       if (siteData) {
         // Criar configuração automática do site com dados do usuário
-        // Não usar o WhatsApp do usuário automaticamente - deixar vazio para edição independente
+        // Usar o WhatsApp do cliente se disponível
+        const phoneFromClient = clientData?.whatsapp || '';
+        
         const configData = {
           site_id: siteData.id,
           company_name: userData?.name || '',
           email: userData?.email || '',
-          phone: '', // Deixar vazio - o usuário pode configurar independentemente
+          phone: phoneFromClient, // Usar WhatsApp do cliente
           attendant_name: userData?.name || '',
           field_name: true,
           field_email: true,
@@ -195,20 +205,36 @@ const Sites = () => {
 
         console.log("Creating site config with data:", configData);
 
-        const { error: configError } = await supabase
+        const { data: insertedConfig, error: configError } = await supabase
           .from("site_configs")
-          .insert(configData);
+          .insert(configData)
+          .select()
+          .single();
 
         if (configError) {
           console.error("Error creating site config:", configError);
         } else {
           console.log("Site config created successfully");
+          
+          // Replicar o phone do site_configs para o whatsapp do clients
+          if (insertedConfig && insertedConfig.phone) {
+            const { error: clientUpdateError } = await supabase
+              .from("clients")
+              .update({ whatsapp: insertedConfig.phone })
+              .eq("user_id", newSite.user_id);
+
+            if (clientUpdateError) {
+              console.error("Error updating client whatsapp:", clientUpdateError);
+            } else {
+              console.log("Client whatsapp updated successfully");
+            }
+          }
         }
       }
 
       toast({
         title: "Site criado com sucesso!",
-        description: "As configurações foram criadas. Você pode configurar o WhatsApp nas configurações do site.",
+        description: "As configurações foram criadas com o WhatsApp do usuário.",
       });
 
       setNewSite({ domain: "", user_id: userProfile?.user_type === 'client' ? userProfile.user_id : "" });
