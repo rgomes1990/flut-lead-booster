@@ -49,24 +49,29 @@ export const detectOriginFromUrl = (url: string): string => {
       return 'Instagram';
     }
     
+    // Verificar Meta Ads (parâmetro utm_source=meta)
+    if (utmSource === 'meta') {
+      return 'Meta Ads';
+    }
+    
+    // Verificar Tráfego Orgânico (parâmetro srsltid)
+    if (params.has('srsltid')) {
+      return 'Tráfego Orgânico';
+    }
+    
     // Verificar Google Ads (parâmetros gclid ou gad_source)
     if (params.has('gclid') || params.has('gad_source')) {
       return 'Google Ads';
     }
     
-    // Verificar Google Orgânico (parâmetro srsltid)
-    if (params.has('srsltid')) {
-      return 'Google Orgânico';
-    }
-    
-    // Verificar Meta Ads
-    if (utmSource === 'meta' || utmSource === 'facebook') {
-      return 'Meta Ads';
-    }
-    
-    // Outros UTM sources
+    // Verificar outros UTM sources
     if (utmSource) {
       return 'UTM Campaign';
+    }
+    
+    // Se não tem parâmetros na URL, é tráfego direto
+    if (!url.includes('?') && !url.includes('&')) {
+      return 'Tráfego Direto';
     }
     
     return 'Site Orgânico';
@@ -74,12 +79,17 @@ export const detectOriginFromUrl = (url: string): string => {
     // Se a URL for inválida, usar regex
     if (url.match(/[?&]fbclid=/)) return 'Facebook';
     if (url.match(/[?&]utm_source=instagram(&|$)/i)) return 'Instagram';
+    if (url.match(/[?&]utm_source=meta(&|$)/i)) return 'Meta Ads';
+    if (url.match(/[?&]srsltid=/)) return 'Tráfego Orgânico';
     if (url.match(/[?&](gclid|gad_source)=/)) return 'Google Ads';
-    if (url.match(/[?&]srsltid=/)) return 'Google Orgânico';
-    if (url.match(/[?&]utm_source=(meta|facebook)(&|$)/i)) return 'Meta Ads';
     if (url.match(/[?&]utm_source=/)) return 'UTM Campaign';
     
-    return url.includes('?') || url.includes('&') ? 'Site Orgânico' : 'Tráfego Direto';
+    // Se não tem parâmetros na URL, é tráfego direto
+    if (!url.includes('?') && !url.includes('&')) {
+      return 'Tráfego Direto';
+    }
+    
+    return 'Site Orgânico';
   }
 };
 

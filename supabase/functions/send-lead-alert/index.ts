@@ -28,13 +28,12 @@ Deno.serve(async (req) => {
 
     console.log('Enviando alerta de lead:', leadData);
 
-    // Buscar dados do cliente/usuário
+    // Buscar dados do cliente através da tabela clients e profiles
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .select(`
         id,
-        user_id,
-        profiles!inner(name, email)
+        user_id
       `)
       .eq('id', leadData.client_id)
       .single();
@@ -47,9 +46,24 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Buscar o perfil do usuário
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('name, email')
+      .eq('user_id', client.user_id)
+      .single();
+
+    if (profileError || !profile) {
+      console.error('Erro ao buscar perfil do usuário:', profileError);
+      return new Response('Perfil do usuário não encontrado', { 
+        status: 404, 
+        headers: corsHeaders 
+      });
+    }
+
     // Preparar dados do email
     const emailData = {
-      to: client.profiles.email,
+      to: profile.email,
       subject: `🚨 Novo Lead Recebido - Sistema Flut`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -86,12 +100,18 @@ Deno.serve(async (req) => {
       `
     };
 
-    console.log('Dados do email preparados para:', emailData.to);
+    console.log('Email preparado para:', emailData.to);
+
+    // Por enquanto, apenas log o email (implementar Resend depois se necessário)
+    console.log('Dados do email:', emailData);
 
     return new Response(JSON.stringify({ 
       success: true, 
-      message: 'Alerta de lead preparado',
-      emailData 
+      message: 'Alerta de lead preparado com sucesso',
+      emailData: {
+        to: emailData.to,
+        subject: emailData.subject
+      }
     }), {
       headers: {
         ...corsHeaders,
