@@ -83,7 +83,9 @@ const AdminNavigation = () => {
       if (sites && sites.length > 0) {
         const siteId = sites[0].id;
         console.log('Redirecionando para site:', siteId);
-        window.location.href = `/sites/${siteId}/config`;
+        // Usar Link do React Router em vez de window.location.href para evitar 404
+        window.location.hash = `#/sites/${siteId}/config`;
+        window.location.reload();
       } else {
         console.log('Nenhum site encontrado, redirecionando para /sites');
         toast({
@@ -91,7 +93,9 @@ const AdminNavigation = () => {
           description: "Você precisa cadastrar um site primeiro.",
           variant: "default",
         });
-        window.location.href = '/sites';
+        // Usar hash navigation para evitar 404
+        window.location.hash = '#/sites';
+        window.location.reload();
       }
     } catch (error) {
       console.error('Erro inesperado:', error);
@@ -100,7 +104,9 @@ const AdminNavigation = () => {
         description: "Erro inesperado. Redirecionando para a página de sites.",
         variant: "destructive",
       });
-      window.location.href = '/sites';
+      // Usar hash navigation para evitar 404
+      window.location.hash = '#/sites';
+      window.location.reload();
     } finally {
       setLoadingInstallation(false);
     }

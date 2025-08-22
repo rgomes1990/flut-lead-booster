@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,24 +35,69 @@ const Admin = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (userProfile?.user_type === 'admin') {
-      loadUsers();
-    }
-  }, [userProfile]);
+  // Determinar se é modo "Meu Perfil" (cliente) ou "Gerenciar Usuários" (admin)
+  const isClientMode = userProfile?.user_type === 'client';
 
   useEffect(() => {
-    // Filtrar usuários baseado no termo de busca
-    if (searchTerm.trim() === "") {
-      setFilteredUsers(users);
-    } else {
-      const filtered = users.filter(user => 
-        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredUsers(filtered);
+    if (userProfile) {
+      if (isClientMode) {
+        // Carregar apenas o próprio perfil do cliente
+        loadOwnProfile();
+      } else if (userProfile.user_type === 'admin') {
+        // Carregar todos os usuários para admin
+        loadUsers();
+      }
     }
-  }, [users, searchTerm]);
+  }, [userProfile, isClientMode]);
+
+  useEffect(() => {
+    // Filtrar usuários baseado no termo de busca (apenas para admin)
+    if (!isClientMode) {
+      if (searchTerm.trim() === "") {
+        setFilteredUsers(users);
+      } else {
+        const filtered = users.filter(user => 
+          user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setFilteredUsers(filtered);
+      }
+    }
+  }, [users, searchTerm, isClientMode]);
+
+  const loadOwnProfile = async () => {
+    try {
+      // Carregar perfil do próprio cliente
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", userProfile.user_id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      // Carregar dados do cliente para obter website_url e WhatsApp
+      const { data: clientData, error: clientError } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("user_id", userProfile.user_id)
+        .single();
+
+      if (clientError) throw clientError;
+
+      // Combinar dados
+      const userWithClientData = {
+        ...profile,
+        website_url: clientData?.website_url || '',
+        whatsapp: clientData?.whatsapp || ''
+      };
+
+      setUsers([userWithClientData]);
+      setFilteredUsers([userWithClientData]);
+    } catch (error) {
+      console.error("Error loading own profile:", error);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -156,6 +202,26 @@ const Admin = () => {
         return;
       }
 
+      // Se há uma nova senha, fazer update via edge function
+      if (editingUser.newPassword && editingUser.newPassword.trim()) {
+        const response = await fetch(`https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/update-user-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3aXNubmlwZGpxbXhwZ2Z2aGlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxMjQ2NzcsImV4cCI6MjA3MDcwMDY3N30.xMOfCDIniXTn5TnlOdcUiQycp-5yPetalylgzm2_VeQ`,
+          },
+          body: JSON.stringify({
+            user_id: editingUser.user_id,
+            password: editingUser.newPassword
+          }),
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+          throw new Error(result.error || 'Erro ao atualizar senha');
+        }
+      }
+
       // Atualizar profile
       const { error: profileError } = await supabase
         .from("profiles")
@@ -209,7 +275,13 @@ const Admin = () => {
 
       setEditDialogOpen(false);
       setEditingUser(null);
-      loadUsers();
+      
+      // Recarregar dados baseado no modo
+      if (isClientMode) {
+        loadOwnProfile();
+      } else {
+        loadUsers();
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar usuário",
@@ -254,12 +326,12 @@ const Admin = () => {
     }
   };
 
-  if (!userProfile || userProfile.user_type !== 'admin') {
+  if (!userProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card>
           <CardContent className="pt-6">
-            <p>Acesso negado. Apenas administradores podem acessar esta página.</p>
+            <p>Carregando...</p>
           </CardContent>
         </Card>
       </div>
@@ -273,104 +345,113 @@ const Admin = () => {
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold">Gerenciar Usuários</h1>
-              <p className="text-muted-foreground">Administrar contas de usuários do sistema</p>
+              <h1 className="text-3xl font-bold">
+                {isClientMode ? "Meu Perfil" : "Gerenciar Usuários"}
+              </h1>
+              <p className="text-muted-foreground">
+                {isClientMode 
+                  ? "Gerencie suas informações pessoais" 
+                  : "Administrar contas de usuários do sistema"
+                }
+              </p>
             </div>
             
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Usuário
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Criar Novo Usuário</DialogTitle>
-                  <DialogDescription>
-                    Adicione um novo usuário ao sistema
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Nome</Label>
-                    <Input
-                      id="name"
-                      value={newUser.name}
-                      onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                      placeholder="Nome completo"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={newUser.email}
-                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                      placeholder="email@exemplo.com"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="password">Senha</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={newUser.password}
-                      onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                      placeholder="Senha (mínimo 6 caracteres)"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="user_type">Tipo de Usuário</Label>
-                    <Select 
-                      value={newUser.user_type} 
-                      onValueChange={(value) => setNewUser({ ...newUser, user_type: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border shadow-lg">
-                        <SelectItem value="client">Cliente</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {newUser.user_type === 'client' && (
-                    <>
-                      <div>
-                        <Label htmlFor="website_url">Site (opcional)</Label>
-                        <Input
-                          id="website_url"
-                          value={newUser.website_url}
-                          onChange={(e) => setNewUser({ ...newUser, website_url: e.target.value })}
-                          placeholder="exemplo.com"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="whatsapp">WhatsApp (opcional)</Label>
-                        <Input
-                          id="whatsapp"
-                          value={newUser.whatsapp}
-                          onChange={(e) => setNewUser({ ...newUser, whatsapp: e.target.value })}
-                          placeholder="(11) 99999-9999"
-                        />
-                      </div>
-                    </>
-                  )}
-                  <Button 
-                    onClick={createUser} 
-                    className="w-full"
-                    disabled={isCreating}
-                  >
-                    {isCreating ? "Criando..." : "Criar Usuário"}
+            {!isClientMode && (
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Usuário
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Criar Novo Usuário</DialogTitle>
+                    <DialogDescription>
+                      Adicione um novo usuário ao sistema
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="name">Nome</Label>
+                      <Input
+                        id="name"
+                        value={newUser.name}
+                        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                        placeholder="Nome completo"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                        placeholder="email@exemplo.com"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="password">Senha</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        placeholder="Senha (mínimo 6 caracteres)"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="user_type">Tipo de Usuário</Label>
+                      <Select 
+                        value={newUser.user_type} 
+                        onValueChange={(value) => setNewUser({ ...newUser, user_type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border shadow-lg">
+                          <SelectItem value="client">Cliente</SelectItem>
+                          <SelectItem value="admin">Administrador</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {newUser.user_type === 'client' && (
+                      <>
+                        <div>
+                          <Label htmlFor="website_url">Site (opcional)</Label>
+                          <Input
+                            id="website_url"
+                            value={newUser.website_url}
+                            onChange={(e) => setNewUser({ ...newUser, website_url: e.target.value })}
+                            placeholder="exemplo.com"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="whatsapp">WhatsApp (opcional)</Label>
+                          <Input
+                            id="whatsapp"
+                            value={newUser.whatsapp}
+                            onChange={(e) => setNewUser({ ...newUser, whatsapp: e.target.value })}
+                            placeholder="(11) 99999-9999"
+                          />
+                        </div>
+                      </>
+                    )}
+                    <Button 
+                      onClick={createUser} 
+                      className="w-full"
+                      disabled={isCreating}
+                    >
+                      {isCreating ? "Criando..." : "Criar Usuário"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
 
           <Card>
@@ -379,18 +460,23 @@ const Admin = () => {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5" />
-                    Usuários Cadastrados
+                    {isClientMode ? "Meus Dados" : "Usuários Cadastrados"}
                   </CardTitle>
                   <CardDescription>
-                    Lista de todos os usuários do sistema
+                    {isClientMode 
+                      ? "Suas informações pessoais e de contato"
+                      : "Lista de todos os usuários do sistema"
+                    }
                   </CardDescription>
                 </div>
-                <SearchInput
-                  value={searchTerm}
-                  onChange={setSearchTerm}
-                  placeholder="Buscar por nome ou email..."
-                  className="w-72"
-                />
+                {!isClientMode && (
+                  <SearchInput
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    placeholder="Buscar por nome ou email..."
+                    className="w-72"
+                  />
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -399,7 +485,7 @@ const Admin = () => {
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Tipo</TableHead>
+                    {!isClientMode && <TableHead>Tipo</TableHead>}
                     <TableHead>Site</TableHead>
                     <TableHead>WhatsApp</TableHead>
                     <TableHead>Data Criação</TableHead>
@@ -411,11 +497,13 @@ const Admin = () => {
                     <TableRow key={user.user_id}>
                       <TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <Badge variant={user.user_type === 'admin' ? 'default' : 'secondary'}>
-                          {user.user_type === 'admin' ? 'Administrador' : 'Cliente'}
-                        </Badge>
-                      </TableCell>
+                      {!isClientMode && (
+                        <TableCell>
+                          <Badge variant={user.user_type === 'admin' ? 'default' : 'secondary'}>
+                            {user.user_type === 'admin' ? 'Administrador' : 'Cliente'}
+                          </Badge>
+                        </TableCell>
+                      )}
                       <TableCell>{user.website_url || '-'}</TableCell>
                       <TableCell>{user.whatsapp || '-'}</TableCell>
                       <TableCell>
@@ -429,20 +517,23 @@ const Admin = () => {
                             console.log("Setting editing user with whatsapp:", user.whatsapp);
                             setEditingUser({
                               ...user,
-                              whatsapp: user.whatsapp || ''
+                              whatsapp: user.whatsapp || '',
+                              newPassword: '' // Campo para nova senha
                             });
                             setEditDialogOpen(true);
                           }}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => deleteUser(user.user_id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {!isClientMode && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => deleteUser(user.user_id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -455,9 +546,14 @@ const Admin = () => {
           <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Editar Usuário</DialogTitle>
+                <DialogTitle>
+                  {isClientMode ? "Editar Meu Perfil" : "Editar Usuário"}
+                </DialogTitle>
                 <DialogDescription>
-                  Edite as informações do usuário selecionado
+                  {isClientMode 
+                    ? "Edite suas informações pessoais"
+                    : "Edite as informações do usuário selecionado"
+                  }
                 </DialogDescription>
               </DialogHeader>
               {editingUser && (
@@ -482,20 +578,32 @@ const Admin = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="edit-user_type">Tipo de Usuário</Label>
-                    <Select 
-                      value={editingUser.user_type} 
-                      onValueChange={(value) => setEditingUser({ ...editingUser, user_type: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border shadow-lg">
-                        <SelectItem value="client">Cliente</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="edit-new-password">Nova Senha (opcional)</Label>
+                    <Input
+                      id="edit-new-password"
+                      type="password"
+                      value={editingUser.newPassword || ''}
+                      onChange={(e) => setEditingUser({ ...editingUser, newPassword: e.target.value })}
+                      placeholder="Deixe em branco para manter a senha atual"
+                    />
                   </div>
+                  {!isClientMode && (
+                    <div>
+                      <Label htmlFor="edit-user_type">Tipo de Usuário</Label>
+                      <Select 
+                        value={editingUser.user_type} 
+                        onValueChange={(value) => setEditingUser({ ...editingUser, user_type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border shadow-lg">
+                          <SelectItem value="client">Cliente</SelectItem>
+                          <SelectItem value="admin">Administrador</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   {editingUser.user_type === 'client' && (
                     <>
                       <div>
@@ -529,7 +637,7 @@ const Admin = () => {
                     className="w-full"
                     disabled={isUpdating}
                   >
-                    {isUpdating ? "Atualizando..." : "Atualizar Usuário"}
+                    {isUpdating ? "Atualizando..." : `${isClientMode ? "Atualizar Perfil" : "Atualizar Usuário"}`}
                   </Button>
                 </div>
               )}
