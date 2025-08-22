@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 interface SubscriptionPlan {
   id: string;
   client_id: string;
-  plan_type: string;
+  plan_type: "free_7_days" | "one_month" | "three_months" | "six_months" | "one_year";
   start_date: string;
   end_date: string;
   is_active: boolean;
@@ -38,10 +38,18 @@ interface EditPlanDialogProps {
 }
 
 const EditPlanDialog = ({ plan, isOpen, onClose, onPlanUpdated }: EditPlanDialogProps) => {
-  const [planType, setPlanType] = useState(plan?.plan_type || "");
-  const [isActive, setIsActive] = useState(plan?.is_active || false);
+  const [planType, setPlanType] = useState<"free_7_days" | "one_month" | "three_months" | "six_months" | "one_year">("free_7_days");
+  const [isActive, setIsActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  // Reset form when plan changes
+  useEffect(() => {
+    if (plan) {
+      setPlanType(plan.plan_type);
+      setIsActive(plan.is_active);
+    }
+  }, [plan]);
 
   const handleSubmit = async () => {
     if (!plan) return;
@@ -93,14 +101,6 @@ const EditPlanDialog = ({ plan, isOpen, onClose, onPlanUpdated }: EditPlanDialog
     }
   };
 
-  // Reset form when plan changes
-  useState(() => {
-    if (plan) {
-      setPlanType(plan.plan_type);
-      setIsActive(plan.is_active);
-    }
-  }, [plan]);
-
   if (!plan) return null;
 
   return (
@@ -116,7 +116,7 @@ const EditPlanDialog = ({ plan, isOpen, onClose, onPlanUpdated }: EditPlanDialog
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="planType">Tipo de Plano</Label>
-            <Select value={planType} onValueChange={setPlanType}>
+            <Select value={planType} onValueChange={(value: "free_7_days" | "one_month" | "three_months" | "six_months" | "one_year") => setPlanType(value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o tipo de plano" />
               </SelectTrigger>
