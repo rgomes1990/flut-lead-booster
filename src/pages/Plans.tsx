@@ -1,117 +1,106 @@
-import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Edit, Plus } from "lucide-react";
-import AdminNavigation from "@/components/AdminNavigation";
 
-type PlanType = 'free_7_days' | 'one_month' | 'three_months' | 'six_months' | 'one_year';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { Trash2, Plus } from "lucide-react";
+import AdminNavigation from "@/components/AdminNavigation";
 
 interface SubscriptionPlan {
   id: string;
   client_id: string;
-  plan_type: PlanType;
+  plan_type: string;
   start_date: string;
   end_date: string;
   is_active: boolean;
-  status?: string;
+  status: string;
   created_at: string;
   updated_at: string;
-  clients?: {
-    profiles?: {
+  clients: {
+    id: string;
+    user_id: string;
+    website_url: string;
+    script_id: string;
+    profiles: {
       name: string;
       email: string;
-    } | null;
-  } | null;
-}
-
-interface EditForm {
-  id: string;
-  client_id: string;
-  plan_type: PlanType;
-  start_date: string;
-  end_date: string;
-  is_active: boolean;
+    };
+  };
 }
 
 const Plans = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [newPlan, setNewPlan] = useState({
-    client_id: '',
-    plan_type: 'free_7_days' as PlanType,
-    start_date: new Date().toISOString().split('T')[0],
-    end_date: new Date().toISOString().split('T')[0],
-  });
-  const [editForm, setEditForm] = useState<EditForm>({
-    id: '',
-    client_id: '',
-    plan_type: 'free_7_days' as PlanType,
-    start_date: new Date().toISOString().split('T')[0],
-    end_date: new Date().toISOString().split('T')[0],
-    is_active: true
-  });
+  const [loading, setLoading] = useState(true);
+  const [planToDelete, setPlanToDelete] = useState<SubscriptionPlan | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { userProfile } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
-    fetchPlans();
-  }, [user]);
+    if (userProfile?.user_type === "admin") {
+      loadPlans();
+    }
+  }, [userProfile]);
 
-  const fetchPlans = async () => {
-    setLoading(true);
+  const loadPlans = async () => {
     try {
-      const { data, error } = await supabase
-        .from('subscription_plans')
+      setLoading(true);
+      
+      const { data: plansData, error } = await supabase
+        .from("subscription_plans")
         .select(`
           *,
           clients (
-            profiles (
-              name,
-              email
-            )
+            id,
+            user_id,
+            website_url,
+            script_id
           )
         `)
-        .order('created_at', { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
+
+      // Buscar os perfis dos usuários separadamente
+      if (plansData && plansData.length > 0) {
+        const userIds = plansData
+          .map(plan => plan.clients?.user_id)
+          .filter(Boolean);
+
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("user_id, name, email")
+          .in("user_id", userIds);
+
+        if (profilesError) throw profilesError;
+
+        // Combinar os dados
+        const transformedPlans = plansData.map(plan => ({
+          ...plan,
+          clients: {
+            ...plan.clients,
+            profiles: profilesData?.find(p => p.user_id === plan.clients?.user_id) || {
+              name: 'N/A',
+              email: 'N/A'
+            }
+          }
+        })) as SubscriptionPlan[];
+
+        setPlans(transformedPlans);
+      } else {
+        setPlans([]);
+      }
       
-      // Map the data to our SubscriptionPlan type with proper type handling
-      const validPlans: SubscriptionPlan[] = (data || [])
-        .filter((plan: any) => plan && typeof plan.id === 'string')
-        .map((plan: any) => ({
-          id: plan.id,
-          client_id: plan.client_id,
-          plan_type: plan.plan_type as PlanType,
-          start_date: plan.start_date,
-          end_date: plan.end_date,
-          is_active: plan.is_active,
-          status: plan.status || 'active',
-          created_at: plan.created_at,
-          updated_at: plan.updated_at,
-          clients: plan.clients ? {
-            profiles: plan.clients.profiles ? {
-              name: plan.clients.profiles.name || 'N/A',
-              email: plan.clients.profiles.email || 'N/A'
-            } : null
-          } : null
-        }));
-      
-      setPlans(validPlans);
-    } catch (error: any) {
+    } catch (error) {
+      console.error("Erro ao carregar planos:", error);
       toast({
-        title: "Erro ao buscar planos",
-        description: error.message,
+        title: "Erro",
+        description: "Erro ao carregar planos de assinatura",
         variant: "destructive",
       });
     } finally {
@@ -119,310 +108,233 @@ const Plans = () => {
     }
   };
 
-  const handleCreatePlan = async () => {
-    try {
-      const { data: client, error: clientError } = await supabase
-        .from('clients')
-        .select('id')
-        .eq('id', newPlan.client_id)
-        .single();
-
-      if (clientError || !client) {
-        toast({
-          title: "Erro ao criar plano",
-          description: "Cliente não encontrado.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { error } = await supabase
-        .from('subscription_plans')
-        .insert({
-          client_id: newPlan.client_id,
-          plan_type: newPlan.plan_type as PlanType,
-          start_date: newPlan.start_date,
-          end_date: newPlan.end_date,
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Plano criado",
-        description: "Novo plano criado com sucesso!",
-      });
-
-      setCreateDialogOpen(false);
-      fetchPlans();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao criar plano",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleEditPlan = async () => {
-    try {
-      const { error } = await supabase
-        .from('subscription_plans')
-        .update({
-          plan_type: editForm.plan_type,
-          start_date: editForm.start_date,
-          end_date: editForm.end_date,
-          is_active: editForm.is_active
-        })
-        .eq('id', editForm.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Plano atualizado",
-        description: `Plano ${editForm.is_active ? 'ativado' : 'desativado'} com sucesso!`,
-      });
-
-      setEditDialogOpen(false);
-      fetchPlans();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao atualizar plano",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   };
 
   const getPlanTypeLabel = (planType: string) => {
     switch (planType) {
-      case 'free_7_days':
-        return 'Teste Grátis (7 dias)';
-      case 'one_month':
-        return '1 Mês';
-      case 'three_months':
-        return '3 Meses';
-      case 'six_months':
-        return '6 Meses';
-      case 'one_year':
-        return '1 Ano';
+      case "free_7_days":
+        return "Grátis 7 dias";
+      case "one_month":
+        return "1 Mês";
+      case "three_months":
+        return "3 Meses";
+      case "six_months":
+        return "6 Meses";
+      case "one_year":
+        return "1 Ano";
       default:
-        return 'Desconhecido';
+        return planType;
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <AdminNavigation />
+  const getStatusBadgeVariant = (isActive: boolean, endDate: string) => {
+    const now = new Date();
+    const end = new Date(endDate);
+    
+    if (!isActive) return "secondary";
+    if (end < now) return "destructive";
+    return "default";
+  };
+
+  const getStatusLabel = (isActive: boolean, endDate: string) => {
+    const now = new Date();
+    const end = new Date(endDate);
+    
+    if (!isActive) return "Inativo";
+    if (end < now) return "Expirado";
+    return "Ativo";
+  };
+
+  const handleDeleteClick = (plan: SubscriptionPlan) => {
+    setPlanToDelete(plan);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!planToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("subscription_plans")
+        .delete()
+        .eq("id", planToDelete.id);
+
+      if (error) throw error;
+
+      setPlans(prev => prev.filter(plan => plan.id !== planToDelete.id));
       
-      <div className="container mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gerenciar Planos</h1>
-            <p className="text-gray-600 mt-2">Gerencie os planos de assinatura dos clientes</p>
-          </div>
-          
-          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-            <DialogTrigger asChild>
+      toast({
+        title: "Sucesso",
+        description: "Plano excluído com sucesso",
+      });
+    } catch (error) {
+      console.error("Erro ao excluir plano:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir plano. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setPlanToDelete(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setIsDeleteDialogOpen(false);
+    setPlanToDelete(null);
+  };
+
+  if (!userProfile || userProfile.user_type !== "admin") {
+    return (
+      <div className="min-h-screen bg-background">
+        <AdminNavigation />
+        <div className="container mx-auto py-8">
+          <Card>
+            <CardContent className="p-8 text-center">
+              <h2 className="text-2xl font-bold text-destructive">Acesso Negado</h2>
+              <p className="text-muted-foreground mt-2">
+                Você não tem permissão para acessar esta página.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <AdminNavigation />
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl font-bold">📊 Gerenciar Planos</CardTitle>
+                <CardDescription className="text-base mt-2">
+                  Visualize e gerencie todos os planos de assinatura dos clientes
+                </CardDescription>
+              </div>
               <Button className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
-                Criar Plano
+                Novo Plano
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Criar Novo Plano</DialogTitle>
-                <DialogDescription>
-                  Preencha os campos abaixo para criar um novo plano de assinatura
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="client-id">ID do Cliente</Label>
-                  <Input
-                    id="client-id"
-                    value={newPlan.client_id}
-                    onChange={(e) => setNewPlan({ ...newPlan, client_id: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="plan-type">Tipo do Plano</Label>
-                  <Select value={newPlan.plan_type} onValueChange={(value) => setNewPlan({...newPlan, plan_type: value as PlanType})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="free_7_days">Teste Grátis (7 dias)</SelectItem>
-                      <SelectItem value="one_month">1 Mês</SelectItem>
-                      <SelectItem value="three_months">3 Meses</SelectItem>
-                      <SelectItem value="six_months">6 Meses</SelectItem>
-                      <SelectItem value="one_year">1 Ano</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="start-date">Data de Início</Label>
-                  <Input
-                    id="start-date"
-                    type="date"
-                    value={newPlan.start_date}
-                    onChange={(e) => setNewPlan({ ...newPlan, start_date: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="end-date">Data de Fim</Label>
-                  <Input
-                    id="end-date"
-                    type="date"
-                    value={newPlan.end_date}
-                    onChange={(e) => setNewPlan({ ...newPlan, end_date: e.target.value })}
-                  />
-                </div>
-
-                <Button onClick={handleCreatePlan} className="w-full">
-                  Criar Plano
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Planos de Assinatura</CardTitle>
-            <CardDescription>
-              Lista de todos os planos de assinatura dos clientes
-            </CardDescription>
+            </div>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Tipo do Plano</TableHead>
-                  <TableHead>Data Início</TableHead>
-                  <TableHead>Data Fim</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {plans.map((plan) => (
-                  <TableRow key={plan.id}>
-                    <TableCell className="font-medium">
-                      {plan.clients?.profiles?.name || 'N/A'}
-                    </TableCell>
-                    <TableCell>{plan.clients?.profiles?.email || 'N/A'}</TableCell>
-                    <TableCell>
-                      <Badge variant={plan.plan_type === 'free_7_days' ? 'secondary' : 'default'}>
-                        {getPlanTypeLabel(plan.plan_type)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{new Date(plan.start_date).toLocaleDateString('pt-BR')}</TableCell>
-                    <TableCell>{new Date(plan.end_date).toLocaleDateString('pt-BR')}</TableCell>
-                    <TableCell>
-                      <Badge variant={plan.is_active && new Date(plan.end_date) > new Date() ? 'default' : 'destructive'}>
-                        {plan.is_active && new Date(plan.end_date) > new Date() ? 'Ativo' : 'Desativado'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-                        <DialogTrigger asChild>
+          <CardContent className="p-6">
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="text-muted-foreground mt-2">Carregando planos...</p>
+              </div>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Site</TableHead>
+                      <TableHead>Plano</TableHead>
+                      <TableHead>Data Início</TableHead>
+                      <TableHead>Data Fim</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-20">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {plans.map((plan) => (
+                      <TableRow key={plan.id}>
+                        <TableCell>
+                          <span className="font-medium">
+                            {plan.clients?.profiles?.name || 'N/A'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">
+                            {plan.clients?.profiles?.email || 'N/A'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">
+                            {plan.clients?.website_url || 'N/A'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium">
+                            {getPlanTypeLabel(plan.plan_type)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">
+                            {formatDate(plan.start_date)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">
+                            {formatDate(plan.end_date)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusBadgeVariant(plan.is_active, plan.end_date)}>
+                            {getStatusLabel(plan.is_active, plan.end_date)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
                           <Button
-                            variant="outline"
+                            variant="destructive"
                             size="sm"
-                            onClick={() => {
-                              setEditForm({
-                                id: plan.id,
-                                client_id: plan.client_id,
-                                plan_type: plan.plan_type,
-                                start_date: new Date(plan.start_date).toISOString().split('T')[0],
-                                end_date: new Date(plan.end_date).toISOString().split('T')[0],
-                                is_active: plan.is_active
-                              });
-                            }}
+                            onClick={() => handleDeleteClick(plan)}
+                            className="h-8 w-8 p-0"
                           >
-                            <Edit className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Editar Plano</DialogTitle>
-                            <DialogDescription>
-                              Edite as informações do plano de assinatura
-                            </DialogDescription>
-                          </DialogHeader>
-                          
-                          <div className="space-y-4">
-                            <div>
-                              <Label htmlFor="edit-plan-type">Tipo do Plano</Label>
-                              <Select value={editForm.plan_type} onValueChange={(value) => setEditForm({...editForm, plan_type: value as PlanType})}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="free_7_days">Teste Grátis (7 dias)</SelectItem>
-                                  <SelectItem value="one_month">1 Mês</SelectItem>
-                                  <SelectItem value="three_months">3 Meses</SelectItem>
-                                  <SelectItem value="six_months">6 Meses</SelectItem>
-                                  <SelectItem value="one_year">1 Ano</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div>
-                              <Label htmlFor="edit-start-date">Data de Início</Label>
-                              <Input
-                                id="edit-start-date"
-                                type="date"
-                                value={editForm.start_date}
-                                onChange={(e) => setEditForm({...editForm, start_date: e.target.value})}
-                              />
-                            </div>
-
-                            <div>
-                              <Label htmlFor="edit-end-date">Data de Fim</Label>
-                              <Input
-                                id="edit-end-date"
-                                type="date"
-                                value={editForm.end_date}
-                                onChange={(e) => setEditForm({...editForm, end_date: e.target.value})}
-                              />
-                            </div>
-
-                            <div>
-                              <Label htmlFor="edit-is-active">Status do Plano</Label>
-                              <Select 
-                                value={editForm.is_active ? "true" : "false"} 
-                                onValueChange={(value) => setEditForm({...editForm, is_active: value === "true"})}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="true">Ativo</SelectItem>
-                                  <SelectItem value="false">Desativado</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <Button onClick={handleEditPlan} className="w-full">
-                              Atualizar Plano
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                
+                {plans.length === 0 && !loading && (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">Nenhum plano encontrado.</p>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
+
+        {/* Dialog de confirmação de exclusão */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir o plano de <strong>{planToDelete?.clients?.profiles?.name}</strong>? 
+                Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleDeleteCancel}>
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteConfirm}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
