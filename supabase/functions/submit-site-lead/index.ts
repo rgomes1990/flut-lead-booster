@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
 
     // Extrair dados UTM da URL
     const extractUTMFromUrl = (url: string) => {
-      if (!url) return { campaign: null, content: null, medium: null };
+      if (!url) return { campaign: null };
 
       try {
         const urlObj = new URL(url);
@@ -61,19 +61,13 @@ Deno.serve(async (req) => {
         
         return {
           campaign: params.get('utm_campaign') || null,
-          content: params.get('utm_content') || null,
-          medium: params.get('utm_medium') || null,
         };
       } catch {
         // Se a URL for inválida, tentar extrair com regex
         const campaignMatch = url.match(/[?&]utm_campaign=([^&]*)/);
-        const contentMatch = url.match(/[?&]utm_content=([^&]*)/);
-        const mediumMatch = url.match(/[?&]utm_medium=([^&]*)/);
         
         return {
           campaign: campaignMatch ? decodeURIComponent(campaignMatch[1]) : null,
-          content: contentMatch ? decodeURIComponent(contentMatch[1]) : null,
-          medium: mediumMatch ? decodeURIComponent(mediumMatch[1]) : null,
         };
       }
     };
@@ -104,7 +98,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (siteError || !site) {
-      console.error('Site error:', siteError);
+      console.error('Site error:", siteError);
       return new Response('Site not found or inactive', { 
         status: 404, 
         headers: corsHeaders 
@@ -172,7 +166,7 @@ Deno.serve(async (req) => {
       .eq('site_id', site_id)
       .single();
 
-    // Inserir lead na tabela leads com dados UTM
+    // Inserir lead na tabela leads apenas com as colunas que existem
     const { error: leadError } = await supabase
       .from('leads')
       .insert({
@@ -184,8 +178,6 @@ Deno.serve(async (req) => {
         website_url: website_url || '',
         origin: finalOrigin,
         campaign: utmData.campaign || 'Não informado',
-        ad_content: utmData.content || 'Não informado',
-        audience: utmData.medium || 'Não informado',
         status: 'new'
       });
 
