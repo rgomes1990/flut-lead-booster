@@ -12,10 +12,13 @@ import { Plus, Edit, Trash2, Users, Building } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminNavigation from "@/components/AdminNavigation";
+import SearchInput from "@/components/SearchInput";
 
 const Admin = () => {
   const { userProfile } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [newClient, setNewClient] = useState({ 
     name: "", 
     email: "", 
@@ -37,6 +40,20 @@ const Admin = () => {
       loadUsers();
     }
   }, [userProfile]);
+
+  useEffect(() => {
+    // Filtrar usuários baseado no termo de busca
+    if (searchTerm.trim() === "") {
+      setFilteredUsers(users);
+    } else {
+      const filtered = users.filter(user => 
+        user.profiles?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.user_type?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredUsers(filtered);
+    }
+  }, [users, searchTerm]);
 
   const loadUsers = async () => {
     try {
@@ -384,13 +401,23 @@ const Admin = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Usuários Cadastrados
-            </CardTitle>
-            <CardDescription>
-              Lista de todos os usuários do sistema (Administradores e Clientes)
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Usuários Cadastrados
+                </CardTitle>
+                <CardDescription>
+                  Lista de todos os usuários do sistema (Administradores e Clientes)
+                </CardDescription>
+              </div>
+              <SearchInput
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="Buscar por nome, email ou tipo..."
+                className="w-72"
+              />
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
@@ -406,7 +433,7 @@ const Admin = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
+                {filteredUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.profiles?.name}</TableCell>
                     <TableCell>{user.profiles?.email}</TableCell>

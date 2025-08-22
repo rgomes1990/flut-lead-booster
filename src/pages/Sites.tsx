@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,15 +13,18 @@ import { Plus, Edit, Trash2, Globe, Users, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminNavigation from "@/components/AdminNavigation";
+import SearchInput from "@/components/SearchInput";
 import { Link } from "react-router-dom";
 
 const Sites = () => {
   const { userProfile } = useAuth();
   const [sites, setSites] = useState<any[]>([]);
+  const [filteredSites, setFilteredSites] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [users, setUsers] = useState<any[]>([]);
   const [newSite, setNewSite] = useState({ 
     domain: "", 
-    user_id: "" 
+    user_id: userProfile?.user_type === 'client' ? userProfile.user_id : "" 
   });
   const [editingSite, setEditingSite] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -33,6 +37,27 @@ const Sites = () => {
       if (userProfile.user_type === 'admin') {
         loadUsers();
       }
+    }
+  }, [userProfile]);
+
+  useEffect(() => {
+    // Filtrar sites baseado no termo de busca
+    if (searchTerm.trim() === "") {
+      setFilteredSites(sites);
+    } else {
+      const filtered = sites.filter(site => 
+        site.domain?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        site.profiles?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        site.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredSites(filtered);
+    }
+  }, [sites, searchTerm]);
+
+  // Atualizar o user_id padrão quando o perfil do usuário carrega
+  useEffect(() => {
+    if (userProfile?.user_type === 'client') {
+      setNewSite(prev => ({ ...prev, user_id: userProfile.user_id }));
     }
   }, [userProfile]);
 
@@ -132,11 +157,57 @@ const Sites = () => {
 
       if (error) throw error;
 
+      // Buscar dados do usuário para auto-preencher configurações do site
+      const { data: userData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", newSite.user_id)
+        .single();
+
+      const { data: clientData } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("user_id", newSite.user_id)
+        .single();
+
+      // Buscar o site recém-criado para obter o ID
+      const { data: siteData } = await supabase
+        .from("sites")
+        .select("*")
+        .eq("domain", domain)
+        .eq("user_id", newSite.user_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (siteData) {
+        // Criar configuração automática do site com dados do usuário
+        await supabase
+          .from("site_configs")
+          .insert({
+            site_id: siteData.id,
+            company_name: userData?.name || '',
+            email: userData?.email || '',
+            phone: clientData?.whatsapp || '',
+            attendant_name: userData?.name || '',
+            field_name: true,
+            field_email: true,
+            field_phone: true,
+            field_message: true,
+            field_capture_page: true,
+            is_active: true,
+            icon_type: 'whatsapp',
+            icon_position: 'bottom',
+            default_message: 'Olá! Gostaria de mais informações sobre seus produtos/serviços.'
+          });
+      }
+
       toast({
         title: "Site criado com sucesso!",
+        description: "As configurações foram preenchidas automaticamente com seus dados.",
       });
 
-      setNewSite({ domain: "", user_id: "" });
+      setNewSite({ domain: "", user_id: userProfile?.user_type === 'client' ? userProfile.user_id : "" });
       setDialogOpen(false);
       loadSites();
     } catch (error: any) {
@@ -257,19 +328,19 @@ const Sites = () => {
             <p className="text-muted-foreground">Administrar sites e vincular usuários</p>
           </div>
           
-          {userProfile?.user_type === 'admin' && (
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Site
-                </Button>
-              </DialogTrigger>
+          {/* Permitir criação de sites tanto para admin quanto para client */}
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Site
+              </Button>
+            </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Criar Novo Site</DialogTitle>
                 <DialogDescription>
-                  Adicione um novo domínio e vincule a um usuário
+                  Adicione um novo domínio{userProfile?.user_type === 'admin' ? ' e vincule a um usuário' : ''}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -283,42 +354,53 @@ const Sites = () => {
                     required
                   />
                 </div>
-                <div>
-                  <Label htmlFor="user">Usuário</Label>
-                  <Select 
-                    value={newSite.user_id} 
-                    onValueChange={(value) => setNewSite({ ...newSite, user_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um usuário" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border shadow-lg">
-                      {users.map((user) => (
-                        <SelectItem key={user.user_id} value={user.user_id}>
-                          {user.name} ({user.email}) - {user.user_type === 'admin' ? 'Admin' : 'Cliente'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {userProfile?.user_type === 'admin' && (
+                  <div>
+                    <Label htmlFor="user">Usuário</Label>
+                    <Select 
+                      value={newSite.user_id} 
+                      onValueChange={(value) => setNewSite({ ...newSite, user_id: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um usuário" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border shadow-lg">
+                        {users.map((user) => (
+                          <SelectItem key={user.user_id} value={user.user_id}>
+                            {user.name} ({user.email}) - {user.user_type === 'admin' ? 'Admin' : 'Cliente'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <Button onClick={createSite} className="w-full">
                   Criar Site
                 </Button>
               </div>
             </DialogContent>
           </Dialog>
-          )}
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              Sites Cadastrados
-            </CardTitle>
-            <CardDescription>
-              Lista de todos os sites e seus usuários vinculados
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Sites Cadastrados
+                </CardTitle>
+                <CardDescription>
+                  Lista de todos os sites e seus usuários vinculados
+                </CardDescription>
+              </div>
+              <SearchInput
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="Buscar por domínio, usuário ou email..."
+                className="w-72"
+              />
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
@@ -334,7 +416,7 @@ const Sites = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sites.map((site) => (
+                {filteredSites.map((site) => (
                   <TableRow key={site.id}>
                     <TableCell className="font-medium">
                       <Link 
@@ -369,7 +451,7 @@ const Sites = () => {
                           <Settings className="h-4 w-4" />
                         </Button>
                       </Link>
-                      {userProfile?.user_type === 'admin' && (
+                      {(userProfile?.user_type === 'admin' || site.user_id === userProfile?.user_id) && (
                         <>
                           <Button
                             size="sm"
@@ -418,24 +500,26 @@ const Sites = () => {
                     placeholder="exemplo.com"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="edit-user">Usuário</Label>
-                  <Select 
-                    value={editingSite.user_id} 
-                    onValueChange={(value) => setEditingSite({ ...editingSite, user_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um usuário" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border shadow-lg">
-                      {users.map((user) => (
-                        <SelectItem key={user.user_id} value={user.user_id}>
-                          {user.name} ({user.email}) - {user.user_type === 'admin' ? 'Admin' : 'Cliente'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {userProfile?.user_type === 'admin' && (
+                  <div>
+                    <Label htmlFor="edit-user">Usuário</Label>
+                    <Select 
+                      value={editingSite.user_id} 
+                      onValueChange={(value) => setEditingSite({ ...editingSite, user_id: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um usuário" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border shadow-lg">
+                        {users.map((user) => (
+                          <SelectItem key={user.user_id} value={user.user_id}>
+                            {user.name} ({user.email}) - {user.user_type === 'admin' ? 'Admin' : 'Cliente'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"

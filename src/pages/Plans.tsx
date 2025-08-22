@@ -1,246 +1,268 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import AdminNavigation from '@/components/AdminNavigation';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { Calendar, Clock, Users, AlertTriangle, Trash2, XCircle } from 'lucide-react';
 
-interface Client {
-  id: string;
-  script_id: string;
-  website_url?: string;
-  is_active: boolean;
-  user_id: string;
-  profiles: {
-    name: string;
-    email: string;
-  } | null;
-  subscription_plans: {
-    id: string;
-    plan_type: string;
-    start_date: string;
-    end_date: string;
-    is_active: boolean;
-  } | null;
-}
+import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Edit, Trash2, Calendar, Clock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import AdminNavigation from "@/components/AdminNavigation";
+import SearchInput from "@/components/SearchInput";
 
-const PLAN_LABELS = {
-  free_7_days: '7 Dias Grátis',
-  one_month: '1 Mês',
-  three_months: '3 Meses',
-  six_months: '6 Meses',
-  one_year: '1 Ano'
-};
-
-export default function Plans() {
+const Plans = () => {
   const { userProfile } = useAuth();
+  const [subscriptionPlans, setSubscriptionPlans] = useState<any[]>([]);
+  const [filteredPlans, setFilteredPlans] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [clients, setClients] = useState<any[]>([]);
+  const [newPlan, setNewPlan] = useState({
+    client_id: "",
+    plan_type: "free_7_days" as "free_7_days" | "one_month" | "three_months" | "six_months" | "one_year"
+  });
+  const [editingPlan, setEditingPlan] = useState<any>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { toast } = useToast();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedClient, setSelectedClient] = useState<string>('');
-  const [selectedPlan, setSelectedPlan] = useState<string>('');
-  const [updateLoading, setUpdateLoading] = useState(false);
 
   useEffect(() => {
     if (userProfile) {
-      loadClients();
+      loadPlans();
+      if (userProfile.user_type === 'admin') {
+        loadClients();
+      }
     }
   }, [userProfile]);
 
-  const loadClients = async () => {
+  useEffect(() => {
+    // Filtrar planos baseado no termo de busca
+    if (searchTerm.trim() === "") {
+      setFilteredPlans(subscriptionPlans);
+    } else {
+      const filtered = subscriptionPlans.filter(plan => 
+        plan.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        plan.client_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        plan.plan_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (plan.is_active ? 'ativo' : 'inativo').includes(searchTerm.toLowerCase())
+      );
+      setFilteredPlans(filtered);
+    }
+  }, [subscriptionPlans, searchTerm]);
+
+  const loadPlans = async () => {
     try {
-      setLoading(true);
+      // Query baseado no tipo de usuário
+      let plansQuery = supabase
+        .from("subscription_plans")
+        .select("*");
 
-      let clientsQuery = supabase
-        .from('clients')
-        .select(`
-          *,
-          subscription_plans(id, plan_type, start_date, end_date, is_active)
-        `);
-
-      // Se for cliente, filtrar apenas seus próprios dados
+      // Se for cliente, filtrar apenas seus planos
       if (userProfile?.user_type === 'client') {
-        clientsQuery = clientsQuery.eq('user_id', userProfile.user_id);
+        const { data: clientData } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("user_id", userProfile.user_id)
+          .single();
+        
+        if (clientData) {
+          plansQuery = plansQuery.eq('client_id', clientData.id);
+        }
       }
 
-      const { data, error } = await clientsQuery
-        .order('created_at', { ascending: false });
+      const { data: plansData, error: plansError } = await plansQuery
+        .order("created_at", { ascending: false });
 
-      // Buscar profiles separadamente - apenas clientes
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('user_id, name, email')
-        .eq('user_type', 'client');
+      if (plansError) throw plansError;
 
-      // Combinar dados e filtrar apenas clientes - pegar o plano ativo mais recente
-      const clientsWithProfiles = data?.filter(client => {
-        const profile = profilesData?.find(profile => profile.user_id === client.user_id);
-        return profile !== undefined;
-      }).map(client => ({
-        ...client,
-        profiles: profilesData?.find(profile => profile.user_id === client.user_id) || null,
-        subscription_plans: Array.isArray(client.subscription_plans) && client.subscription_plans.length > 0 
-          ? client.subscription_plans
-              .filter((plan: any) => plan.is_active) // Apenas planos ativos
-              .sort((a: any, b: any) => new Date(b.created_at || b.start_date).getTime() - new Date(a.created_at || a.start_date).getTime())[0] || null
-          : null
-      })) || [];
+      // Carregar dados dos clientes para exibição
+      const { data: clientsData, error: clientsError } = await supabase
+        .from("clients")
+        .select(`
+          id,
+          user_id,
+          profiles!inner(name, email)
+        `);
 
-      if (error) throw error;
-      setClients(clientsWithProfiles);
+      if (clientsError) throw clientsError;
+
+      // Combinar dados
+      const plansWithClients = plansData?.map(plan => {
+        const client = clientsData?.find(c => c.id === plan.client_id);
+        return {
+          ...plan,
+          client_name: client?.profiles?.name || 'N/A',
+          client_email: client?.profiles?.email || 'N/A'
+        };
+      }) || [];
+
+      setSubscriptionPlans(plansWithClients);
     } catch (error) {
-      console.error('Erro ao carregar clientes:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar clientes.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      console.error("Error loading subscription plans:", error);
     }
   };
 
-  const updatePlan = async () => {
-    if (!selectedClient || !selectedPlan) return;
-
+  const loadClients = async () => {
     try {
-      setUpdateLoading(true);
+      const { data: clientsData, error } = await supabase
+        .from("clients")
+        .select(`
+          id,
+          user_id,
+          profiles!inner(name, email)
+        `)
+        .order("profiles.name");
 
-      // Primeiro, desativar todos os planos existentes do cliente
-      await supabase
-        .from('subscription_plans')
-        .update({ is_active: false })
-        .eq('client_id', selectedClient);
+      if (error) throw error;
 
-      // Criar novo plano
-      const startDate = new Date().toISOString();
-      const { data: endDateData, error: functionError } = await supabase
-        .rpc('calculate_plan_end_date', {
-          plan_type: selectedPlan as any,
-          start_date: startDate
+      const transformedClients = clientsData?.map((client: any) => ({
+        id: client.id,
+        user_id: client.user_id,
+        name: client.profiles?.name || 'N/A',
+        email: client.profiles?.email || 'N/A'
+      })) || [];
+
+      setClients(transformedClients);
+    } catch (error) {
+      console.error("Error loading clients:", error);
+    }
+  };
+
+  const createPlan = async () => {
+    try {
+      if (!newPlan.client_id || !newPlan.plan_type) {
+        toast({
+          title: "Erro",
+          description: "Cliente e tipo de plano são obrigatórios",
+          variant: "destructive",
         });
+        return;
+      }
 
-      if (functionError) throw functionError;
+      // Calcular data de fim baseado no tipo de plano
+      const { data, error } = await supabase.rpc('calculate_plan_end_date', {
+        plan_type: newPlan.plan_type,
+        start_date: new Date().toISOString()
+      });
+
+      if (error) throw error;
 
       const { error: insertError } = await supabase
-        .from('subscription_plans')
+        .from("subscription_plans")
         .insert({
-          client_id: selectedClient,
-          plan_type: selectedPlan as any,
-          start_date: startDate,
-          end_date: endDateData,
+          client_id: newPlan.client_id,
+          plan_type: newPlan.plan_type,
+          start_date: new Date().toISOString(),
+          end_date: data,
           is_active: true
         });
 
       if (insertError) throw insertError;
 
-      // Atualizar status do cliente baseado no plano
-      await supabase
-        .from('clients')
-        .update({ is_active: true })
-        .eq('id', selectedClient);
-
       toast({
-        title: "Sucesso",
-        description: "Plano atualizado com sucesso!",
+        title: "Plano criado com sucesso!",
       });
 
-      setSelectedClient('');
-      setSelectedPlan('');
-      loadClients();
-    } catch (error) {
-      console.error('Erro ao atualizar plano:', error);
+      setNewPlan({ client_id: "", plan_type: "free_7_days" });
+      setDialogOpen(false);
+      loadPlans();
+    } catch (error: any) {
       toast({
-        title: "Erro",
-        description: "Erro ao atualizar plano.",
+        title: "Erro ao criar plano",
+        description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setUpdateLoading(false);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
-
-  const isPlanExpired = (endDate: string) => {
-    return new Date(endDate) < new Date();
-  };
-
-  const getActivePlan = (plan: Client['subscription_plans']) => {
-    return plan;
-  };
-
-  const deactivatePlan = async (planId: string) => {
+  const updatePlan = async () => {
     try {
+      if (!editingPlan.client_id || !editingPlan.plan_type) {
+        toast({
+          title: "Erro",
+          description: "Cliente e tipo de plano são obrigatórios",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
-        .from('subscription_plans')
-        .update({ is_active: false })
-        .eq('id', planId);
+        .from("subscription_plans")
+        .update({
+          client_id: editingPlan.client_id,
+          plan_type: editingPlan.plan_type,
+          is_active: editingPlan.is_active
+        })
+        .eq("id", editingPlan.id);
 
       if (error) throw error;
 
       toast({
-        title: "Sucesso",
-        description: "Plano desativado com sucesso!",
+        title: "Plano atualizado com sucesso!",
       });
 
-      loadClients();
-    } catch (error) {
-      console.error('Erro ao desativar plano:', error);
+      setEditDialogOpen(false);
+      setEditingPlan(null);
+      loadPlans();
+    } catch (error: any) {
       toast({
-        title: "Erro",
-        description: "Erro ao desativar plano.",
+        title: "Erro ao atualizar plano",
+        description: error.message,
         variant: "destructive",
       });
     }
   };
 
   const deletePlan = async (planId: string) => {
+    if (!confirm("Tem certeza que deseja excluir este plano?")) return;
+
     try {
       const { error } = await supabase
-        .from('subscription_plans')
+        .from("subscription_plans")
         .delete()
-        .eq('id', planId);
+        .eq("id", planId);
 
       if (error) throw error;
 
       toast({
-        title: "Sucesso",
-        description: "Plano excluído com sucesso!",
+        title: "Plano excluído com sucesso!",
       });
 
-      loadClients();
-    } catch (error) {
-      console.error('Erro ao excluir plano:', error);
+      loadPlans();
+    } catch (error: any) {
       toast({
-        title: "Erro",
-        description: "Erro ao excluir plano.",
+        title: "Erro ao excluir plano",
+        description: error.message,
         variant: "destructive",
       });
     }
   };
 
+  const formatPlanType = (planType: string) => {
+    const planTypes: { [key: string]: string } = {
+      'free_7_days': 'Grátis 7 dias',
+      'one_month': '1 Mês',
+      'three_months': '3 Meses',
+      'six_months': '6 Meses',
+      'one_year': '1 Ano'
+    };
+    return planTypes[planType] || planType;
+  };
+
+  const isPlanActive = (endDate: string) => {
+    return new Date(endDate) > new Date();
+  };
+
   if (!userProfile || (userProfile.user_type !== 'admin' && userProfile.user_type !== 'client')) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Acesso Negado
-            </CardTitle>
-            <CardDescription>
-              Você não tem permissão para acessar esta página.
-            </CardDescription>
-          </CardHeader>
+      <div className="min-h-screen flex items-center justify-center">
+        <Card>
+          <CardContent className="pt-6">
+            <p>Acesso negado. Você não tem permissão para acessar esta página.</p>
+          </CardContent>
         </Card>
       </div>
     );
@@ -249,165 +271,229 @@ export default function Plans() {
   return (
     <div className="min-h-screen bg-background">
       <AdminNavigation />
-      
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Gerenciar Planos</h1>
-            <p className="text-muted-foreground">
-              Gerencie os planos de assinatura dos clientes
-            </p>
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold">Gerenciar Planos</h1>
+              <p className="text-muted-foreground">Administrar planos de assinatura dos clientes</p>
+            </div>
+            
+            {userProfile?.user_type === 'admin' && (
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Plano
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Criar Novo Plano</DialogTitle>
+                    <DialogDescription>
+                      Adicione um novo plano de assinatura para um cliente
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="client">Cliente</Label>
+                      <Select 
+                        value={newPlan.client_id} 
+                        onValueChange={(value) => setNewPlan({ ...newPlan, client_id: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um cliente" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border shadow-lg">
+                          {clients.map((client) => (
+                            <SelectItem key={client.id} value={client.id}>
+                              {client.name} ({client.email})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="planType">Tipo de Plano</Label>
+                      <Select 
+                        value={newPlan.plan_type} 
+                        onValueChange={(value: any) => setNewPlan({ ...newPlan, plan_type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo de plano" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border shadow-lg">
+                          <SelectItem value="free_7_days">Grátis 7 dias</SelectItem>
+                          <SelectItem value="one_month">1 Mês</SelectItem>
+                          <SelectItem value="three_months">3 Meses</SelectItem>
+                          <SelectItem value="six_months">6 Meses</SelectItem>
+                          <SelectItem value="one_year">1 Ano</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button onClick={createPlan} className="w-full">
+                      Criar Plano
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
 
-          {userProfile?.user_type === 'admin' && (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button>
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Atualizar Plano
-                </Button>
-              </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Atualizar Plano de Cliente</DialogTitle>
-                <DialogDescription>
-                  Selecione o cliente e o novo plano. A renovação será feita a partir da data atual.
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
                 <div>
-                  <label className="text-sm font-medium">Cliente</label>
-                  <Select value={selectedClient} onValueChange={setSelectedClient}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um cliente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.profiles?.name || 'Cliente'} - {client.website_url || 'Site não identificado'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Planos de Assinatura
+                  </CardTitle>
+                  <CardDescription>
+                    Lista dos planos de assinatura ativos e histórico
+                  </CardDescription>
                 </div>
-
-                <div>
-                  <label className="text-sm font-medium">Plano</label>
-                  <Select value={selectedPlan} onValueChange={setSelectedPlan}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um plano" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="free_7_days">7 Dias Grátis</SelectItem>
-                      <SelectItem value="one_month">1 Mês</SelectItem>
-                      <SelectItem value="three_months">3 Meses</SelectItem>
-                      <SelectItem value="six_months">6 Meses</SelectItem>
-                      <SelectItem value="one_year">1 Ano</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button 
-                  onClick={updatePlan} 
-                  disabled={!selectedClient || !selectedPlan || updateLoading}
-                  className="w-full"
-                >
-                  {updateLoading ? "Atualizando..." : "Atualizar Plano"}
-                </Button>
+                <SearchInput
+                  value={searchTerm}
+                  onChange={setSearchTerm}
+                  placeholder="Buscar por cliente, email, plano ou status..."
+                  className="w-72"
+                />
               </div>
-            </DialogContent>
-          </Dialog>
-          )}
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Clientes e Planos
-            </CardTitle>
-            <CardDescription>
-              Visualize todos os clientes e seus planos de assinatura
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-8">Carregando clientes...</div>
-            ) : (
+            </CardHeader>
+            <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Cliente</TableHead>
-                    <TableHead>E-mail</TableHead>
-                    <TableHead>Site</TableHead>
-                    <TableHead>Plano Atual</TableHead>
-                    <TableHead>Início</TableHead>
-                    <TableHead>Expiração</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Tipo de Plano</TableHead>
+                    <TableHead>Data Início</TableHead>
+                    <TableHead>Data Fim</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Ações</TableHead>
+                    <TableHead>Ativo</TableHead>
+                    {userProfile?.user_type === 'admin' && <TableHead>Ações</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {clients.map((client) => {
-                    const activePlan = getActivePlan(client.subscription_plans);
-                    const isExpired = activePlan ? isPlanExpired(activePlan.end_date) : true;
-                    const isManuallyDeactivated = activePlan ? !activePlan.is_active : false;
-                    const isInactive = isExpired || isManuallyDeactivated;
-                    
-                    return (
-                      <TableRow key={client.id}>
-                        <TableCell className="font-medium">
-                          {client.profiles?.name || 'Nome não encontrado'}
+                  {filteredPlans.map((plan) => (
+                    <TableRow key={plan.id}>
+                      <TableCell className="font-medium">{plan.client_name}</TableCell>
+                      <TableCell>{plan.client_email}</TableCell>
+                      <TableCell>{formatPlanType(plan.plan_type)}</TableCell>
+                      <TableCell>
+                        {new Date(plan.start_date).toLocaleDateString("pt-BR")}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(plan.end_date).toLocaleDateString("pt-BR")}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={isPlanActive(plan.end_date) ? 'default' : 'secondary'}>
+                          <Clock className="h-3 w-3 mr-1" />
+                          {isPlanActive(plan.end_date) ? 'Vigente' : 'Expirado'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={plan.is_active ? 'default' : 'secondary'}>
+                          {plan.is_active ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </TableCell>
+                      {userProfile?.user_type === 'admin' && (
+                        <TableCell className="space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingPlan(plan);
+                              setEditDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => deletePlan(plan.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </TableCell>
-                        <TableCell>{client.profiles?.email || 'Email não encontrado'}</TableCell>
-                        <TableCell>{client.website_url || 'Site não identificado'}</TableCell>
-                        <TableCell>
-                          {activePlan ? PLAN_LABELS[activePlan.plan_type as keyof typeof PLAN_LABELS] : 'Sem plano'}
-                        </TableCell>
-                        <TableCell>
-                          {activePlan ? formatDate(activePlan.start_date) : '-'}
-                        </TableCell>
-                        <TableCell>
-                          {activePlan ? formatDate(activePlan.end_date) : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={isInactive ? "destructive" : "default"}>
-                            {isManuallyDeactivated ? 'Inativo' : (isExpired ? 'Expirado' : 'Ativo')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {activePlan && userProfile?.user_type === 'admin' && (
-                            <div className="flex gap-2">
-                              {activePlan.is_active && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => deactivatePlan(activePlan.id)}
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              )}
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => deletePlan(activePlan.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          )}
-                          {userProfile?.user_type === 'client' && <span className="text-muted-foreground text-sm">-</span>}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                      )}
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          {/* Edit Dialog */}
+          {userProfile?.user_type === 'admin' && (
+            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Editar Plano</DialogTitle>
+                  <DialogDescription>
+                    Edite as informações do plano selecionado
+                  </DialogDescription>
+                </DialogHeader>
+                {editingPlan && (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="edit-client">Cliente</Label>
+                      <Select 
+                        value={editingPlan.client_id} 
+                        onValueChange={(value) => setEditingPlan({ ...editingPlan, client_id: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um cliente" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border shadow-lg">
+                          {clients.map((client) => (
+                            <SelectItem key={client.id} value={client.id}>
+                              {client.name} ({client.email})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-planType">Tipo de Plano</Label>
+                      <Select 
+                        value={editingPlan.plan_type} 
+                        onValueChange={(value: any) => setEditingPlan({ ...editingPlan, plan_type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo de plano" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border shadow-lg">
+                          <SelectItem value="free_7_days">Grátis 7 dias</SelectItem>
+                          <SelectItem value="one_month">1 Mês</SelectItem>
+                          <SelectItem value="three_months">3 Meses</SelectItem>
+                          <SelectItem value="six_months">6 Meses</SelectItem>
+                          <SelectItem value="one_year">1 Ano</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="edit-plan-active"
+                        checked={editingPlan.is_active}
+                        onChange={(e) => setEditingPlan({ ...editingPlan, is_active: e.target.checked })}
+                      />
+                      <Label htmlFor="edit-plan-active">Plano Ativo</Label>
+                    </div>
+                    <Button onClick={updatePlan} className="w-full">
+                      Atualizar Plano
+                    </Button>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default Plans;
