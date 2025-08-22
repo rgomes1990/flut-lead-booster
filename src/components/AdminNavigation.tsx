@@ -7,9 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { FlutLogo } from "./FlutLogo";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const AdminNavigation = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { signOut, userProfile } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [loadingInstallation, setLoadingInstallation] = useState(false);
@@ -83,9 +85,8 @@ const AdminNavigation = () => {
       if (sites && sites.length > 0) {
         const siteId = sites[0].id;
         console.log('Redirecionando para site:', siteId);
-        // Usar Link do React Router em vez de window.location.href para evitar 404
-        window.location.hash = `#/sites/${siteId}/config`;
-        window.location.reload();
+        // Usar navigate do React Router em vez de window.location
+        navigate(`/sites/${siteId}/config`);
       } else {
         console.log('Nenhum site encontrado, redirecionando para /sites');
         toast({
@@ -93,9 +94,8 @@ const AdminNavigation = () => {
           description: "Você precisa cadastrar um site primeiro.",
           variant: "default",
         });
-        // Usar hash navigation para evitar 404
-        window.location.hash = '#/sites';
-        window.location.reload();
+        // Usar navigate do React Router
+        navigate('/sites');
       }
     } catch (error) {
       console.error('Erro inesperado:', error);
@@ -104,9 +104,8 @@ const AdminNavigation = () => {
         description: "Erro inesperado. Redirecionando para a página de sites.",
         variant: "destructive",
       });
-      // Usar hash navigation para evitar 404
-      window.location.hash = '#/sites';
-      window.location.reload();
+      // Usar navigate do React Router
+      navigate('/sites');
     } finally {
       setLoadingInstallation(false);
     }
