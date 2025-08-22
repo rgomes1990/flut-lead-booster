@@ -1,3 +1,4 @@
+
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Users, Globe, LogOut, Contact, BarChart3, Calendar, Settings, Menu, X } from "lucide-react";
@@ -5,11 +6,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { FlutLogo } from "./FlutLogo";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const AdminNavigation = () => {
   const location = useLocation();
   const { signOut, userProfile } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [loadingInstallation, setLoadingInstallation] = useState(false);
+  const { toast } = useToast();
 
   const menuItems = [
     {
@@ -40,20 +44,65 @@ const AdminNavigation = () => {
   ];
 
   const handleInstallationClick = async () => {
+    if (loadingInstallation) return;
+    
+    setLoadingInstallation(true);
+    
     try {
-      const { data: sites } = await supabase
+      console.log('Buscando sites para o usuário:', userProfile?.user_id);
+      
+      if (!userProfile?.user_id) {
+        toast({
+          title: "Erro",
+          description: "Usuário não identificado. Faça login novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data: sites, error } = await supabase
         .from('sites')
-        .select('id')
-        .eq('user_id', userProfile?.user_id)
+        .select('id, domain')
+        .eq('user_id', userProfile.user_id)
+        .eq('is_active', true)
         .limit(1);
       
+      console.log('Sites encontrados:', sites);
+      console.log('Erro na consulta:', error);
+      
+      if (error) {
+        console.error('Erro ao buscar sites:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar informações do site. Tente novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       if (sites && sites.length > 0) {
-        window.location.href = `/sites/${sites[0].id}/config`;
+        const siteId = sites[0].id;
+        console.log('Redirecionando para site:', siteId);
+        window.location.href = `/sites/${siteId}/config`;
       } else {
+        console.log('Nenhum site encontrado, redirecionando para /sites');
+        toast({
+          title: "Nenhum site encontrado",
+          description: "Você precisa cadastrar um site primeiro.",
+          variant: "default",
+        });
         window.location.href = '/sites';
       }
     } catch (error) {
+      console.error('Erro inesperado:', error);
+      toast({
+        title: "Erro",
+        description: "Erro inesperado. Redirecionando para a página de sites.",
+        variant: "destructive",
+      });
       window.location.href = '/sites';
+    } finally {
+      setLoadingInstallation(false);
     }
   };
 
@@ -93,11 +142,14 @@ const AdminNavigation = () => {
                 variant="ghost"
                 className={`flex items-center gap-2 text-white hover:text-primary hover:bg-white/90 transition-all duration-200 ${
                   location.pathname.includes("/config") ? "bg-accent text-primary font-medium shadow-md" : ""
-                }`}
+                } ${loadingInstallation ? "opacity-50 cursor-not-allowed" : ""}`}
                 onClick={handleInstallationClick}
+                disabled={loadingInstallation}
               >
                 <Settings className="h-4 w-4" />
-                <span className="hidden xl:block">Instalação</span>
+                <span className="hidden xl:block">
+                  {loadingInstallation ? "Carregando..." : "Instalação"}
+                </span>
               </Button>
             )}
           </div>
@@ -164,14 +216,15 @@ const AdminNavigation = () => {
                   variant="ghost"
                   className={`w-full justify-start gap-3 text-white hover:text-primary hover:bg-white/90 transition-all duration-200 ${
                     location.pathname.includes("/config") ? "bg-accent text-primary font-medium" : ""
-                  }`}
+                  } ${loadingInstallation ? "opacity-50 cursor-not-allowed" : ""}`}
                   onClick={() => {
                     handleInstallationClick();
                     setIsMobileMenuOpen(false);
                   }}
+                  disabled={loadingInstallation}
                 >
                   <Settings className="h-5 w-5" />
-                  Instalação
+                  {loadingInstallation ? "Carregando..." : "Instalação"}
                 </Button>
               )}
 
