@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
           return 'Tráfego Direto';
         }
         
-        return 'Site Orgânico';
+        return 'Tráfego Direto';
       } catch {
         // Se a URL for inválida, usar regex - ALTERADO para Meta Ads
         if (url.match(/[?&]fbclid=/)) return 'Meta Ads';
@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
           return 'Tráfego Direto';
         }
         
-        return 'Site Orgânico';
+        return 'Tráfego Direto';
       }
     };
 
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
       detectedOrigin
     });
 
-    const finalOrigin = detectedOrigin || 'Site Orgânico';
+    const finalOrigin = detectedOrigin || 'Tráfego Direto';
 
     console.log('Final origin assigned:', finalOrigin);
 

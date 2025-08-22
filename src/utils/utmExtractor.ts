@@ -74,7 +74,7 @@ export const detectOriginFromUrl = (url: string): string => {
       return 'Tráfego Direto';
     }
     
-    return 'Site Orgânico';
+    return 'Tráfego Direto'; // ALTERADO de 'Site Orgânico' para 'Tráfego Direto'
   } catch {
     // Se a URL for inválida, usar regex - ALTERADO para Meta Ads
     if (url.match(/[?&]fbclid=/)) return 'Meta Ads';
@@ -89,7 +89,7 @@ export const detectOriginFromUrl = (url: string): string => {
       return 'Tráfego Direto';
     }
     
-    return 'Site Orgânico';
+    return 'Tráfego Direto'; // ALTERADO de 'Site Orgânico' para 'Tráfego Direto'
   }
 };
 
