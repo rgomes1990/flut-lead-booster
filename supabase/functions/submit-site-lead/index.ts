@@ -1,4 +1,5 @@
 
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0'
 
 const corsHeaders = {
@@ -98,7 +99,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (siteError || !site) {
-      console.error('Site error:", siteError);
+      console.error('Site error:', siteError);
       return new Response('Site not found or inactive', { 
         status: 404, 
         headers: corsHeaders 
@@ -224,3 +225,4 @@ ${message ? `${message}` : ''}`;
     });
   }
 });
+
