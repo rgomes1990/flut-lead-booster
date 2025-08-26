@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
@@ -14,6 +15,7 @@ import LeadsCaptured from "./pages/LeadsCaptured";
 import Plans from "./pages/Plans";
 import Landing from "./pages/Landing";
 import LeadDemo from "./pages/LeadDemo";
+import Audit from "./pages/Audit";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,27 +33,10 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode;
 
   // Se requer admin mas usuário não é admin, redireciona para dashboard
   if (requiredRole === 'admin' && userProfile?.user_type !== 'admin') {
-    return <Navigate to="/" replace />;
-  }
-  
-  return <>{children}</>;
-};
-
-const DashboardRouter = () => {
-  const { userProfile, loading } = useAuth();
-  
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
-  }
-  
-  // Redireciona baseado no tipo de usuário
-  if (userProfile?.user_type === 'admin') {
-    return <Navigate to="/admin" replace />;
-  } else if (userProfile?.user_type === 'client') {
     return <Navigate to="/dashboard" replace />;
   }
   
-  return <Dashboard />;
+  return <>{children}</>;
 };
 
 const AppRoutes = () => (
@@ -65,8 +50,13 @@ const AppRoutes = () => (
       </ProtectedRoute>
     } />
     <Route path="/admin" element={
-      <ProtectedRoute>
+      <ProtectedRoute requiredRole="admin">
         <Admin />
+      </ProtectedRoute>
+    } />
+    <Route path="/audit" element={
+      <ProtectedRoute requiredRole="admin">
+        <Audit />
       </ProtectedRoute>
     } />
     <Route path="/sites" element={
@@ -89,11 +79,7 @@ const AppRoutes = () => (
         <Plans />
       </ProtectedRoute>
     } />
-    <Route path="/" element={
-      <ProtectedRoute>
-        <DashboardRouter />
-      </ProtectedRoute>
-    } />
+    <Route path="/" element={<Index />} />
     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
     <Route path="*" element={<NotFound />} />
   </Routes>

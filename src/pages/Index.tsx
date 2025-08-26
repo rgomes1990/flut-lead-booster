@@ -12,12 +12,8 @@ const Index = () => {
       if (user && userProfile) {
         console.log('User authenticated. Type:', userProfile.user_type);
         
-        // Redireciona baseado no tipo de usuário
-        if (userProfile.user_type === 'admin') {
-          navigate("/admin", { replace: true });
-        } else if (userProfile.user_type === 'client') {
-          navigate("/dashboard", { replace: true });
-        }
+        // Sempre redireciona para dashboard independente do tipo de usuário
+        navigate("/dashboard", { replace: true });
       } else if (!user) {
         console.log('User not authenticated, redirecting to auth');
         navigate("/auth", { replace: true });

@@ -1,7 +1,7 @@
 
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Users, Globe, LogOut, Contact, BarChart3, Calendar, Settings, Menu, X } from "lucide-react";
+import { Users, Globe, LogOut, Contact, BarChart3, Calendar, Settings, Menu, X, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { FlutLogo } from "./FlutLogo";
@@ -44,6 +44,15 @@ const AdminNavigation = () => {
       label: "Planos"
     }
   ];
+
+  // Adicionar menu de Auditoria apenas para administradores
+  if (userProfile?.user_type === 'admin') {
+    menuItems.push({
+      path: "/audit",
+      icon: FileText,
+      label: "Auditoria"
+    });
+  }
 
   const handleInstallationClick = async () => {
     if (loadingInstallation) return;
