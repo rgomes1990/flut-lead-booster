@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import AdminNavigation from "@/components/AdminNavigation";
@@ -30,7 +29,7 @@ const Audit = () => {
   const [loading, setLoading] = useState(true);
   const [filteredLogs, setFilteredLogs] = useState<AuditLog[]>([]);
   const [tableFilter, setTableFilter] = useState<string>("");
-  const [operationFilter, setOperationFilter] = useState<string>("");
+  const [operationFilter, setOperationFilter] = useState<string>("all");
   const [userFilter, setUserFilter] = useState<string>("");
   const { toast } = useToast();
 
@@ -79,7 +78,7 @@ const Audit = () => {
       );
     }
 
-    if (operationFilter) {
+    if (operationFilter && operationFilter !== "all") {
       filtered = filtered.filter(log => log.operation === operationFilter);
     }
 
@@ -127,7 +126,7 @@ const Audit = () => {
 
   const clearFilters = () => {
     setTableFilter("");
-    setOperationFilter("");
+    setOperationFilter("all");
     setUserFilter("");
   };
 
@@ -184,7 +183,7 @@ const Audit = () => {
                     <SelectValue placeholder="Todas as operações" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as operações</SelectItem>
+                    <SelectItem value="all">Todas as operações</SelectItem>
                     <SelectItem value="INSERT">Criação</SelectItem>
                     <SelectItem value="UPDATE">Alteração</SelectItem>
                     <SelectItem value="DELETE">Exclusão</SelectItem>
