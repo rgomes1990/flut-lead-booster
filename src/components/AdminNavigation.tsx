@@ -1,10 +1,9 @@
-
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Users, Globe, LogOut, Contact, BarChart3, Calendar, Settings, Menu, X, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { FlutLogo } from "./FlutLogo";
+import { InternalLogo } from "./InternalLogo";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -126,7 +125,7 @@ const AdminNavigation = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <FlutLogo variant="white" size="md" />
+            <InternalLogo variant="white" size="md" />
           </div>
 
           {/* Desktop Menu */}

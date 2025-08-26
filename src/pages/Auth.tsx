@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,12 +24,8 @@ const Auth = () => {
   // Redirecionar automaticamente se usuário já estiver logado
   useEffect(() => {
     if (!loading && user && userProfile) {
-      console.log('Usuário logado detectado, redirecionando...', userProfile.user_type);
-      if (userProfile.user_type === 'admin') {
-        navigate('/admin', { replace: true });
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
+      console.log('Usuário logado detectado, redirecionando para dashboard...');
+      navigate('/dashboard', { replace: true });
     }
   }, [user, userProfile, loading, navigate]);
 
@@ -51,7 +46,8 @@ const Auth = () => {
           title: "Login realizado com sucesso!",
           description: "Bem-vindo de volta!",
         });
-        // O redirecionamento será feito pelo useEffect quando o userProfile for carregado
+        // Redirecionar diretamente para dashboard
+        navigate('/dashboard', { replace: true });
       }
     } catch (error: any) {
       console.error("Erro no login:", error);
@@ -181,9 +177,8 @@ const Auth = () => {
           <div className="flex justify-center mb-4">
             <FlutLogo />
           </div>
-          <CardTitle>FLUT</CardTitle>
           <CardDescription>
-            Geração de Leads Inteligente
+            Gestão de Leads Inteligente
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -2,7 +2,18 @@
 # Handle client-side routing fallback
 /*    /index.html   200
 
-# Handle specific routes
+# Handle specific routes with better specificity
+/admin/*    /index.html   200
+/dashboard/*    /index.html   200
+/sites/*    /index.html   200
+/leads-captured/*    /index.html   200
+/plans/*    /index.html   200
+/auth/*    /index.html   200
+/landing/*    /index.html   200
+/demo/*    /index.html   200
+/audit/*    /index.html   200
+
+# Handle exact routes
 /admin    /index.html   200
 /dashboard    /index.html   200
 /sites    /index.html   200
@@ -12,6 +23,3 @@
 /landing    /index.html   200
 /demo    /index.html   200
 /audit    /index.html   200
-
-# Handle nested routes
-/sites/*    /index.html   200
