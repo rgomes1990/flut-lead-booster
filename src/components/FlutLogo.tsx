@@ -22,7 +22,7 @@ export const FlutLogo: React.FC<FlutLogoProps> = ({
   return (
     <div className={`flex items-center ${className}`}>
       <img 
-        src="https://i.imgur.com/Xp8RRKG.png"
+        src="/lovable-uploads/55c0da45-185f-4e1a-9bb7-be853452bb0f.png"
         alt="FLUT"
         className={`${sizeClasses[size]} w-auto object-contain`}
       />

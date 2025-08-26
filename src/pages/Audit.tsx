@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { FileText, Filter, RefreshCw } from "lucide-react";
+import { FileText, Filter, RefreshCw, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import AuditLogDetailsDialog from "@/components/AuditLogDetailsDialog";
 
 interface AuditLog {
   id: string;
@@ -31,6 +32,8 @@ const Audit = () => {
   const [tableFilter, setTableFilter] = useState<string>("");
   const [operationFilter, setOperationFilter] = useState<string>("all");
   const [userFilter, setUserFilter] = useState<string>("");
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const loadAuditLogs = async () => {
@@ -128,6 +131,11 @@ const Audit = () => {
     setTableFilter("");
     setOperationFilter("all");
     setUserFilter("");
+  };
+
+  const openDetailsDialog = (log: AuditLog) => {
+    setSelectedLog(log);
+    setDetailsDialogOpen(true);
   };
 
   if (loading) {
@@ -231,12 +239,13 @@ const Audit = () => {
                     <TableHead>Tabela</TableHead>
                     <TableHead>Operação</TableHead>
                     <TableHead>Registro ID</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredLogs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         Nenhum log de auditoria encontrado
                       </TableCell>
                     </TableRow>
@@ -258,6 +267,16 @@ const Audit = () => {
                         <TableCell className="font-mono text-sm">
                           {log.record_id ? log.record_id.substring(0, 8) + "..." : "N/A"}
                         </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openDetailsDialog(log)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Detalhes
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -266,6 +285,12 @@ const Audit = () => {
             </div>
           </CardContent>
         </Card>
+
+        <AuditLogDetailsDialog
+          log={selectedLog}
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+        />
       </div>
     </div>
   );

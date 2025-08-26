@@ -25,7 +25,11 @@ const Index = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold mb-2">FLUT</h1>
+          <img 
+            src="/lovable-uploads/55c0da45-185f-4e1a-9bb7-be853452bb0f.png"
+            alt="FLUT"
+            className="h-16 w-auto object-contain mx-auto mb-4"
+          />
           <p className="text-muted-foreground">Carregando...</p>
         </div>
       </div>
@@ -36,7 +40,11 @@ const Index = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center">
-        <h1 className="text-2xl font-semibold mb-2">FLUT</h1>
+        <img 
+          src="/lovable-uploads/55c0da45-185f-4e1a-9bb7-be853452bb0f.png"
+          alt="FLUT"
+          className="h-16 w-auto object-contain mx-auto mb-4"
+        />
         <p className="text-muted-foreground">Redirecionando...</p>
       </div>
     </div>
