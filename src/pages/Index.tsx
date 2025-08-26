@@ -10,7 +10,7 @@ const Index = () => {
   useEffect(() => {
     if (!loading) {
       if (user && userProfile) {
-        console.log('User authenticated. Type:', userProfile.user_type);
+        console.log('User authenticated. Redirecting to dashboard');
         
         // Sempre redireciona para dashboard independente do tipo de usuário
         navigate("/dashboard", { replace: true });
