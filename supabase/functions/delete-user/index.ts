@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -29,20 +30,35 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header provided");
 
-    // Verify the requesting user is admin
+    // Extract token from Bearer header
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
     
-    const requestingUser = userData.user;
-    if (!requestingUser) throw new Error("User not authenticated");
+    // Use regular supabase client to verify user session
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
 
-    // Check if requesting user is admin
-    const { data: adminProfile } = await supabaseAdmin
+    // Set the session using the token
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+    if (userError || !user) {
+      logStep("Authentication failed", { error: userError?.message });
+      throw new Error(`Authentication failed: ${userError?.message || 'User not found'}`);
+    }
+
+    logStep("User authenticated", { userId: user.id });
+
+    // Check if requesting user is admin using service role client
+    const { data: adminProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('user_type')
-      .eq('user_id', requestingUser.id)
+      .eq('user_id', user.id)
       .single();
+
+    if (profileError) {
+      logStep("Error fetching admin profile", profileError);
+      throw new Error(`Error fetching user profile: ${profileError.message}`);
+    }
 
     if (adminProfile?.user_type !== 'admin') {
       throw new Error("Only admins can delete users");
@@ -125,12 +141,12 @@ serve(async (req) => {
     else logStep("Deleted clients for user");
 
     // Delete profile
-    const { error: profileError } = await supabaseAdmin
+    const { error: profileDeleteError } = await supabaseAdmin
       .from('profiles')
       .delete()
       .eq('user_id', userId);
     
-    if (profileError) logStep("Error deleting profile", profileError);
+    if (profileDeleteError) logStep("Error deleting profile", profileDeleteError);
     else logStep("Deleted profile for user");
 
     // Finally, delete the auth user

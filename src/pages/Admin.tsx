@@ -20,6 +20,7 @@ const Admin = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [userTypeFilter, setUserTypeFilter] = useState("all");
   const [newUser, setNewUser] = useState({ 
     name: "", 
     email: "", 
@@ -51,19 +52,26 @@ const Admin = () => {
   }, [userProfile, isClientMode]);
 
   useEffect(() => {
-    // Filtrar usuários baseado no termo de busca (apenas para admin)
+    // Filtrar usuários baseado no termo de busca e tipo (apenas para admin)
     if (!isClientMode) {
-      if (searchTerm.trim() === "") {
-        setFilteredUsers(users);
-      } else {
-        const filtered = users.filter(user => 
+      let filtered = users;
+
+      // Filtrar por termo de busca
+      if (searchTerm.trim() !== "") {
+        filtered = filtered.filter(user => 
           user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           user.email?.toLowerCase().includes(searchTerm.toLowerCase())
         );
-        setFilteredUsers(filtered);
       }
+
+      // Filtrar por tipo de usuário
+      if (userTypeFilter !== "all") {
+        filtered = filtered.filter(user => user.user_type === userTypeFilter);
+      }
+
+      setFilteredUsers(filtered);
     }
-  }, [users, searchTerm, isClientMode]);
+  }, [users, searchTerm, userTypeFilter, isClientMode]);
 
   const loadOwnProfile = async () => {
     try {
@@ -321,13 +329,19 @@ const Admin = () => {
     if (!confirm("Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.")) return;
 
     try {
+      // Get current session to use proper auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Você precisa estar logado para excluir usuários");
+      }
+
       const response = await fetch(`https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/delete-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3aXNubmlwZGpxbXhwZ2Z2aGlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxMjQ2NzcsImV4cCI6MjA3MDcwMDY3N30.xMOfCDIniXTn5TnlOdcUiQycp-5yPetalylgzm2_VeQ`,
+          'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ user_id: userId }),
+        body: JSON.stringify({ userId: userId }),
       });
 
       if (!response.ok) {
@@ -500,12 +514,27 @@ const Admin = () => {
                   </CardDescription>
                 </div>
                 {!isClientMode && (
-                  <SearchInput
-                    value={searchTerm}
-                    onChange={setSearchTerm}
-                    placeholder="Buscar por nome ou email..."
-                    className="w-72"
-                  />
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="userTypeFilter">Filtrar por tipo:</Label>
+                      <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
+                        <SelectTrigger className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          <SelectItem value="admin">Administrador</SelectItem>
+                          <SelectItem value="client">Cliente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <SearchInput
+                      value={searchTerm}
+                      onChange={setSearchTerm}
+                      placeholder="Buscar por nome ou email..."
+                      className="w-72"
+                    />
+                  </div>
                 )}
               </div>
             </CardHeader>

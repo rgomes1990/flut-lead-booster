@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -5,11 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search, X, Phone, Send, Trash2 } from "lucide-react";
+import { Download, Search, X, Phone, Send, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import AdminNavigation from "@/components/AdminNavigation";
 import LeadsFilters from "@/components/LeadsFilters";
 import { extractUTMFromUrl, updateLeadWithUTMData } from "@/utils/utmExtractor";
@@ -40,14 +43,22 @@ interface Lead {
 const LeadsCaptured = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
+  const [displayedLeads, setDisplayedLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const { userProfile } = useAuth();
   const { toast } = useToast();
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
 
   useEffect(() => {
     if (userProfile) {
@@ -56,7 +67,7 @@ const LeadsCaptured = () => {
   }, [userProfile]);
 
   useEffect(() => {
-    const filtered = filteredLeads.filter(lead =>
+    const filtered = leads.filter(lead =>
       lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.phone.includes(searchTerm) ||
@@ -64,7 +75,13 @@ const LeadsCaptured = () => {
       lead.profile?.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredLeads(filtered);
-  }, [searchTerm]);
+    setCurrentPage(1); // Reset to first page when search changes
+  }, [searchTerm, leads]);
+
+  useEffect(() => {
+    const displayed = filteredLeads.slice(startIndex, endIndex);
+    setDisplayedLeads(displayed);
+  }, [filteredLeads, currentPage, itemsPerPage, startIndex, endIndex]);
 
   const loadLeads = async () => {
     try {
@@ -138,7 +155,6 @@ const LeadsCaptured = () => {
       }) || [];
 
       setLeads(transformedLeads);
-      setFilteredLeads(transformedLeads);
       
       // Atualizar leads existentes no banco com dados UTM se necessário
       await updateExistingLeadsWithUTM(transformedLeads);
@@ -299,9 +315,6 @@ const LeadsCaptured = () => {
         setLeads(prev => prev.map(l => 
           l.id === lead.id ? { ...l, status: 'read' } : l
         ));
-        setFilteredLeads(prev => prev.map(l => 
-          l.id === lead.id ? { ...l, status: 'read' } : l
-        ));
         
         toast({
           title: "Lead marcado como lido",
@@ -361,6 +374,16 @@ const LeadsCaptured = () => {
 
   const handleFilteredLeads = (filtered: Lead[]) => {
     setFilteredLeads(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(parseInt(value));
+    setCurrentPage(1); // Reset to first page when items per page changes
   };
 
   if (!userProfile || (userProfile.user_type !== "admin" && userProfile.user_type !== "client")) {
@@ -420,9 +443,22 @@ const LeadsCaptured = () => {
                     className="pl-10 w-80"
                   />
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  {filteredLeads.length} resultados por página
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Mostrar:</span>
+                  <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm text-muted-foreground">
+                    resultados por página
+                  </span>
+                </div>
               </div>
               
               <Button onClick={exportToCSV} className="flex items-center gap-2">
@@ -437,114 +473,167 @@ const LeadsCaptured = () => {
                 <p className="text-muted-foreground mt-2">Carregando leads...</p>
               </div>
             ) : (
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-48">Nome</TableHead>
-                      <TableHead>Site</TableHead>
-                      {userProfile?.user_type === 'admin' && <TableHead>Usuário</TableHead>}
-                      <TableHead>WhatsApp</TableHead>
-                      <TableHead>E-mail</TableHead>
-                      <TableHead>Data e Hora</TableHead>
-                      <TableHead>Origem</TableHead>
-                      <TableHead>Campanha</TableHead>
-                      <TableHead>Anúncio</TableHead>
-                      <TableHead>Público</TableHead>
-                      <TableHead className="w-20">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLeads.map((lead, index) => (
-                      <TableRow key={lead.id}>
-                         <TableCell>
-                           <div className="space-y-2">
-                             <div className="flex items-center gap-2">
-                               <Button 
-                                 variant="secondary" 
-                                 size="sm"
-                                 onClick={() => handleViewMessage(lead)}
-                                 className="bg-green-100 text-green-800 border-green-300 hover:bg-green-200 text-xs px-2 py-1 h-6"
-                               >
-                                 Ver Mensagem
-                               </Button>
-                               <Badge 
-                                 variant={getStatusBadgeVariant(lead.status)}
-                                 className={lead.status === 'new' ? 'bg-red-100 text-red-800 border-red-300 animate-pulse' : ''}
-                               >
-                                 {getStatusLabel(lead.status)}
-                               </Badge>
-                               <span className="text-sm text-muted-foreground">#{index + 1}</span>
-                             </div>
-                             <div className="flex items-center gap-2">
-                               <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                                 lead.status === 'new' ? 'bg-red-100 border-2 border-red-300' : 'bg-muted'
-                               }`}>
-                                 <span className="text-xs font-medium">
-                                   {lead.name.charAt(0).toUpperCase()}
+              <>
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-48">Nome</TableHead>
+                        <TableHead>Site</TableHead>
+                        {userProfile?.user_type === 'admin' && <TableHead>Usuário</TableHead>}
+                        <TableHead>WhatsApp</TableHead>
+                        <TableHead>E-mail</TableHead>
+                        <TableHead>Data e Hora</TableHead>
+                        <TableHead>Origem</TableHead>
+                        <TableHead>Campanha</TableHead>
+                        <TableHead>Anúncio</TableHead>
+                        <TableHead>Público</TableHead>
+                        <TableHead className="w-20">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {displayedLeads.map((lead, index) => (
+                        <TableRow key={lead.id}>
+                           <TableCell>
+                             <div className="space-y-2">
+                               <div className="flex items-center gap-2">
+                                 <Button 
+                                   variant="secondary" 
+                                   size="sm"
+                                   onClick={() => handleViewMessage(lead)}
+                                   className="bg-green-100 text-green-800 border-green-300 hover:bg-green-200 text-xs px-2 py-1 h-6"
+                                 >
+                                   Ver Mensagem
+                                 </Button>
+                                 <Badge 
+                                   variant={getStatusBadgeVariant(lead.status)}
+                                   className={lead.status === 'new' ? 'bg-red-100 text-red-800 border-red-300 animate-pulse' : ''}
+                                 >
+                                   {getStatusLabel(lead.status)}
+                                 </Badge>
+                                 <span className="text-sm text-muted-foreground">#{startIndex + index + 1}</span>
+                               </div>
+                               <div className="flex items-center gap-2">
+                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                                   lead.status === 'new' ? 'bg-red-100 border-2 border-red-300' : 'bg-muted'
+                                 }`}>
+                                   <span className="text-xs font-medium">
+                                     {lead.name.charAt(0).toUpperCase()}
+                                   </span>
+                                 </div>
+                                 <span className={`font-medium text-sm ${
+                                   lead.status === 'new' ? 'font-bold text-red-800' : ''
+                                 }`}>
+                                   {lead.name}
+                                   {lead.status === 'new' && <span className="ml-1 text-red-500">●</span>}
                                  </span>
                                </div>
-                               <span className={`font-medium text-sm ${
-                                 lead.status === 'new' ? 'font-bold text-red-800' : ''
-                               }`}>
-                                 {lead.name}
-                                 {lead.status === 'new' && <span className="ml-1 text-red-500">●</span>}
-                               </span>
                              </div>
-                           </div>
-                         </TableCell>
-                         <TableCell>
-                           <span className="text-sm">{extractMainDomain(lead.website_url)}</span>
-                         </TableCell>
-                        {userProfile?.user_type === 'admin' && (
-                          <TableCell>
-                            <span className="font-medium">{lead.profile?.name || 'N/A'}</span>
-                          </TableCell>
-                        )}
-                        <TableCell>
-                          <span className="text-sm">{lead.phone}</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">{lead.email}</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">{formatDate(lead.created_at)}</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">{lead.origin || 'Não informado'}</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">{lead.campaign || 'Não informado'}</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">{lead.ad_content || 'Não informado'}</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">{lead.audience || 'Não informado'}</span>
-                        </TableCell>
-                        <TableCell>
+                           </TableCell>
+                           <TableCell>
+                             <span className="text-sm">{extractMainDomain(lead.website_url)}</span>
+                           </TableCell>
                           {userProfile?.user_type === 'admin' && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDeleteClick(lead)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <TableCell>
+                              <span className="font-medium">{lead.profile?.name || 'N/A'}</span>
+                            </TableCell>
                           )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                
-                {filteredLeads.length === 0 && !loading && (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">Nenhum lead encontrado.</p>
+                          <TableCell>
+                            <span className="text-sm">{lead.phone}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">{lead.email}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">{formatDate(lead.created_at)}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">{lead.origin || 'Não informado'}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">{lead.campaign || 'Não informado'}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">{lead.ad_content || 'Não informado'}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">{lead.audience || 'Não informado'}</span>
+                          </TableCell>
+                          <TableCell>
+                            {userProfile?.user_type === 'admin' && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteClick(lead)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  
+                  {displayedLeads.length === 0 && !loading && (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Nenhum lead encontrado.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-6">
+                    <div className="text-sm text-muted-foreground">
+                      Mostrando {startIndex + 1} até {Math.min(endIndex, filteredLeads.length)} de {filteredLeads.length} resultados
+                    </div>
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                        
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNumber;
+                          if (totalPages <= 5) {
+                            pageNumber = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNumber = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNumber = totalPages - 4 + i;
+                          } else {
+                            pageNumber = currentPage - 2 + i;
+                          }
+                          
+                          return (
+                            <PaginationItem key={pageNumber}>
+                              <PaginationLink
+                                onClick={() => handlePageChange(pageNumber)}
+                                isActive={currentPage === pageNumber}
+                                className="cursor-pointer"
+                              >
+                                {pageNumber}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        })}
+                        
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                            className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
                   </div>
                 )}
-              </div>
+              </>
             )}
           </CardContent>
         </Card>
