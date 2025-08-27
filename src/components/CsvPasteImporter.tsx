@@ -60,82 +60,22 @@ const CsvPasteImporter = () => {
 
     // Função para dividir o texto em registros CSV respeitando quebras de linha dentro de campos
     const parseCSVRecords = (text: string, delimiter: string): string[][] => {
+      const lines = text.split('\n');
       const records = [];
-      let currentRecord = '';
-      let inQuotes = false;
-      let messageFieldIndex = 4; // índice do campo message (0-based)
       
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const nextChar = text[i + 1];
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
         
-        if (char === '"') {
-          if (!inQuotes) {
-            inQuotes = true;
-            currentRecord += char;
-          } else {
-            // Estamos dentro de aspas, verificar se é realmente o fim do campo
-            // Olhar à frente para ver se após as aspas há um delimitador seguido por dados válidos
-            let lookAhead = i + 1;
-            
-            // Pular aspas duplas escapadas
-            if (nextChar === '"') {
-              currentRecord += '""';
-              i++; // pular próxima aspa
-              continue;
-            }
-            
-            // Verificar se após as aspas há um delimitador
-            if (nextChar === delimiter || nextChar === '\n' || nextChar === '\r' || lookAhead >= text.length) {
-              // Contar quantos delimitadores já temos no registro atual
-              const currentDelimiters = (currentRecord.match(new RegExp('\\' + delimiter, 'g')) || []).length;
-              
-              // Se já temos 4 delimitadores (campos 0-3 completos), então estamos no campo message
-              // e esta aspas pode ser o fim real do campo message
-              if (currentDelimiters >= 4) {
-                // Olhar mais à frente para ver se os próximos campos fazem sentido
-                let remainingText = text.substring(lookAhead);
-                if (nextChar === delimiter) {
-                  remainingText = remainingText.substring(1); // pular o delimitador
-                }
-                
-                // Verificar se o que vem depois se parece com os campos restantes (origem, url, data)
-                const nextFields = remainingText.split(delimiter);
-                
-                // Se há pelo menos 3 campos restantes ou se chegamos ao fim da linha
-                if (nextFields.length >= 3 || nextChar === '\n' || nextChar === '\r' || lookAhead >= text.length) {
-                  inQuotes = false;
-                  currentRecord += char;
-                } else {
-                  // Não é o fim real, continuar incluindo na mensagem
-                  currentRecord += char;
-                }
-              } else {
-                // Ainda não chegamos no campo message, então é fim normal do campo
-                inQuotes = false;
-                currentRecord += char;
-              }
-            } else {
-              // Não há delimitador após as aspas, então é parte do conteúdo
-              currentRecord += char;
-            }
-          }
-        } else if (char === '\n' && !inQuotes) {
-          // Fim do registro apenas se não estivermos dentro de aspas
-          if (currentRecord.trim()) {
-            const fields = parseCSVLine(currentRecord, delimiter);
-            records.push(fields);
-            currentRecord = '';
-          }
+        // Parse cada linha individualmente com o delimitador detectado
+        const fields = parseCSVLine(line, delimiter);
+        
+        // Validar se a linha tem o número esperado de campos (8 campos)
+        if (fields.length >= 7) { // Pelo menos 7 campos (pode ter 8)
+          records.push(fields);
         } else {
-          currentRecord += char;
+          console.warn(`Linha ${i + 1} ignorada - número insuficiente de campos:`, fields);
         }
-      }
-      
-      // Adicionar último registro se houver
-      if (currentRecord.trim()) {
-        const fields = parseCSVLine(currentRecord, delimiter);
-        records.push(fields);
       }
       
       return records;
