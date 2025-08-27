@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import AdminNavigation from "@/components/AdminNavigation";
 import SearchInput from "@/components/SearchInput";
 import CsvLeadImporter from "@/components/CsvLeadImporter";
+import CsvPasteImporter from "@/components/CsvPasteImporter";
 
 const Admin = () => {
   const { userProfile } = useAuth();
@@ -604,7 +605,10 @@ const Admin = () => {
 
           {/* CSV Lead Importer - Apenas para admins */}
           {userProfile.user_type === 'admin' && (
-            <CsvLeadImporter />
+            <>
+              <CsvLeadImporter />
+              <CsvPasteImporter />
+            </>
           )}
 
           {/* Edit Dialog */}
