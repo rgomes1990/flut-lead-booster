@@ -24,15 +24,35 @@ async function connectWithTLS(hostname: string, port: number) {
   }
 }
 
+// Função para limpar o hostname removendo protocolo e barras
+function cleanHostname(hostname: string): string {
+  if (!hostname) return '';
+  
+  // Remover protocolo (http://, https://)
+  let cleaned = hostname.replace(/^https?:\/\//, '');
+  
+  // Remover barra final
+  cleaned = cleaned.replace(/\/$/, '');
+  
+  // Remover qualquer path adicional
+  cleaned = cleaned.split('/')[0];
+  
+  return cleaned;
+}
+
 // Função melhorada para enviar email via SMTP
 async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
-  const smtpHost = Deno.env.get('HOSTGATOR_SMTP_HOST');
+  const rawSmtpHost = Deno.env.get('HOSTGATOR_SMTP_HOST');
   const smtpPort = parseInt(Deno.env.get('HOSTGATOR_SMTP_PORT') || '587');
   const smtpUser = Deno.env.get('HOSTGATOR_SMTP_USER');
   const smtpPassword = Deno.env.get('HOSTGATOR_SMTP_PASSWORD');
 
+  // Limpar o hostname removendo protocolo e barras
+  const smtpHost = cleanHostname(rawSmtpHost || '');
+
   console.log('Configurações SMTP:', {
-    host: smtpHost,
+    rawHost: rawSmtpHost,
+    cleanedHost: smtpHost,
     port: smtpPort,
     user: smtpUser ? 'Definido' : 'Não definido',
     password: smtpPassword ? 'Definido' : 'Não definido'
