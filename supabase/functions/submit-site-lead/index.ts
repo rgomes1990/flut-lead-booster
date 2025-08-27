@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0'
 
 const corsHeaders = {
@@ -135,16 +136,20 @@ Deno.serve(async (req) => {
 
     // Validar campos obrigatórios
     if (!site_id) {
-      return new Response('Site ID is required', { 
+      return new Response(JSON.stringify({ 
+        error: 'Site ID is required' 
+      }), { 
         status: 400, 
-        headers: corsHeaders 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
     if (!name && !email && !phone) {
-      return new Response('At least one contact field is required', { 
+      return new Response(JSON.stringify({ 
+        error: 'At least one contact field is required' 
+      }), { 
         status: 400, 
-        headers: corsHeaders 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -158,9 +163,11 @@ Deno.serve(async (req) => {
 
     if (siteError || !site) {
       console.error('Site error:', siteError);
-      return new Response('Site not found or inactive', { 
+      return new Response(JSON.stringify({ 
+        error: 'Site not found or inactive' 
+      }), { 
         status: 404, 
-        headers: corsHeaders 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -185,9 +192,11 @@ Deno.serve(async (req) => {
 
       if (createClientError) {
         console.error('Client creation error:', createClientError);
-        return new Response('Error creating client', { 
+        return new Response(JSON.stringify({ 
+          error: 'Error creating client' 
+        }), { 
           status: 500, 
-          headers: corsHeaders 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
       
@@ -246,23 +255,40 @@ Deno.serve(async (req) => {
 
     if (leadError) {
       console.error('Lead insertion error:', leadError);
-      return new Response('Error saving lead', { 
+      return new Response(JSON.stringify({ 
+        error: 'Error saving lead' 
+      }), { 
         status: 500, 
-        headers: corsHeaders 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
     console.log('Lead saved successfully with origin:', finalOrigin, 'and UTM data:', utmData);
 
-    // Enviar alerta por email via SMTP (não blocking)
+    // Enviar alerta por email via SMTP (aguardar resposta)
+    let emailSuccess = false;
     try {
-      await supabase.functions.invoke('send-smtp-email', {
-        body: { leadData: { ...leadData, created_at: insertedLead.created_at } }
+      console.log('Iniciando envio de email de alerta...');
+      
+      const emailResponse = await supabase.functions.invoke('send-smtp-email', {
+        body: { 
+          leadData: { 
+            ...leadData, 
+            created_at: insertedLead.created_at 
+          } 
+        }
       });
-      console.log('Email de alerta enviado com sucesso via SMTP');
+
+      console.log('Resposta do envio de email:', emailResponse);
+      
+      if (emailResponse.error) {
+        console.error('Erro ao enviar email:', emailResponse.error);
+      } else {
+        console.log('Email de alerta enviado com sucesso via SMTP');
+        emailSuccess = true;
+      }
     } catch (emailError) {
-      console.error('Erro ao enviar email de alerta via SMTP:', emailError);
-      // Não falhar a operação principal por causa do email
+      console.error('Erro ao chamar função de envio de email:', emailError);
     }
 
     // Preparar resposta com dados para redirecionamento do WhatsApp
@@ -275,12 +301,15 @@ ${message ? `${message}` : ''}`;
 
     const responseData = {
       success: true,
-      message: 'Lead submitted successfully',
+      message: 'Lead enviado com sucesso!',
+      emailSent: emailSuccess,
       whatsapp: {
         phone: whatsappPhone,
         message: encodeURIComponent(whatsappMessage)
       }
     };
+
+    console.log('Retornando resposta de sucesso:', responseData);
 
     return new Response(JSON.stringify(responseData), { 
       status: 200, 
@@ -291,10 +320,16 @@ ${message ? `${message}` : ''}`;
     });
 
   } catch (error) {
-    console.error('Error:', error);
-    return new Response('Internal server error', { 
+    console.error('Error geral:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Internal server error',
+      message: 'Erro interno do servidor'
+    }), { 
       status: 500, 
-      headers: corsHeaders 
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
     });
   }
 });

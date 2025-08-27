@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0'
 
 const corsHeaders = {
@@ -154,7 +155,7 @@ Deno.serve(async (req) => {
                 cursor: pointer;
                 font-size: 14px;
               ">Fechar</button>
-              <button type="submit" style="
+              <button type="submit" id="flut-submit" style="
                 flex: 1;
                 padding: 12px;
                 background: #25D366;
@@ -199,19 +200,29 @@ Deno.serve(async (req) => {
   async function submitForm(e) {
     e.preventDefault();
     
+    const submitButton = document.getElementById('flut-submit');
+    const originalText = submitButton.textContent;
+    
+    // Mostrar estado de carregamento
+    submitButton.textContent = 'Enviando...';
+    submitButton.disabled = true;
+    submitButton.style.opacity = '0.7';
+    
     const name = document.getElementById('flut-name').value;
     const email = document.getElementById('flut-email').value;
     const phone = document.getElementById('flut-phone').value;
     const message = document.getElementById('flut-message').value;
 
     try {
-      const response = await fetch(\`\${API_URL}/submit-lead\`, {
+      console.log('Enviando dados do formulário...');
+      
+      const response = await fetch(\`\${API_URL}/submit-site-lead\`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          client_id: FLUT_CLIENT_ID,
+          site_id: FLUT_CLIENT_ID,
           name,
           email,
           phone,
@@ -220,16 +231,36 @@ Deno.serve(async (req) => {
         })
       });
 
-      if (response.ok) {
+      console.log('Resposta recebida:', response.status);
+      
+      const responseData = await response.json();
+      console.log('Dados da resposta:', responseData);
+
+      if (response.ok && responseData.success) {
+        // Sucesso
         alert('Mensagem enviada com sucesso! Entraremos em contato em breve.');
         hideModal();
         document.getElementById('flut-form').reset();
+        
+        // Se houver dados do WhatsApp, abrir
+        if (responseData.whatsapp && responseData.whatsapp.phone) {
+          const whatsappUrl = \`https://wa.me/\${responseData.whatsapp.phone}?text=\${responseData.whatsapp.message}\`;
+          window.open(whatsappUrl, '_blank');
+        }
       } else {
-        throw new Error('Erro ao enviar mensagem');
+        // Erro do servidor
+        const errorMessage = responseData.message || responseData.error || 'Erro ao enviar mensagem';
+        console.error('Erro do servidor:', errorMessage);
+        alert(\`Erro: \${errorMessage}\`);
       }
     } catch (error) {
-      console.error('Erro:', error);
-      alert('Erro ao enviar mensagem. Tente novamente.');
+      console.error('Erro na requisição:', error);
+      alert('Erro de conexão. Verifique sua internet e tente novamente.');
+    } finally {
+      // Restaurar estado do botão
+      submitButton.textContent = originalText;
+      submitButton.disabled = false;
+      submitButton.style.opacity = '1';
     }
   }
 

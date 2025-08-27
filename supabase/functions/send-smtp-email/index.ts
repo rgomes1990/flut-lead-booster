@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0'
 
 const corsHeaders = {
@@ -6,74 +5,148 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Função para enviar email via SMTP
+// Função para conectar via TLS
+async function connectWithTLS(hostname: string, port: number) {
+  console.log(`Tentando conectar via TLS para ${hostname}:${port}`);
+  
+  try {
+    // Conectar via TLS diretamente
+    const conn = await Deno.connectTls({
+      hostname,
+      port,
+      alpnProtocols: ["http/1.1"],
+    });
+    console.log('Conexão TLS estabelecida com sucesso');
+    return conn;
+  } catch (error) {
+    console.error('Erro na conexão TLS:', error);
+    throw error;
+  }
+}
+
+// Função melhorada para enviar email via SMTP
 async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
   const smtpHost = Deno.env.get('HOSTGATOR_SMTP_HOST');
   const smtpPort = parseInt(Deno.env.get('HOSTGATOR_SMTP_PORT') || '587');
   const smtpUser = Deno.env.get('HOSTGATOR_SMTP_USER');
   const smtpPassword = Deno.env.get('HOSTGATOR_SMTP_PASSWORD');
 
+  console.log('Configurações SMTP:', {
+    host: smtpHost,
+    port: smtpPort,
+    user: smtpUser ? 'Definido' : 'Não definido',
+    password: smtpPassword ? 'Definido' : 'Não definido'
+  });
+
   if (!smtpHost || !smtpUser || !smtpPassword) {
     throw new Error('Credenciais SMTP não configuradas');
   }
 
+  let conn;
+  
   try {
-    // Conectar ao servidor SMTP
-    const conn = await Deno.connect({
-      hostname: smtpHost,
-      port: smtpPort,
-    });
+    // Decidir o método de conexão baseado na porta
+    if (smtpPort === 465) {
+      // SSL direto
+      conn = await connectWithTLS(smtpHost, smtpPort);
+    } else {
+      // STARTTLS
+      conn = await Deno.connect({
+        hostname: smtpHost,
+        port: smtpPort,
+      });
+    }
 
     const textEncoder = new TextEncoder();
     const textDecoder = new TextDecoder();
+    let buffer = new Uint8Array(1024);
 
     // Função para enviar comando e ler resposta
     async function sendCommand(command: string): Promise<string> {
+      console.log('Enviando comando:', command.replace(/AUTH.*/, 'AUTH [HIDDEN]'));
+      
       await conn.write(textEncoder.encode(command + '\r\n'));
-      const buffer = new Uint8Array(1024);
+      
+      // Aguardar resposta
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const bytesRead = await conn.read(buffer);
-      return textDecoder.decode(buffer.subarray(0, bytesRead || 0));
+      const response = textDecoder.decode(buffer.subarray(0, bytesRead || 0));
+      
+      console.log('Resposta recebida:', response.trim());
+      return response;
     }
 
-    // Iniciar comunicação SMTP
-    let response = await sendCommand('');
-    console.log('Connect response:', response);
+    // Ler banner inicial do servidor
+    let response = '';
+    if (smtpPort !== 465) {
+      const bytesRead = await conn.read(buffer);
+      response = textDecoder.decode(buffer.subarray(0, bytesRead || 0));
+      console.log('Banner do servidor:', response.trim());
+    }
 
     // EHLO
     response = await sendCommand(`EHLO ${smtpHost}`);
-    console.log('EHLO response:', response);
+    if (!response.startsWith('250')) {
+      throw new Error(`EHLO falhou: ${response}`);
+    }
 
-    // STARTTLS se disponível
-    if (smtpPort === 587) {
+    // STARTTLS se necessário (porta 587)
+    if (smtpPort === 587 && response.includes('STARTTLS')) {
+      console.log('Iniciando STARTTLS...');
       response = await sendCommand('STARTTLS');
-      console.log('STARTTLS response:', response);
+      
+      if (!response.startsWith('220')) {
+        throw new Error(`STARTTLS falhou: ${response}`);
+      }
+
+      // Atualizar conexão para TLS
+      conn.close();
+      conn = await connectWithTLS(smtpHost, smtpPort);
+      
+      // EHLO novamente após TLS
+      response = await sendCommand(`EHLO ${smtpHost}`);
     }
 
     // AUTH LOGIN
     response = await sendCommand('AUTH LOGIN');
-    console.log('AUTH response:', response);
+    if (!response.startsWith('334')) {
+      throw new Error(`AUTH LOGIN falhou: ${response}`);
+    }
 
     // Enviar usuário (base64)
     const userBase64 = btoa(smtpUser);
     response = await sendCommand(userBase64);
-    console.log('User response:', response);
+    if (!response.startsWith('334')) {
+      throw new Error(`Usuário rejeitado: ${response}`);
+    }
 
     // Enviar senha (base64)
     const passwordBase64 = btoa(smtpPassword);
     response = await sendCommand(passwordBase64);
-    console.log('Password response:', response);
+    if (!response.startsWith('235')) {
+      throw new Error(`Autenticação falhou: ${response}`);
+    }
+
+    console.log('Autenticação SMTP bem-sucedida');
 
     // MAIL FROM
     response = await sendCommand(`MAIL FROM:<${smtpUser}>`);
-    console.log('MAIL FROM response:', response);
+    if (!response.startsWith('250')) {
+      throw new Error(`MAIL FROM falhou: ${response}`);
+    }
 
     // RCPT TO
     response = await sendCommand(`RCPT TO:<${to}>`);
-    console.log('RCPT TO response:', response);
+    if (!response.startsWith('250')) {
+      throw new Error(`RCPT TO falhou: ${response}`);
+    }
 
     // DATA
     response = await sendCommand('DATA');
-    console.log('DATA response:', response);
+    if (!response.startsWith('354')) {
+      throw new Error(`DATA falhou: ${response}`);
+    }
 
     // Cabeçalhos e conteúdo do email
     const emailContent = [
@@ -83,15 +156,21 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
       'Content-Type: text/html; charset=UTF-8',
       'MIME-Version: 1.0',
       '',
-      htmlContent,
-      '.'
-    ].join('\r\n');
+      htmlContent
+    ].join('\r\n') + '\r\n.\r\n';
 
-    await conn.write(textEncoder.encode(emailContent + '\r\n'));
-    const buffer = new Uint8Array(1024);
+    await conn.write(textEncoder.encode(emailContent));
+    
+    // Aguardar confirmação
+    await new Promise(resolve => setTimeout(resolve, 200));
     const bytesRead = await conn.read(buffer);
     response = textDecoder.decode(buffer.subarray(0, bytesRead || 0));
-    console.log('Email content response:', response);
+    
+    if (!response.startsWith('250')) {
+      throw new Error(`Envio de email falhou: ${response}`);
+    }
+
+    console.log('Email enviado com sucesso:', response.trim());
 
     // QUIT
     await sendCommand('QUIT');
@@ -100,7 +179,14 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
     return 'Email enviado com sucesso';
 
   } catch (error) {
-    console.error('Erro SMTP:', error);
+    console.error('Erro detalhado no SMTP:', error);
+    if (conn) {
+      try {
+        conn.close();
+      } catch (e) {
+        console.error('Erro ao fechar conexão:', e);
+      }
+    }
     throw error;
   }
 }
@@ -139,9 +225,11 @@ Deno.serve(async (req) => {
 
     if (clientError || !client) {
       console.error('Erro ao buscar cliente:', clientError);
-      return new Response('Cliente não encontrado', { 
+      return new Response(JSON.stringify({ 
+        error: 'Cliente não encontrado' 
+      }), { 
         status: 404, 
-        headers: corsHeaders 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -154,13 +242,14 @@ Deno.serve(async (req) => {
 
     if (profileError || !profile) {
       console.error('Erro ao buscar perfil do usuário:', profileError);
-      return new Response('Perfil do usuário não encontrado', { 
+      return new Response(JSON.stringify({ 
+        error: 'Perfil do usuário não encontrado' 
+      }), { 
         status: 404, 
-        headers: corsHeaders 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Preparar conteúdo HTML do email
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -270,7 +359,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Erro ao enviar email de alerta:', error);
     return new Response(JSON.stringify({ 
-      error: 'Erro interno do servidor',
+      error: 'Erro ao enviar email',
       details: error.message 
     }), { 
       status: 500, 
