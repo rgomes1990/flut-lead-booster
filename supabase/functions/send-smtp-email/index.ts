@@ -59,35 +59,37 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
 
     const textEncoder = new TextEncoder();
     const textDecoder = new TextDecoder();
-    let buffer = new Uint8Array(1024);
+    let buffer = new Uint8Array(2048); // Aumentar buffer
+
+    // Função para ler resposta completa
+    async function readResponse(): Promise<string> {
+      await new Promise(resolve => setTimeout(resolve, 200)); // Aguardar um pouco mais
+      
+      const bytesRead = await conn.read(buffer);
+      const response = textDecoder.decode(buffer.subarray(0, bytesRead || 0));
+      console.log('Resposta completa recebida:', response.trim());
+      return response;
+    }
 
     // Função para enviar comando e ler resposta
     async function sendCommand(command: string): Promise<string> {
       console.log('Enviando comando:', command.replace(/AUTH.*/, 'AUTH [HIDDEN]'));
       
       await conn.write(textEncoder.encode(command + '\r\n'));
-      
-      // Aguardar resposta
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      const bytesRead = await conn.read(buffer);
-      const response = textDecoder.decode(buffer.subarray(0, bytesRead || 0));
-      
-      console.log('Resposta recebida:', response.trim());
-      return response;
+      return await readResponse();
     }
 
-    // Ler banner inicial do servidor
-    let response = '';
-    if (smtpPort !== 465) {
-      const bytesRead = await conn.read(buffer);
-      response = textDecoder.decode(buffer.subarray(0, bytesRead || 0));
-      console.log('Banner do servidor:', response.trim());
+    // Ler banner inicial do servidor SEMPRE (tanto SSL quanto não-SSL)
+    console.log('Lendo banner inicial do servidor...');
+    let response = await readResponse();
+    
+    if (!response.includes('220')) {
+      throw new Error(`Banner inválido do servidor: ${response}`);
     }
 
     // EHLO
     response = await sendCommand(`EHLO ${smtpHost}`);
-    if (!response.startsWith('250')) {
+    if (!response.includes('250')) {
       throw new Error(`EHLO falhou: ${response}`);
     }
 
@@ -96,7 +98,7 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
       console.log('Iniciando STARTTLS...');
       response = await sendCommand('STARTTLS');
       
-      if (!response.startsWith('220')) {
+      if (!response.includes('220')) {
         throw new Error(`STARTTLS falhou: ${response}`);
       }
 
@@ -110,21 +112,21 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
 
     // AUTH LOGIN
     response = await sendCommand('AUTH LOGIN');
-    if (!response.startsWith('334')) {
+    if (!response.includes('334')) {
       throw new Error(`AUTH LOGIN falhou: ${response}`);
     }
 
     // Enviar usuário (base64)
     const userBase64 = btoa(smtpUser);
     response = await sendCommand(userBase64);
-    if (!response.startsWith('334')) {
+    if (!response.includes('334')) {
       throw new Error(`Usuário rejeitado: ${response}`);
     }
 
     // Enviar senha (base64)
     const passwordBase64 = btoa(smtpPassword);
     response = await sendCommand(passwordBase64);
-    if (!response.startsWith('235')) {
+    if (!response.includes('235')) {
       throw new Error(`Autenticação falhou: ${response}`);
     }
 
@@ -132,19 +134,19 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
 
     // MAIL FROM
     response = await sendCommand(`MAIL FROM:<${smtpUser}>`);
-    if (!response.startsWith('250')) {
+    if (!response.includes('250')) {
       throw new Error(`MAIL FROM falhou: ${response}`);
     }
 
     // RCPT TO
     response = await sendCommand(`RCPT TO:<${to}>`);
-    if (!response.startsWith('250')) {
+    if (!response.includes('250')) {
       throw new Error(`RCPT TO falhou: ${response}`);
     }
 
     // DATA
     response = await sendCommand('DATA');
-    if (!response.startsWith('354')) {
+    if (!response.includes('354')) {
       throw new Error(`DATA falhou: ${response}`);
     }
 
@@ -161,12 +163,10 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
 
     await conn.write(textEncoder.encode(emailContent));
     
-    // Aguardar confirmação
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const bytesRead = await conn.read(buffer);
-    response = textDecoder.decode(buffer.subarray(0, bytesRead || 0));
+    // Aguardar confirmação do envio
+    response = await readResponse();
     
-    if (!response.startsWith('250')) {
+    if (!response.includes('250')) {
       throw new Error(`Envio de email falhou: ${response}`);
     }
 
