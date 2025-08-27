@@ -225,7 +225,7 @@ const CsvPasteImporter = () => {
               phone: leadPhone,
               message: leadMessage,
               website_url: finalWebsiteUrl,
-              status: 'new',
+              status: 'read',
               origin: leadOrigin,
               campaign: 'Importação Manual',
               created_at: leadCreatedAt
