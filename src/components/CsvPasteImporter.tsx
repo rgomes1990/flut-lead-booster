@@ -22,8 +22,15 @@ const CsvPasteImporter = () => {
   const { toast } = useToast();
 
   const parseCSVData = (data: string): any[] => {
+    console.log('Raw CSV data:', data);
+    
     const lines = data.trim().split('\n').filter(line => line.trim());
-    if (lines.length === 0) return [];
+    console.log('Parsed lines:', lines);
+    
+    if (lines.length === 0) {
+      console.log('No lines found');
+      return [];
+    }
 
     // Parse CSV with better handling of quoted values and commas inside quotes
     const parseCSVLine = (line: string): string[] => {
@@ -57,6 +64,8 @@ const CsvPasteImporter = () => {
     };
 
     const headers = parseCSVLine(lines[0]);
+    console.log('Headers:', headers);
+    
     const parsedData = [];
 
     for (let i = 1; i < lines.length; i++) {
@@ -70,6 +79,7 @@ const CsvPasteImporter = () => {
       }
     }
 
+    console.log('Parsed data:', parsedData);
     return parsedData;
   };
 
