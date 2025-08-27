@@ -76,40 +76,37 @@ const CsvLeadImporter = () => {
         errors: []
       };
 
-      // Verificar se as colunas necessárias existem
-      const requiredFields = ['email', 'name', 'phone'];
-      const availableFields = Object.keys(csvData[0]);
-      const missingFields = requiredFields.filter(field => 
-        !availableFields.some(available => available.toLowerCase().includes(field.toLowerCase()))
-      );
+          // Verificar se as colunas necessárias existem
+          const requiredFields = ['Email-cliente', 'name', 'email', 'cellphone'];
+          const availableFields = Object.keys(csvData[0]);
+          const missingFields = requiredFields.filter(field => 
+            !availableFields.includes(field)
+          );
 
-      if (missingFields.length > 0) {
-        throw new Error(`Campos obrigatórios não encontrados: ${missingFields.join(', ')}`);
-      }
-
-      // Processar cada linha do CSV
-      for (let i = 0; i < csvData.length; i++) {
-        const lead = csvData[i];
-        setProgress(((i + 1) / csvData.length) * 100);
-
-        try {
-          // Encontrar o campo de email do usuário (pode ter nomes diferentes)
-          const userEmailField = availableFields.find(field => 
-            field.toLowerCase().includes('email') && 
-            field.toLowerCase() !== 'email' // Assumindo que 'email' é do lead
-          ) || 'Email'; // Campo padrão se não encontrar
-
-          const userEmail = lead[userEmailField];
-          const leadName = lead.name || lead.Name || lead.nome || lead.Nome;
-          const leadEmail = lead.email || lead.Email;
-          const leadPhone = lead.phone || lead.Phone || lead.telefone || lead.Telefone;
-          const leadMessage = lead.message || lead.Message || lead.mensagem || lead.Mensagem || '';
-          const websiteUrl = lead.website_url || lead.Website || lead.site || lead.Site || '';
-
-          if (!userEmail || !leadName || !leadEmail || !leadPhone) {
-            importResult.errors.push(`Linha ${i + 1}: Campos obrigatórios faltando`);
-            continue;
+          if (missingFields.length > 0) {
+            throw new Error(`Campos obrigatórios não encontrados: ${missingFields.join(', ')}`);
           }
+
+          // Processar cada linha do CSV
+          for (let i = 0; i < csvData.length; i++) {
+            const lead = csvData[i];
+            setProgress(((i + 1) / csvData.length) * 100);
+
+            try {
+              // Mapear campos do CSV para campos do sistema
+              const userEmail = lead['Email-cliente'];
+              const leadName = lead['name'];
+              const leadEmail = lead['email'];
+              const leadPhone = lead['cellphone'];
+              const leadMessage = lead['message'] || '';
+              const websiteUrl = lead['url_pesquisa'] || '';
+              const leadOrigin = lead['origem'] || 'Importação CSV';
+              const leadCreatedAt = lead['created_at'] || new Date().toISOString();
+
+              if (!userEmail || !leadName || !leadEmail || !leadPhone) {
+                importResult.errors.push(`Linha ${i + 1}: Campos obrigatórios faltando (Email-cliente, name, email, cellphone)`);
+                continue;
+              }
 
           // Buscar o usuário pelo email
           const { data: profile, error: profileError } = await supabase
@@ -146,8 +143,9 @@ const CsvLeadImporter = () => {
               message: leadMessage,
               website_url: websiteUrl,
               status: 'new',
-              origin: 'Importação CSV',
-              campaign: 'Importação Manual'
+              origin: leadOrigin,
+              campaign: 'Importação Manual',
+              created_at: leadCreatedAt
             });
 
           if (leadError) {
@@ -190,7 +188,7 @@ const CsvLeadImporter = () => {
         </CardTitle>
         <CardDescription>
           Importe leads em lote associando automaticamente aos usuários pelo email.
-          O CSV deve conter as colunas: Email (do usuário), name, email (do lead), phone.
+          O CSV deve conter as colunas: Email-cliente, name, email, cellphone, message, origem, url_pesquisa, created_at.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
