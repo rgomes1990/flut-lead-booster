@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { Checkbox } from "@/components/ui/checkbox";
 import AdminNavigation from "@/components/AdminNavigation";
 import LeadsFilters from "@/components/LeadsFilters";
 import { extractUTMFromUrl, updateLeadWithUTMData } from "@/utils/utmExtractor";
@@ -50,6 +51,8 @@ const LeadsCaptured = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const { userProfile } = useAuth();
@@ -372,6 +375,67 @@ const LeadsCaptured = () => {
     setLeadToDelete(null);
   };
 
+  const handleSelectLead = (leadId: string, isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedLeads(prev => [...prev, leadId]);
+    } else {
+      setSelectedLeads(prev => prev.filter(id => id !== leadId));
+    }
+  };
+
+  const handleSelectAll = (isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedLeads(displayedLeads.map(lead => lead.id));
+    } else {
+      setSelectedLeads([]);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedLeads.length === 0) {
+      toast({
+        title: "Nenhum lead selecionado",
+        description: "Selecione pelo menos um lead para excluir",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsBulkDeleteDialogOpen(true);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    try {
+      const { error } = await supabase
+        .from("leads")
+        .delete()
+        .in("id", selectedLeads);
+
+      if (error) throw error;
+
+      // Remove os leads da lista local
+      setLeads(prev => prev.filter(lead => !selectedLeads.includes(lead.id)));
+      setSelectedLeads([]);
+      
+      toast({
+        title: "Sucesso",
+        description: `${selectedLeads.length} lead(s) excluído(s) com sucesso`,
+      });
+    } catch (error) {
+      console.error("Erro ao excluir leads:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir leads. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBulkDeleteDialogOpen(false);
+    }
+  };
+
+  const handleBulkDeleteCancel = () => {
+    setIsBulkDeleteDialogOpen(false);
+  };
+
   const handleFilteredLeads = (filtered: Lead[]) => {
     setFilteredLeads(filtered);
     setCurrentPage(1); // Reset to first page when filters change
@@ -459,6 +523,16 @@ const LeadsCaptured = () => {
                     resultados por página
                   </span>
                 </div>
+                {userProfile?.user_type === 'admin' && selectedLeads.length > 0 && (
+                  <Button 
+                    onClick={handleBulkDelete} 
+                    variant="destructive"
+                    className="flex items-center gap-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Excluir Selecionados ({selectedLeads.length})
+                  </Button>
+                )}
               </div>
               
               <Button onClick={exportToCSV} className="flex items-center gap-2">
@@ -478,6 +552,14 @@ const LeadsCaptured = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        {userProfile?.user_type === 'admin' && (
+                          <TableHead className="w-12">
+                            <Checkbox 
+                              checked={selectedLeads.length === displayedLeads.length && displayedLeads.length > 0}
+                              onCheckedChange={handleSelectAll}
+                            />
+                          </TableHead>
+                        )}
                         <TableHead className="w-48">Nome</TableHead>
                         <TableHead>Site</TableHead>
                         {userProfile?.user_type === 'admin' && <TableHead>Usuário</TableHead>}
@@ -494,6 +576,14 @@ const LeadsCaptured = () => {
                     <TableBody>
                       {displayedLeads.map((lead, index) => (
                         <TableRow key={lead.id}>
+                          {userProfile?.user_type === 'admin' && (
+                            <TableCell>
+                              <Checkbox 
+                                checked={selectedLeads.includes(lead.id)}
+                                onCheckedChange={(checked) => handleSelectLead(lead.id, checked as boolean)}
+                              />
+                            </TableCell>
+                          )}
                            <TableCell>
                              <div className="space-y-2">
                                <div className="flex items-center gap-2">
@@ -738,6 +828,30 @@ const LeadsCaptured = () => {
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Dialog de confirmação de exclusão em massa */}
+        <AlertDialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Exclusão em Massa</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir <strong>{selectedLeads.length} lead(s)</strong> selecionado(s)? 
+                Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleBulkDeleteCancel}>
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleBulkDeleteConfirm}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir Todos ({selectedLeads.length})
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
