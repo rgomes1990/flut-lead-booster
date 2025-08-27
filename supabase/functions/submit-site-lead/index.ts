@@ -254,15 +254,15 @@ Deno.serve(async (req) => {
 
     console.log('Lead saved successfully with origin:', finalOrigin, 'and UTM data:', utmData);
 
-    // Enviar alerta por email (não blocking)
+    // Enviar alerta por email via SMTP (não blocking)
     try {
-      await supabase.functions.invoke('send-lead-alert', {
+      await supabase.functions.invoke('send-smtp-email', {
         body: { leadData: { ...leadData, created_at: insertedLead.created_at } }
       });
-      console.log('Lead alert sent successfully');
-    } catch (alertError) {
-      console.error('Erro ao enviar alerta de lead:', alertError);
-      // Não falhar a operação principal por causa do alerta
+      console.log('Email de alerta enviado com sucesso via SMTP');
+    } catch (emailError) {
+      console.error('Erro ao enviar email de alerta via SMTP:', emailError);
+      // Não falhar a operação principal por causa do email
     }
 
     // Preparar resposta com dados para redirecionamento do WhatsApp
