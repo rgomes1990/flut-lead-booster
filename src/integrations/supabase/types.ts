@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          created_at: string | null
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          operation: Database["public"]["Enums"]["audit_operation"]
+          record_id: string | null
+          table_name: string
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          operation: Database["public"]["Enums"]["audit_operation"]
+          record_id?: string | null
+          table_name: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          operation?: Database["public"]["Enums"]["audit_operation"]
+          record_id?: string | null
+          table_name?: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           created_at: string
@@ -61,6 +97,7 @@ export type Database = {
           client_id: string
           created_at: string
           email: string
+          "email-cliente": string | null
           id: string
           message: string | null
           name: string
@@ -75,6 +112,7 @@ export type Database = {
           client_id: string
           created_at?: string
           email: string
+          "email-cliente"?: string | null
           id?: string
           message?: string | null
           name: string
@@ -89,6 +127,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           email?: string
+          "email-cliente"?: string | null
           id?: string
           message?: string | null
           name?: string
@@ -293,6 +332,16 @@ export type Database = {
         Args: { client_uuid: string }
         Returns: boolean
       }
+      create_audit_log: {
+        Args: {
+          p_new_values?: Json
+          p_old_values?: Json
+          p_operation: Database["public"]["Enums"]["audit_operation"]
+          p_record_id: string
+          p_table_name: string
+        }
+        Returns: undefined
+      }
       determine_origin_from_url: {
         Args: { url: string }
         Returns: string
@@ -315,6 +364,7 @@ export type Database = {
       }
     }
     Enums: {
+      audit_operation: "INSERT" | "UPDATE" | "DELETE"
       plan_type:
         | "free_7_days"
         | "one_month"
@@ -449,6 +499,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      audit_operation: ["INSERT", "UPDATE", "DELETE"],
       plan_type: [
         "free_7_days",
         "one_month",
