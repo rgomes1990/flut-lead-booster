@@ -32,44 +32,81 @@ const CsvPasteImporter = () => {
       return [];
     }
 
-    // Parse CSV with better handling of quoted values and commas inside quotes
-    const parseCSVLine = (line: string): string[] => {
-      const result = [];
-      let current = '';
-      let inQuotes = false;
-      
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        const nextChar = line[i + 1];
+    // Detectar se é separado por vírgula ou tab
+    const firstLine = lines[0];
+    const delimiter = firstLine.includes('\t') ? '\t' : ',';
+    console.log('Detected delimiter:', delimiter === '\t' ? 'TAB' : 'COMMA');
+
+    // Parse line with the detected delimiter
+    const parseDataLine = (line: string): string[] => {
+      if (delimiter === '\t') {
+        // Simple split for tab-delimited
+        return line.split('\t').map(value => value.trim());
+      } else {
+        // Handle quoted values for comma-delimited
+        const result = [];
+        let current = '';
+        let inQuotes = false;
         
-        if (char === '"' && !inQuotes) {
-          inQuotes = true;
-        } else if (char === '"' && inQuotes) {
-          if (nextChar === '"') {
-            current += '"';
-            i++; // Skip next quote
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          const nextChar = line[i + 1];
+          
+          if (char === '"' && !inQuotes) {
+            inQuotes = true;
+          } else if (char === '"' && inQuotes) {
+            if (nextChar === '"') {
+              current += '"';
+              i++; // Skip next quote
+            } else {
+              inQuotes = false;
+            }
+          } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
           } else {
-            inQuotes = false;
+            current += char;
           }
-        } else if (char === ',' && !inQuotes) {
-          result.push(current.trim());
-          current = '';
-        } else {
-          current += char;
         }
+        
+        result.push(current.trim());
+        return result;
       }
-      
-      result.push(current.trim());
-      return result;
     };
 
-    const headers = parseCSVLine(lines[0]);
+    // Check if we have headers or just data
+    const hasHeaders = lines.length > 1;
+    let headers: string[];
+    let dataStartIndex: number;
+
+    if (hasHeaders) {
+      // Try to detect if first line looks like headers
+      const firstLineData = parseDataLine(lines[0]);
+      const secondLineData = parseDataLine(lines[1]);
+      
+      // If first line contains expected column names, use it as headers
+      if (firstLineData.some(val => 
+        ['Email-cliente', 'name', 'email', 'cellphone', 'message', 'origem', 'url_pesquisa', 'created_at'].includes(val)
+      )) {
+        headers = firstLineData;
+        dataStartIndex = 1;
+      } else {
+        // Assume no headers, create default ones
+        headers = ['Email-cliente', 'name', 'email', 'cellphone', 'message', 'origem', 'url_pesquisa', 'created_at'];
+        dataStartIndex = 0;
+      }
+    } else {
+      // Single line, no headers
+      headers = ['Email-cliente', 'name', 'email', 'cellphone', 'message', 'origem', 'url_pesquisa', 'created_at'];
+      dataStartIndex = 0;
+    }
+
     console.log('Headers:', headers);
     
     const parsedData = [];
 
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i]);
+    for (let i = dataStartIndex; i < lines.length; i++) {
+      const values = parseDataLine(lines[i]);
       if (values.length > 0) {
         const row: any = {};
         headers.forEach((header, index) => {
