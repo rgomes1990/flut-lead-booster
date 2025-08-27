@@ -24,16 +24,53 @@ const CsvPasteImporter = () => {
   const parseCSVData = (data: string): any[] => {
     console.log('Raw CSV data:', data);
     
-    const lines = data.trim().split('\n').filter(line => line.trim());
-    console.log('Parsed lines:', lines);
+    // Parse CSV respeitando quebras de linha dentro de campos com aspas
+    const parsedLines = [];
+    let currentLine = '';
+    let inQuotes = false;
     
-    if (lines.length === 0) {
+    const lines = data.trim().split('\n');
+    
+    for (const line of lines) {
+      if (!inQuotes) {
+        // Se não estamos dentro de aspas, verificar se a linha contém aspas não fechadas
+        const quoteCount = (line.match(/"/g) || []).length;
+        if (quoteCount % 2 === 1) {
+          // Número ímpar de aspas - começando um campo com quebra de linha
+          inQuotes = true;
+          currentLine = line;
+        } else {
+          // Linha completa
+          parsedLines.push(line);
+        }
+      } else {
+        // Estamos dentro de aspas, continuar construindo a linha
+        currentLine += '\n' + line;
+        const quoteCount = (line.match(/"/g) || []).length;
+        if (quoteCount % 2 === 1) {
+          // Encontrou a aspa de fechamento
+          inQuotes = false;
+          parsedLines.push(currentLine);
+          currentLine = '';
+        }
+      }
+    }
+    
+    // Se ainda há uma linha em construção, adicionar
+    if (currentLine) {
+      parsedLines.push(currentLine);
+    }
+    
+    const filteredLines = parsedLines.filter(line => line.trim());
+    console.log('Parsed lines:', filteredLines);
+    
+    if (filteredLines.length === 0) {
       console.log('No lines found');
       return [];
     }
 
     // Detectar se é separado por vírgula ou tab
-    const firstLine = lines[0];
+    const firstLine = filteredLines[0];
     const delimiter = firstLine.includes('\t') ? '\t' : ',';
     console.log('Detected delimiter:', delimiter === '\t' ? 'TAB' : 'COMMA');
 
@@ -75,14 +112,14 @@ const CsvPasteImporter = () => {
     };
 
     // Check if we have headers or just data
-    const hasHeaders = lines.length > 1;
+    const hasHeaders = filteredLines.length > 1;
     let headers: string[];
     let dataStartIndex: number;
 
     if (hasHeaders) {
       // Try to detect if first line looks like headers
-      const firstLineData = parseDataLine(lines[0]);
-      const secondLineData = parseDataLine(lines[1]);
+      const firstLineData = parseDataLine(filteredLines[0]);
+      const secondLineData = parseDataLine(filteredLines[1]);
       
       // If first line contains expected column names, use it as headers
       if (firstLineData.some(val => 
@@ -105,8 +142,8 @@ const CsvPasteImporter = () => {
     
     const parsedData = [];
 
-    for (let i = dataStartIndex; i < lines.length; i++) {
-      const values = parseDataLine(lines[i]);
+    for (let i = dataStartIndex; i < filteredLines.length; i++) {
+      const values = parseDataLine(filteredLines[i]);
       if (values.length > 0) {
         const row: any = {};
         headers.forEach((header, index) => {
