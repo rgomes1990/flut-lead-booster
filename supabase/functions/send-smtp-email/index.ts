@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0'
 
 const corsHeaders = {
@@ -50,12 +51,16 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
   // Limpar o hostname removendo protocolo e barras
   const smtpHost = cleanHostname(rawSmtpHost || '');
 
+  // Endereço fixo para MAIL FROM conforme solicitado
+  const mailFromAddress = 'atendimento@faccondominios.com.br';
+
   console.log('Configurações SMTP:', {
     rawHost: rawSmtpHost,
     cleanedHost: smtpHost,
     port: smtpPort,
     user: smtpUser ? 'Definido' : 'Não definido',
-    password: smtpPassword ? 'Definido' : 'Não definido'
+    password: smtpPassword ? 'Definido' : 'Não definido',
+    mailFrom: mailFromAddress
   });
 
   if (!smtpHost || !smtpUser || !smtpPassword) {
@@ -152,8 +157,8 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
 
     console.log('Autenticação SMTP bem-sucedida');
 
-    // MAIL FROM
-    response = await sendCommand(`MAIL FROM:<${smtpUser}>`);
+    // MAIL FROM - usando o endereço específico solicitado
+    response = await sendCommand(`MAIL FROM:<${mailFromAddress}>`);
     if (!response.includes('250')) {
       throw new Error(`MAIL FROM falhou: ${response}`);
     }
@@ -170,9 +175,9 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
       throw new Error(`DATA falhou: ${response}`);
     }
 
-    // Cabeçalhos e conteúdo do email
+    // Cabeçalhos e conteúdo do email - usando o endereço correto no From
     const emailContent = [
-      `From: Sistema FLUT <${smtpUser}>`,
+      `From: Sistema FLUT <${mailFromAddress}>`,
       `To: ${to}`,
       `Subject: ${subject}`,
       'Content-Type: text/html; charset=UTF-8',
