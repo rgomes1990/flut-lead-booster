@@ -202,6 +202,19 @@ const CsvPasteImporter = () => {
             continue;
           }
 
+          // Buscar o site principal associado ao usuário
+          const { data: site, error: siteError } = await supabase
+            .from('sites')
+            .select('domain')
+            .eq('user_id', profile.user_id)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          // Se tiver site, usar o domínio; senão usar a URL informada no CSV
+          const finalWebsiteUrl = site?.domain ? `https://${site.domain}` : websiteUrl;
+
           // Inserir o lead
           const { error: leadError } = await supabase
             .from('leads')
@@ -211,7 +224,7 @@ const CsvPasteImporter = () => {
               email: leadEmail,
               phone: leadPhone,
               message: leadMessage,
-              website_url: websiteUrl,
+              website_url: finalWebsiteUrl,
               status: 'new',
               origin: leadOrigin,
               campaign: 'Importação Manual',
