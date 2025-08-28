@@ -109,7 +109,7 @@ const Plans = () => {
     const end = new Date(endDate);
     const daysUntilExpiry = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     
-    if (daysUntilExpiry <= 7) return "warning";
+    if (daysUntilExpiry <= 7) return "secondary"; // Changed from "warning" to "secondary"
     return "default";
   };
 
