@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,8 +24,24 @@ interface Profile {
   email: string;
   user_type: 'admin' | 'client';
   created_at: string;
+}
+
+interface Client {
+  id: string;
+  user_id: string;
   website_url?: string;
   whatsapp?: string;
+}
+
+interface Site {
+  id: string;
+  user_id: string;
+  domain: string;
+}
+
+interface UserWithDetails extends Profile {
+  client?: Client;
+  sites?: Site[];
 }
 
 const Admin = () => {
@@ -39,7 +56,7 @@ const Admin = () => {
     whatsapp: "",
     user_type: "client" as "admin" | "client"
   });
-  const [editingUser, setEditingUser] = useState<Profile | null>(null);
+  const [editingUser, setEditingUser] = useState<UserWithDetails | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -48,37 +65,98 @@ const Admin = () => {
   const isAdmin = userProfile?.user_type === 'admin';
 
   const { data: profiles, isLoading, refetch } = useQuery({
-    queryKey: ["profiles", userProfile?.user_id],
+    queryKey: ["profiles-with-details", userProfile?.user_id],
     queryFn: async () => {
       console.log('Fetching profiles for user:', userProfile?.user_id, 'isAdmin:', isAdmin);
       
       if (isAdmin) {
-        // Admin vê todos os perfis
-        const { data, error } = await supabase
+        // Admin vê todos os perfis com detalhes
+        const { data: profilesData, error: profilesError } = await supabase
           .from("profiles")
           .select("*")
           .order("created_at", { ascending: false });
 
-        if (error) {
-          console.error('Error fetching admin profiles:', error);
-          throw error;
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError);
+          throw profilesError;
         }
-        console.log('Admin profiles loaded:', data?.length);
-        return data as Profile[];
+
+        // Buscar dados dos clientes
+        const { data: clientsData, error: clientsError } = await supabase
+          .from("clients")
+          .select("*");
+
+        if (clientsError) {
+          console.error('Error fetching clients:', clientsError);
+          throw clientsError;
+        }
+
+        // Buscar dados dos sites
+        const { data: sitesData, error: sitesError } = await supabase
+          .from("sites")
+          .select("*");
+
+        if (sitesError) {
+          console.error('Error fetching sites:', sitesError);
+          throw sitesError;
+        }
+
+        // Combinar os dados
+        const usersWithDetails: UserWithDetails[] = profilesData.map(profile => {
+          const client = clientsData.find(c => c.user_id === profile.user_id);
+          const sites = sitesData.filter(s => s.user_id === profile.user_id);
+          
+          return {
+            ...profile,
+            client,
+            sites
+          };
+        });
+
+        console.log('Users with details loaded:', usersWithDetails.length);
+        return usersWithDetails;
       } else {
         // Cliente vê apenas seu próprio perfil
-        const { data, error } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("*")
           .eq("user_id", userProfile?.user_id)
           .single();
 
-        if (error) {
-          console.error('Error fetching client profile:', error);
-          throw error;
+        if (profileError) {
+          console.error('Error fetching client profile:', profileError);
+          throw profileError;
         }
-        console.log('Client profile loaded:', data);
-        return [data] as Profile[];
+
+        // Buscar dados do cliente
+        const { data: clientData, error: clientError } = await supabase
+          .from("clients")
+          .select("*")
+          .eq("user_id", userProfile?.user_id)
+          .maybeSingle();
+
+        if (clientError) {
+          console.error('Error fetching client data:', clientError);
+        }
+
+        // Buscar sites do cliente
+        const { data: sitesData, error: sitesError } = await supabase
+          .from("sites")
+          .select("*")
+          .eq("user_id", userProfile?.user_id);
+
+        if (sitesError) {
+          console.error('Error fetching sites:', sitesError);
+        }
+
+        const userWithDetails: UserWithDetails = {
+          ...profileData,
+          client: clientData || undefined,
+          sites: sitesData || []
+        };
+
+        console.log('Client profile loaded:', userWithDetails);
+        return [userWithDetails];
       }
     },
     enabled: !!userProfile?.user_id
@@ -132,8 +210,8 @@ const Admin = () => {
           user_id: editingUser.user_id,
           name: editingUser.name,
           email: editingUser.email,
-          website_url: editingUser.website_url,
-          whatsapp: editingUser.whatsapp,
+          website_url: editingUser.client?.website_url,
+          whatsapp: editingUser.client?.whatsapp,
           user_type: editingUser.user_type
         }
       });
@@ -342,7 +420,7 @@ const Admin = () => {
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Tipo</TableHead>
-                    <TableHead>Site</TableHead>
+                    <TableHead>Sites</TableHead>
                     <TableHead>WhatsApp</TableHead>
                     <TableHead>Data Criação</TableHead>
                     <TableHead>Ações</TableHead>
@@ -359,10 +437,13 @@ const Admin = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {profile.website_url || '-'}
+                        {profile.sites && profile.sites.length > 0 
+                          ? profile.sites.map(site => site.domain).join(', ')
+                          : (profile.client?.website_url || '-')
+                        }
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {profile.whatsapp || '-'}
+                        {profile.client?.whatsapp || '-'}
                       </TableCell>
                       <TableCell>
                         {new Date(profile.created_at).toLocaleDateString('pt-BR')}
@@ -441,16 +522,24 @@ const Admin = () => {
                         {new Date(profile.created_at).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
-                    {profile.website_url && (
+                    {profile.sites && profile.sites.length > 0 && (
                       <div>
-                        <Label>Site</Label>
-                        <p className="text-sm text-muted-foreground">{profile.website_url}</p>
+                        <Label>Sites</Label>
+                        <p className="text-sm text-muted-foreground">
+                          {profile.sites.map(site => site.domain).join(', ')}
+                        </p>
                       </div>
                     )}
-                    {profile.whatsapp && (
+                    {profile.client?.website_url && (
+                      <div>
+                        <Label>Site</Label>
+                        <p className="text-sm text-muted-foreground">{profile.client.website_url}</p>
+                      </div>
+                    )}
+                    {profile.client?.whatsapp && (
                       <div>
                         <Label>WhatsApp</Label>
-                        <p className="text-sm text-muted-foreground">{profile.whatsapp}</p>
+                        <p className="text-sm text-muted-foreground">{profile.client.whatsapp}</p>
                       </div>
                     )}
                   </div>
@@ -521,8 +610,16 @@ const Admin = () => {
                   <Label htmlFor="edit-website_url">Site (opcional)</Label>
                   <Input
                     id="edit-website_url"
-                    value={editingUser.website_url || ""}
-                    onChange={(e) => setEditingUser({...editingUser, website_url: e.target.value})}
+                    value={editingUser.client?.website_url || ""}
+                    onChange={(e) => setEditingUser({
+                      ...editingUser, 
+                      client: {
+                        ...editingUser.client,
+                        id: editingUser.client?.id || '',
+                        user_id: editingUser.user_id,
+                        website_url: e.target.value
+                      }
+                    })}
                     placeholder="www.exemplo.com"
                   />
                 </div>
@@ -531,8 +628,16 @@ const Admin = () => {
                   <Label htmlFor="edit-whatsapp">WhatsApp (opcional)</Label>
                   <Input
                     id="edit-whatsapp"
-                    value={editingUser.whatsapp || ""}
-                    onChange={(e) => setEditingUser({...editingUser, whatsapp: e.target.value})}
+                    value={editingUser.client?.whatsapp || ""}
+                    onChange={(e) => setEditingUser({
+                      ...editingUser, 
+                      client: {
+                        ...editingUser.client,
+                        id: editingUser.client?.id || '',
+                        user_id: editingUser.user_id,
+                        whatsapp: e.target.value
+                      }
+                    })}
                     placeholder="(11) 99999-9999"
                   />
                 </div>
