@@ -14,8 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminNavigation from "@/components/AdminNavigation";
 import SearchInput from "@/components/SearchInput";
-import CsvLeadImporter from "@/components/CsvLeadImporter";
-import CsvPasteImporter from "@/components/CsvPasteImporter";
 
 const Admin = () => {
   const { userProfile } = useAuth();
@@ -603,13 +601,6 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          {/* CSV Lead Importer - Apenas para admins */}
-          {userProfile.user_type === 'admin' && (
-            <>
-              <CsvLeadImporter />
-              <CsvPasteImporter />
-            </>
-          )}
 
           {/* Edit Dialog */}
           <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>

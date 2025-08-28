@@ -110,6 +110,7 @@ const LeadsCaptured = () => {
       }
 
       const { data: leadsData, error } = await leadsQuery
+        .range(0, 50000)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
