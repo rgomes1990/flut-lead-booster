@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -90,11 +89,8 @@ const LeadsCaptured = () => {
     try {
       setLoading(true);
       
-      // Buscar leads baseado no tipo de usuário
-      let leadsQuery = supabase
-        .from("leads")
-        .select("*");
-
+      let allLeads: any[] = [];
+      
       // Se for cliente, filtrar apenas leads relacionados ao cliente
       if (userProfile?.user_type === 'client') {
         // Primeiro, buscar o ID do cliente baseado no user_id
@@ -105,18 +101,59 @@ const LeadsCaptured = () => {
           .single();
 
         if (clientData) {
-          leadsQuery = leadsQuery.eq('client_id', clientData.id);
+          // Carregar leads do cliente em lotes
+          let from = 0;
+          const batchSize = 1000;
+          let hasMore = true;
+          
+          while (hasMore) {
+            const { data: leadsData, error } = await supabase
+              .from("leads")
+              .select("*")
+              .eq('client_id', clientData.id)
+              .range(from, from + batchSize - 1)
+              .order("created_at", { ascending: false });
+
+            if (error) throw error;
+
+            if (leadsData && leadsData.length > 0) {
+              allLeads = [...allLeads, ...leadsData];
+              from += batchSize;
+              hasMore = leadsData.length === batchSize;
+            } else {
+              hasMore = false;
+            }
+          }
+        }
+      } else {
+        // Admin: carregar todos os leads em lotes
+        let from = 0;
+        const batchSize = 1000;
+        let hasMore = true;
+        
+        while (hasMore) {
+          const { data: leadsData, error } = await supabase
+            .from("leads")
+            .select("*")
+            .range(from, from + batchSize - 1)
+            .order("created_at", { ascending: false });
+
+          if (error) throw error;
+
+          if (leadsData && leadsData.length > 0) {
+            allLeads = [...allLeads, ...leadsData];
+            from += batchSize;
+            hasMore = leadsData.length === batchSize;
+          } else {
+            hasMore = false;
+          }
         }
       }
 
-      const { data: leadsData, error } = await leadsQuery
-        .range(0, 50000)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
+      console.log(`Total de leads carregados: ${allLeads.length}`);
 
       // Buscar informações dos clientes separadamente
-      const clientIds = [...new Set(leadsData?.map(lead => lead.client_id))];
+      const clientIds = [...new Set(allLeads?.map(lead => lead.client_id))];
       const { data: clientsData, error: clientsError } = await supabase
         .from("clients")
         .select(`
@@ -138,7 +175,7 @@ const LeadsCaptured = () => {
       if (profilesError) throw profilesError;
 
       // Combinar os dados e atualizar com UTM
-      const transformedLeads = leadsData?.map((lead: any) => {
+      const transformedLeads = allLeads?.map((lead: any) => {
         const client = clientsData?.find(c => c.id === lead.client_id);
         const profile = profilesData?.find(p => p.user_id === client?.user_id);
         
