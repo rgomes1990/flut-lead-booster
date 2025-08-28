@@ -104,9 +104,10 @@ const LeadsCaptured = () => {
           // Carregar leads do cliente em lotes
           let from = 0;
           const batchSize = 1000;
-          let hasMore = true;
           
-          while (hasMore) {
+          while (true) {
+            console.log(`Carregando lote ${Math.floor(from / batchSize) + 1} - leads ${from} a ${from + batchSize - 1}`);
+            
             const { data: leadsData, error } = await supabase
               .from("leads")
               .select("*")
@@ -114,14 +115,25 @@ const LeadsCaptured = () => {
               .range(from, from + batchSize - 1)
               .order("created_at", { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+              console.error("Erro ao carregar lote:", error);
+              throw error;
+            }
 
             if (leadsData && leadsData.length > 0) {
               allLeads = [...allLeads, ...leadsData];
+              console.log(`Lote carregado: ${leadsData.length} leads. Total acumulado: ${allLeads.length}`);
+              
+              // Se retornou menos que o tamanho do lote, não há mais dados
+              if (leadsData.length < batchSize) {
+                console.log("Último lote carregado (menos que 1000 leads)");
+                break;
+              }
+              
               from += batchSize;
-              hasMore = leadsData.length === batchSize;
             } else {
-              hasMore = false;
+              console.log("Nenhum lead encontrado neste lote");
+              break;
             }
           }
         }
@@ -129,23 +141,35 @@ const LeadsCaptured = () => {
         // Admin: carregar todos os leads em lotes
         let from = 0;
         const batchSize = 1000;
-        let hasMore = true;
         
-        while (hasMore) {
+        while (true) {
+          console.log(`Carregando lote ${Math.floor(from / batchSize) + 1} - leads ${from} a ${from + batchSize - 1}`);
+          
           const { data: leadsData, error } = await supabase
             .from("leads")
             .select("*")
             .range(from, from + batchSize - 1)
             .order("created_at", { ascending: false });
 
-          if (error) throw error;
+          if (error) {
+            console.error("Erro ao carregar lote:", error);
+            throw error;
+          }
 
           if (leadsData && leadsData.length > 0) {
             allLeads = [...allLeads, ...leadsData];
+            console.log(`Lote carregado: ${leadsData.length} leads. Total acumulado: ${allLeads.length}`);
+            
+            // Se retornou menos que o tamanho do lote, não há mais dados
+            if (leadsData.length < batchSize) {
+              console.log("Último lote carregado (menos que 1000 leads)");
+              break;
+            }
+            
             from += batchSize;
-            hasMore = leadsData.length === batchSize;
           } else {
-            hasMore = false;
+            console.log("Nenhum lead encontrado neste lote");
+            break;
           }
         }
       }
