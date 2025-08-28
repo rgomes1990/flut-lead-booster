@@ -39,9 +39,21 @@ interface Site {
   domain: string;
 }
 
+interface SiteConfig {
+  id: string;
+  site_id: string;
+  company_name?: string;
+  attendant_name?: string;
+  email?: string;
+  phone?: string;
+}
+
 interface UserWithDetails extends Profile {
   client?: Client;
   sites?: Site[];
+  siteConfigs?: SiteConfig[];
+  phone?: string;
+  company_name?: string;
 }
 
 const Admin = () => {
@@ -101,15 +113,33 @@ const Admin = () => {
           throw sitesError;
         }
 
+        // Buscar configurações dos sites
+        const { data: siteConfigsData, error: siteConfigsError } = await supabase
+          .from("site_configs")
+          .select("*");
+
+        if (siteConfigsError) {
+          console.error('Error fetching site configs:', siteConfigsError);
+          throw siteConfigsError;
+        }
+
         // Combinar os dados
         const usersWithDetails: UserWithDetails[] = profilesData.map(profile => {
           const client = clientsData.find(c => c.user_id === profile.user_id);
           const sites = sitesData.filter(s => s.user_id === profile.user_id);
+          const userSiteIds = sites.map(s => s.id);
+          const siteConfigs = siteConfigsData.filter(sc => userSiteIds.includes(sc.site_id));
+          
+          // Pegar o telefone e nome da empresa das configurações do site
+          const mainSiteConfig = siteConfigs[0];
           
           return {
             ...profile,
             client,
-            sites
+            sites,
+            siteConfigs,
+            phone: mainSiteConfig?.phone || client?.whatsapp,
+            company_name: mainSiteConfig?.company_name
           };
         });
 
@@ -149,10 +179,31 @@ const Admin = () => {
           console.error('Error fetching sites:', sitesError);
         }
 
+        // Buscar configurações dos sites
+        let siteConfigsData = [];
+        if (sitesData && sitesData.length > 0) {
+          const siteIds = sitesData.map(s => s.id);
+          const { data: configs, error: configsError } = await supabase
+            .from("site_configs")
+            .select("*")
+            .in("site_id", siteIds);
+
+          if (configsError) {
+            console.error('Error fetching site configs:', configsError);
+          } else {
+            siteConfigsData = configs || [];
+          }
+        }
+
+        const mainSiteConfig = siteConfigsData[0];
+
         const userWithDetails: UserWithDetails = {
           ...profileData,
           client: clientData || undefined,
-          sites: sitesData || []
+          sites: sitesData || [],
+          siteConfigs: siteConfigsData,
+          phone: mainSiteConfig?.phone || clientData?.whatsapp,
+          company_name: mainSiteConfig?.company_name
         };
 
         console.log('Client profile loaded:', userWithDetails);
@@ -211,7 +262,7 @@ const Admin = () => {
           name: editingUser.name,
           email: editingUser.email,
           website_url: editingUser.client?.website_url,
-          whatsapp: editingUser.client?.whatsapp,
+          whatsapp: editingUser.phone,
           user_type: editingUser.user_type
         }
       });
@@ -443,7 +494,7 @@ const Admin = () => {
                         }
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {profile.client?.whatsapp || '-'}
+                        {profile.phone || '-'}
                       </TableCell>
                       <TableCell>
                         {new Date(profile.created_at).toLocaleDateString('pt-BR')}
@@ -536,10 +587,10 @@ const Admin = () => {
                         <p className="text-sm text-muted-foreground">{profile.client.website_url}</p>
                       </div>
                     )}
-                    {profile.client?.whatsapp && (
+                    {profile.phone && (
                       <div>
                         <Label>WhatsApp</Label>
-                        <p className="text-sm text-muted-foreground">{profile.client.whatsapp}</p>
+                        <p className="text-sm text-muted-foreground">{profile.phone}</p>
                       </div>
                     )}
                   </div>
@@ -628,15 +679,10 @@ const Admin = () => {
                   <Label htmlFor="edit-whatsapp">WhatsApp (opcional)</Label>
                   <Input
                     id="edit-whatsapp"
-                    value={editingUser.client?.whatsapp || ""}
+                    value={editingUser.phone || ""}
                     onChange={(e) => setEditingUser({
                       ...editingUser, 
-                      client: {
-                        ...editingUser.client,
-                        id: editingUser.client?.id || '',
-                        user_id: editingUser.user_id,
-                        whatsapp: e.target.value
-                      }
+                      phone: e.target.value
                     })}
                     placeholder="(11) 99999-9999"
                   />
