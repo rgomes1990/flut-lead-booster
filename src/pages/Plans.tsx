@@ -1,16 +1,15 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus, Edit } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search, Edit, Plus } from "lucide-react";
 import AdminNavigation from "@/components/AdminNavigation";
 import EditPlanDialog from "@/components/EditPlanDialog";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SubscriptionPlan {
   id: string;
@@ -35,26 +34,18 @@ interface SubscriptionPlan {
 }
 
 const Plans = () => {
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [planToDelete, setPlanToDelete] = useState<SubscriptionPlan | null>(null);
-  const [planToEdit, setPlanToEdit] = useState<SubscriptionPlan | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { userProfile } = useAuth();
-  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
+  
+  const isAdmin = userProfile?.user_type === 'admin';
 
-  useEffect(() => {
-    if (userProfile?.user_type === "admin") {
-      loadPlans();
-    }
-  }, [userProfile]);
-
-  const loadPlans = async () => {
-    try {
-      setLoading(true);
+  const { data: plans, isLoading, refetch } = useQuery({
+    queryKey: ["subscription-plans", userProfile?.user_id],
+    queryFn: async () => {
+      console.log('Fetching plans for user:', userProfile?.user_id, 'isAdmin:', isAdmin);
       
-      const { data: plansData, error } = await supabase
+      let query = supabase
         .from("subscription_plans")
         .select(`
           *,
@@ -62,62 +53,37 @@ const Plans = () => {
             id,
             user_id,
             website_url,
-            script_id
+            script_id,
+            profiles (
+              name,
+              email
+            )
           )
-        `)
-        .order("created_at", { ascending: false });
+        `);
 
-      if (error) throw error;
-
-      // Buscar os perfis dos usuários separadamente
-      if (plansData && plansData.length > 0) {
-        const userIds = plansData
-          .map(plan => plan.clients?.user_id)
-          .filter(Boolean);
-
-        const { data: profilesData, error: profilesError } = await supabase
-          .from("profiles")
-          .select("user_id, name, email")
-          .in("user_id", userIds);
-
-        if (profilesError) throw profilesError;
-
-        // Combinar os dados
-        const transformedPlans = plansData.map(plan => ({
-          ...plan,
-          clients: {
-            ...plan.clients,
-            profiles: profilesData?.find(p => p.user_id === plan.clients?.user_id) || {
-              name: 'N/A',
-              email: 'N/A'
-            }
-          }
-        })) as SubscriptionPlan[];
-
-        setPlans(transformedPlans);
-      } else {
-        setPlans([]);
+      // Se não for admin, filtrar apenas os planos do cliente atual
+      if (!isAdmin && userProfile?.user_id) {
+        query = query.eq('clients.user_id', userProfile.user_id);
       }
-      
-    } catch (error) {
-      console.error("Erro ao carregar planos:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar planos de assinatura",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
+      const { data, error } = await query.order("created_at", { ascending: false });
+
+      if (error) {
+        console.error('Error fetching plans:', error);
+        throw error;
+      }
+
+      console.log('Plans loaded:', data?.length);
+      return data as SubscriptionPlan[];
+    },
+    enabled: !!userProfile?.user_id
+  });
+
+  const filteredPlans = plans?.filter(plan =>
+    plan.clients?.profiles?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    plan.clients?.profiles?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    plan.plan_type.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const getPlanTypeLabel = (planType: string) => {
     switch (planType) {
@@ -136,91 +102,35 @@ const Plans = () => {
     }
   };
 
-  const getStatusBadgeVariant = (isActive: boolean, endDate: string) => {
+  const getStatusColor = (isActive: boolean, endDate: string) => {
+    if (!isActive) return "destructive";
+    
     const now = new Date();
     const end = new Date(endDate);
+    const daysUntilExpiry = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     
-    if (!isActive) return "secondary";
-    if (end < now) return "destructive";
+    if (daysUntilExpiry <= 7) return "warning";
     return "default";
   };
 
-  const getStatusLabel = (isActive: boolean, endDate: string) => {
+  const getStatusText = (isActive: boolean, endDate: string) => {
+    if (!isActive) return "Inativo";
+    
     const now = new Date();
     const end = new Date(endDate);
+    const daysUntilExpiry = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     
-    if (!isActive) return "Inativo";
-    if (end < now) return "Expirado";
+    if (daysUntilExpiry < 0) return "Expirado";
+    if (daysUntilExpiry <= 7) return `Expira em ${daysUntilExpiry} dias`;
     return "Ativo";
   };
 
-  const handleEditClick = (plan: SubscriptionPlan) => {
-    setPlanToEdit(plan);
-    setIsEditDialogOpen(true);
-  };
-
-  const handleEditClose = () => {
-    setIsEditDialogOpen(false);
-    setPlanToEdit(null);
-  };
-
-  const handlePlanUpdated = () => {
-    loadPlans();
-  };
-
-  const handleDeleteClick = (plan: SubscriptionPlan) => {
-    setPlanToDelete(plan);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!planToDelete) return;
-
-    try {
-      const { error } = await supabase
-        .from("subscription_plans")
-        .delete()
-        .eq("id", planToDelete.id);
-
-      if (error) throw error;
-
-      setPlans(prev => prev.filter(plan => plan.id !== planToDelete.id));
-      
-      toast({
-        title: "Sucesso",
-        description: "Plano excluído com sucesso",
-      });
-    } catch (error) {
-      console.error("Erro ao excluir plano:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao excluir plano. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleteDialogOpen(false);
-      setPlanToDelete(null);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setIsDeleteDialogOpen(false);
-    setPlanToDelete(null);
-  };
-
-  if (!userProfile || userProfile.user_type !== "admin") {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <AdminNavigation />
-        <div className="container mx-auto py-8">
-          <Card>
-            <CardContent className="p-8 text-center">
-              <h2 className="text-2xl font-bold text-destructive">Acesso Negado</h2>
-              <p className="text-muted-foreground mt-2">
-                Você não tem permissão para acessar esta página.
-              </p>
-            </CardContent>
-          </Card>
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+          <div className="text-center">Carregando...</div>
         </div>
       </div>
     );
@@ -229,147 +139,118 @@ const Plans = () => {
   return (
     <div className="min-h-screen bg-background">
       <AdminNavigation />
-      <div className="container mx-auto py-8">
-        <Card>
-          <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl font-bold">📊 Gerenciar Planos</CardTitle>
-                <CardDescription className="text-base mt-2">
-                  Visualize e gerencie todos os planos de assinatura dos clientes
-                </CardDescription>
-              </div>
-              <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Novo Plano
-              </Button>
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              {isAdmin ? 'Gerenciar Planos' : 'Meus Planos'}
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              {isAdmin 
+                ? 'Visualize e gerencie todos os planos de assinatura'
+                : 'Visualize informações dos seus planos ativos'
+              }
+            </p>
+          </div>
+        </div>
+
+        {isAdmin && (
+          <div className="mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Buscar por cliente, email ou tipo de plano..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 max-w-md"
+              />
             </div>
-          </CardHeader>
-          <CardContent className="p-6">
-            {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="text-muted-foreground mt-2">Carregando planos...</p>
-              </div>
-            ) : (
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Site</TableHead>
-                      <TableHead>Plano</TableHead>
-                      <TableHead>Data Início</TableHead>
-                      <TableHead>Data Fim</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="w-32">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {plans.map((plan) => (
-                      <TableRow key={plan.id}>
-                        <TableCell>
-                          <span className="font-medium">
-                            {plan.clients?.profiles?.name || 'N/A'}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">
-                            {plan.clients?.profiles?.email || 'N/A'}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">
-                            {plan.clients?.website_url || 'N/A'}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-medium">
-                            {getPlanTypeLabel(plan.plan_type)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">
-                            {formatDate(plan.start_date)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">
-                            {formatDate(plan.end_date)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusBadgeVariant(plan.is_active, plan.end_date)}>
-                            {getStatusLabel(plan.is_active, plan.end_date)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditClick(plan)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDeleteClick(plan)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                
-                {plans.length === 0 && !loading && (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">Nenhum plano encontrado.</p>
+          </div>
+        )}
+
+        <div className="grid gap-4">
+          {filteredPlans?.map((plan) => (
+            <Card key={plan.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                <div className="space-y-1">
+                  <CardTitle className="text-lg">
+                    {getPlanTypeLabel(plan.plan_type)}
+                  </CardTitle>
+                  {isAdmin && (
+                    <CardDescription>
+                      Cliente: {plan.clients?.profiles?.name} ({plan.clients?.profiles?.email})
+                    </CardDescription>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={getStatusColor(plan.is_active, plan.end_date)}>
+                    {getStatusText(plan.is_active, plan.end_date)}
+                  </Badge>
+                  {isAdmin && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setEditingPlan(plan)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-foreground">Data de Início:</span>
+                    <p className="text-muted-foreground">
+                      {new Date(plan.start_date).toLocaleDateString('pt-BR')}
+                    </p>
                   </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  <div>
+                    <span className="font-medium text-foreground">Data de Término:</span>
+                    <p className="text-muted-foreground">
+                      {new Date(plan.end_date).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  {isAdmin && plan.clients?.website_url && (
+                    <div className="col-span-2">
+                      <span className="font-medium text-foreground">Site:</span>
+                      <p className="text-muted-foreground">{plan.clients.website_url}</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-        {/* Dialog de edição de plano */}
-        <EditPlanDialog
-          plan={planToEdit}
-          isOpen={isEditDialogOpen}
-          onClose={handleEditClose}
-          onPlanUpdated={handlePlanUpdated}
-        />
+        {(!plans || plans.length === 0) && (
+          <div className="text-center py-12">
+            <div className="text-muted-foreground mb-4">
+              {isAdmin ? 'Nenhum plano encontrado.' : 'Nenhum plano ativo encontrado.'}
+            </div>
+          </div>
+        )}
 
-        {/* Dialog de confirmação de exclusão */}
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-              <AlertDialogDescription>
-                Tem certeza que deseja excluir o plano de <strong>{planToDelete?.clients?.profiles?.name}</strong>? 
-                Esta ação não pode ser desfeita.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={handleDeleteCancel}>
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleDeleteConfirm}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Excluir
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {filteredPlans?.length === 0 && plans && plans.length > 0 && (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">
+              Nenhum plano encontrado com esse termo de busca.
+            </p>
+          </div>
+        )}
+
+        {isAdmin && (
+          <EditPlanDialog
+            plan={editingPlan}
+            isOpen={!!editingPlan}
+            onClose={() => setEditingPlan(null)}
+            onPlanUpdated={() => {
+              refetch();
+              setEditingPlan(null);
+            }}
+          />
+        )}
       </div>
     </div>
   );

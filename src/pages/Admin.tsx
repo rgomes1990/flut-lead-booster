@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,10 +16,13 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface Profile {
   id: string;
+  user_id: string;
   name: string;
   email: string;
   user_type: 'admin' | 'client';
   created_at: string;
+  website_url?: string;
+  whatsapp?: string;
 }
 
 const Admin = () => {
@@ -42,8 +44,10 @@ const Admin = () => {
   const isAdmin = userProfile?.user_type === 'admin';
 
   const { data: profiles, isLoading, refetch } = useQuery({
-    queryKey: ["profiles"],
+    queryKey: ["profiles", userProfile?.user_id],
     queryFn: async () => {
+      console.log('Fetching profiles for user:', userProfile?.user_id, 'isAdmin:', isAdmin);
+      
       if (isAdmin) {
         // Admin vê todos os perfis
         const { data, error } = await supabase
@@ -51,7 +55,11 @@ const Admin = () => {
           .select("*")
           .order("created_at", { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching admin profiles:', error);
+          throw error;
+        }
+        console.log('Admin profiles loaded:', data?.length);
         return data as Profile[];
       } else {
         // Cliente vê apenas seu próprio perfil
@@ -61,11 +69,15 @@ const Admin = () => {
           .eq("user_id", userProfile?.user_id)
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching client profile:', error);
+          throw error;
+        }
+        console.log('Client profile loaded:', data);
         return [data] as Profile[];
       }
     },
-    enabled: !!userProfile
+    enabled: !!userProfile?.user_id
   });
 
   const filteredProfiles = profiles?.filter(profile =>
@@ -310,7 +322,7 @@ const Admin = () => {
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancelar</AlertDialogCancel>
                           <AlertDialogAction 
-                            onClick={() => deleteUser(profile.id, profile.email)}
+                            onClick={() => deleteUser(profile.user_id, profile.email)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
                             Excluir
@@ -322,18 +334,35 @@ const Admin = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-sm text-muted-foreground">
-                  Criado em: {new Date(profile.created_at).toLocaleDateString('pt-BR')}
+                <div className="space-y-2">
+                  <div className="text-sm text-muted-foreground">
+                    Criado em: {new Date(profile.created_at).toLocaleDateString('pt-BR')}
+                  </div>
+                  {profile.website_url && (
+                    <div className="text-sm">
+                      <span className="font-medium">Site: </span>
+                      <span className="text-muted-foreground">{profile.website_url}</span>
+                    </div>
+                  )}
+                  {profile.whatsapp && (
+                    <div className="text-sm">
+                      <span className="font-medium">WhatsApp: </span>
+                      <span className="text-muted-foreground">{profile.whatsapp}</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {filteredProfiles?.length === 0 && (
+        {(!profiles || profiles.length === 0) && (
           <div className="text-center py-8">
             <p className="text-muted-foreground">
-              {searchTerm ? 'Nenhum usuário encontrado com esse termo.' : 'Nenhum usuário encontrado.'}
+              {isAdmin 
+                ? (searchTerm ? 'Nenhum usuário encontrado com esse termo.' : 'Nenhum usuário encontrado.')
+                : 'Erro ao carregar perfil do usuário.'
+              }
             </p>
           </div>
         )}
