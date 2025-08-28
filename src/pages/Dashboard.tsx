@@ -45,23 +45,38 @@ const Dashboard = () => {
       let allLeads: any[] = [];
       
       if (userProfile?.user_type === 'admin') {
-        // Admin: ver todos os leads
-        const { data } = await supabase
-          .from("leads")
-          .select(`
-            *,
-            clients(script_id, website_url)
-          `)
-          .range(0, 50000)
-          .order("created_at", { ascending: false });
+        // Admin: ver todos os leads - carregar todos sem limite
+        let from = 0;
+        const batchSize = 1000;
+        let hasMore = true;
         
-        allLeads = data || [];
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from("leads")
+            .select(`
+              *,
+              clients(script_id, website_url)
+            `)
+            .range(from, from + batchSize - 1)
+            .order("created_at", { ascending: false });
+          
+          if (error) throw error;
+          
+          if (data && data.length > 0) {
+            allLeads = [...allLeads, ...data];
+            from += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+        
         setLeads(allLeads);
         
         console.log('Dashboard - Total leads carregados (admin):', allLeads.length);
         console.log('Dashboard - Dados dos leads (admin):', allLeads);
       } else {
-        // Cliente: ver apenas seus leads
+        // Cliente: ver apenas seus leads - carregar todos sem limite
         const { data: client } = await supabase
           .from("clients")
           .select("*")
@@ -71,14 +86,29 @@ const Dashboard = () => {
         setClientData(client);
 
         if (client) {
-          const { data: clientLeads } = await supabase
-            .from("leads")
-            .select("*")
-            .eq("client_id", client.id)
-            .range(0, 50000)
-            .order("created_at", { ascending: false });
+          let from = 0;
+          const batchSize = 1000;
+          let hasMore = true;
           
-          allLeads = clientLeads || [];
+          while (hasMore) {
+            const { data: clientLeads, error } = await supabase
+              .from("leads")
+              .select("*")
+              .eq("client_id", client.id)
+              .range(from, from + batchSize - 1)
+              .order("created_at", { ascending: false });
+            
+            if (error) throw error;
+            
+            if (clientLeads && clientLeads.length > 0) {
+              allLeads = [...allLeads, ...clientLeads];
+              from += batchSize;
+              hasMore = clientLeads.length === batchSize;
+            } else {
+              hasMore = false;
+            }
+          }
+          
           setLeads(allLeads);
           
           console.log('Dashboard - Cliente leads carregados:', allLeads.length);
