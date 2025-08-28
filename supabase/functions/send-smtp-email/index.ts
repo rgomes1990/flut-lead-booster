@@ -1,4 +1,5 @@
 
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0'
 
 const corsHeaders = {
@@ -51,8 +52,8 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
   // Limpar o hostname removendo protocolo e barras
   const smtpHost = cleanHostname(rawSmtpHost || '');
 
-  // Endereço fixo para MAIL FROM conforme solicitado
-  const mailFromAddress = 'atendimento@faccondominios.com.br';
+  // Endereço atualizado para MAIL FROM conforme solicitado
+  const mailFromAddress = 'lead@flut.com.br';
 
   console.log('Configurações SMTP:', {
     rawHost: rawSmtpHost,
@@ -395,3 +396,4 @@ Deno.serve(async (req) => {
     });
   }
 });
+
