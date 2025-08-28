@@ -9,7 +9,7 @@ const corsHeaders = {
 // Função simplificada para envio via SendGrid SMTP
 async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
   const smtpHost = Deno.env.get('HOSTGATOR_SMTP_HOST')?.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'smtp.sendgrid.net';
-  const smtpPort = parseInt(Deno.env.get('HOSTGATOR_SMTP_PORT') || '587');
+  const smtpPort = parseInt(Deno.env.get('HOSTGATOR_SMTP_PORT') || '465');
   const smtpUser = Deno.env.get('HOSTGATOR_SMTP_USER') || 'apikey';
   const smtpPassword = Deno.env.get('HOSTGATOR_SMTP_PASSWORD');
   const mailFromAddress = 'lead@flut.com.br';
@@ -27,9 +27,9 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
   }
 
   try {
-    console.log('🔗 Conectando ao SendGrid SMTP...');
+    console.log('🔗 Conectando ao SendGrid SMTP via SSL (porta 465)...');
     
-    // Conectar ao SendGrid com TLS
+    // Conectar ao SendGrid com SSL na porta 465
     const conn = await Deno.connectTls({
       hostname: smtpHost,
       port: smtpPort,
@@ -38,11 +38,11 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     
-    // Função para ler resposta
+    // Função para ler resposta com timeout
     async function readResponse(): Promise<string> {
       const buffer = new Uint8Array(4096);
       const n = await conn.read(buffer);
-      if (!n) throw new Error('Conexão fechada');
+      if (!n) throw new Error('Conexão fechada pelo servidor');
       const response = decoder.decode(buffer.subarray(0, n)).trim();
       console.log('← Servidor:', response);
       return response;
@@ -54,89 +54,103 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
       console.log('→ Cliente:', logCmd);
       
       await conn.write(encoder.encode(command + '\r\n'));
+      
+      // Pequeno delay para permitir processamento
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       return await readResponse();
     }
 
-    // 1. Ler banner inicial
+    // 1. Ler banner inicial do servidor
+    console.log('📥 Aguardando banner inicial...');
     let response = await readResponse();
     if (!response.startsWith('220')) {
-      throw new Error(`Banner inválido: ${response}`);
+      throw new Error(`Banner SMTP inválido: ${response}`);
     }
 
-    // 2. EHLO
+    // 2. Enviar EHLO
     response = await sendCommand(`EHLO ${smtpHost}`);
     if (!response.startsWith('250')) {
-      throw new Error(`EHLO falhou: ${response}`);
+      throw new Error(`Comando EHLO falhou: ${response}`);
     }
 
-    // 3. AUTH LOGIN
+    // 3. Iniciar autenticação LOGIN
     response = await sendCommand('AUTH LOGIN');
     if (!response.startsWith('334')) {
-      throw new Error(`AUTH LOGIN falhou: ${response}`);
+      throw new Error(`AUTH LOGIN não suportado: ${response}`);
     }
 
-    // 4. Username
-    response = await sendCommand(btoa(smtpUser));
+    // 4. Enviar username (codificado em base64)
+    const encodedUser = btoa(smtpUser);
+    response = await sendCommand(encodedUser);
     if (!response.startsWith('334')) {
       throw new Error(`Username rejeitado: ${response}`);
     }
 
-    // 5. Password
-    response = await sendCommand(btoa(smtpPassword));
+    // 5. Enviar password (codificado em base64)
+    const encodedPassword = btoa(smtpPassword);
+    response = await sendCommand(encodedPassword);
     if (!response.startsWith('235')) {
-      throw new Error(`Autenticação falhou: ${response}`);
+      throw new Error(`Falha na autenticação SMTP: ${response}`);
     }
 
-    console.log('✅ Autenticado com sucesso');
+    console.log('✅ Autenticação SMTP realizada com sucesso');
 
-    // 6. MAIL FROM
+    // 6. Definir remetente
     response = await sendCommand(`MAIL FROM:<${mailFromAddress}>`);
     if (!response.startsWith('250')) {
-      throw new Error(`MAIL FROM falhou: ${response}`);
+      throw new Error(`MAIL FROM rejeitado: ${response}`);
     }
 
-    // 7. RCPT TO
+    // 7. Definir destinatário
     response = await sendCommand(`RCPT TO:<${to}>`);
     if (!response.startsWith('250')) {
-      throw new Error(`RCPT TO falhou: ${response}`);
+      throw new Error(`RCPT TO rejeitado: ${response}`);
     }
 
-    // 8. DATA
+    // 8. Iniciar envio de dados
     response = await sendCommand('DATA');
     if (!response.startsWith('354')) {
-      throw new Error(`DATA falhou: ${response}`);
+      throw new Error(`Comando DATA rejeitado: ${response}`);
     }
 
-    // 9. Email content
-    const emailContent = [
+    // 9. Construir e enviar o conteúdo do email
+    const emailHeaders = [
       `From: Sistema FLUT <${mailFromAddress}>`,
       `To: ${to}`,
       `Subject: ${subject}`,
       'MIME-Version: 1.0',
       'Content-Type: text/html; charset=UTF-8',
       'Content-Transfer-Encoding: 8bit',
-      '',
-      htmlContent,
-      '.'
+      'Date: ' + new Date().toUTCString(),
+      ''
     ].join('\r\n');
 
-    await conn.write(encoder.encode(emailContent + '\r\n'));
-    response = await readResponse();
+    const fullEmailContent = emailHeaders + htmlContent + '\r\n.\r\n';
     
+    console.log('📤 Enviando conteúdo do email...');
+    await conn.write(encoder.encode(fullEmailContent));
+    
+    // Aguardar confirmação do envio
+    response = await readResponse();
     if (!response.startsWith('250')) {
-      throw new Error(`Envio falhou: ${response}`);
+      throw new Error(`Falha no envio do email: ${response}`);
     }
 
-    console.log('✅ Email enviado com sucesso');
+    console.log('✅ Email enviado com sucesso via SendGrid');
 
-    // 10. QUIT
+    // 10. Encerrar sessão SMTP
     await sendCommand('QUIT');
     conn.close();
 
-    return { success: true, message: 'Email enviado via SendGrid SMTP' };
+    return { 
+      success: true, 
+      message: 'Email enviado com sucesso via SendGrid SMTP (porta 465)',
+      messageId: response.match(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i)?.[0] || 'unknown'
+    };
 
   } catch (error) {
-    console.error('❌ Erro SMTP:', error);
+    console.error('❌ Erro na comunicação SMTP:', error);
     throw error;
   }
 }
