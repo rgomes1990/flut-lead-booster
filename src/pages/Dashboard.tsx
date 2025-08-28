@@ -75,6 +75,7 @@ const Dashboard = () => {
             .from("leads")
             .select("*")
             .eq("client_id", client.id)
+            .range(0, 50000)
             .order("created_at", { ascending: false });
           
           allLeads = clientLeads || [];
