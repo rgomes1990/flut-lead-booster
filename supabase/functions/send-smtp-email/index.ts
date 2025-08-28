@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0'
 
 const corsHeaders = {
@@ -6,10 +5,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Função simplificada para envio via SendGrid SMTP
+// Função para envio via SendGrid SMTP com TLS
 async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
   const smtpHost = Deno.env.get('HOSTGATOR_SMTP_HOST')?.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'smtp.sendgrid.net';
-  const smtpPort = parseInt(Deno.env.get('HOSTGATOR_SMTP_PORT') || '465');
+  const smtpPort = parseInt(Deno.env.get('HOSTGATOR_SMTP_PORT') || '587');
   const smtpUser = Deno.env.get('HOSTGATOR_SMTP_USER') || 'apikey';
   const smtpPassword = Deno.env.get('HOSTGATOR_SMTP_PASSWORD');
   const mailFromAddress = 'lead@flut.com.br';
@@ -27,10 +26,10 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
   }
 
   try {
-    console.log('🔗 Conectando ao SendGrid SMTP via SSL (porta 465)...');
+    console.log('🔗 Conectando ao SendGrid SMTP via TLS (porta 587)...');
     
-    // Conectar ao SendGrid com SSL na porta 465
-    const conn = await Deno.connectTls({
+    // Conectar ao SendGrid com conexão normal na porta 587
+    const conn = await Deno.connect({
       hostname: smtpHost,
       port: smtpPort,
     });
@@ -38,7 +37,7 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     
-    // Função para ler resposta com timeout
+    // Função para ler resposta
     async function readResponse(): Promise<string> {
       const buffer = new Uint8Array(4096);
       const n = await conn.read(buffer);
@@ -74,47 +73,88 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
       throw new Error(`Comando EHLO falhou: ${response}`);
     }
 
-    // 3. Iniciar autenticação LOGIN
-    response = await sendCommand('AUTH LOGIN');
+    // 3. Iniciar STARTTLS
+    console.log('🔒 Iniciando STARTTLS...');
+    response = await sendCommand('STARTTLS');
+    if (!response.startsWith('220')) {
+      throw new Error(`STARTTLS falhou: ${response}`);
+    }
+
+    // 4. Atualizar conexão para TLS
+    console.log('🔐 Atualizando conexão para TLS...');
+    const tlsConn = await Deno.startTls(conn, {
+      hostname: smtpHost,
+    });
+
+    // Atualizar funções para usar conexão TLS
+    async function readTlsResponse(): Promise<string> {
+      const buffer = new Uint8Array(4096);
+      const n = await tlsConn.read(buffer);
+      if (!n) throw new Error('Conexão TLS fechada pelo servidor');
+      const response = decoder.decode(buffer.subarray(0, n)).trim();
+      console.log('← Servidor TLS:', response);
+      return response;
+    }
+
+    async function sendTlsCommand(command: string): Promise<string> {
+      const logCmd = command.startsWith('AUTH ') ? 'AUTH [HIDDEN]' : command;
+      console.log('→ Cliente TLS:', logCmd);
+      
+      await tlsConn.write(encoder.encode(command + '\r\n'));
+      
+      // Pequeno delay para permitir processamento
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      return await readTlsResponse();
+    }
+
+    // 5. Enviar EHLO novamente após TLS
+    response = await sendTlsCommand(`EHLO ${smtpHost}`);
+    if (!response.startsWith('250')) {
+      throw new Error(`Comando EHLO após TLS falhou: ${response}`);
+    }
+
+    // 6. Iniciar autenticação LOGIN
+    response = await sendTlsCommand('AUTH LOGIN');
     if (!response.startsWith('334')) {
       throw new Error(`AUTH LOGIN não suportado: ${response}`);
     }
 
-    // 4. Enviar username (codificado em base64)
+    // 7. Enviar username (codificado em base64)
     const encodedUser = btoa(smtpUser);
-    response = await sendCommand(encodedUser);
+    response = await sendTlsCommand(encodedUser);
     if (!response.startsWith('334')) {
       throw new Error(`Username rejeitado: ${response}`);
     }
 
-    // 5. Enviar password (codificado em base64)
+    // 8. Enviar password (codificado em base64)
     const encodedPassword = btoa(smtpPassword);
-    response = await sendCommand(encodedPassword);
+    response = await sendTlsCommand(encodedPassword);
     if (!response.startsWith('235')) {
       throw new Error(`Falha na autenticação SMTP: ${response}`);
     }
 
-    console.log('✅ Autenticação SMTP realizada com sucesso');
+    console.log('✅ Autenticação SMTP TLS realizada com sucesso');
 
-    // 6. Definir remetente
-    response = await sendCommand(`MAIL FROM:<${mailFromAddress}>`);
+    // 9. Definir remetente
+    response = await sendTlsCommand(`MAIL FROM:<${mailFromAddress}>`);
     if (!response.startsWith('250')) {
       throw new Error(`MAIL FROM rejeitado: ${response}`);
     }
 
-    // 7. Definir destinatário
-    response = await sendCommand(`RCPT TO:<${to}>`);
+    // 10. Definir destinatário
+    response = await sendTlsCommand(`RCPT TO:<${to}>`);
     if (!response.startsWith('250')) {
       throw new Error(`RCPT TO rejeitado: ${response}`);
     }
 
-    // 8. Iniciar envio de dados
-    response = await sendCommand('DATA');
+    // 11. Iniciar envio de dados
+    response = await sendTlsCommand('DATA');
     if (!response.startsWith('354')) {
       throw new Error(`Comando DATA rejeitado: ${response}`);
     }
 
-    // 9. Construir e enviar o conteúdo do email
+    // 12. Construir e enviar o conteúdo do email
     const emailHeaders = [
       `From: Sistema FLUT <${mailFromAddress}>`,
       `To: ${to}`,
@@ -129,28 +169,28 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
     const fullEmailContent = emailHeaders + htmlContent + '\r\n.\r\n';
     
     console.log('📤 Enviando conteúdo do email...');
-    await conn.write(encoder.encode(fullEmailContent));
+    await tlsConn.write(encoder.encode(fullEmailContent));
     
     // Aguardar confirmação do envio
-    response = await readResponse();
+    response = await readTlsResponse();
     if (!response.startsWith('250')) {
       throw new Error(`Falha no envio do email: ${response}`);
     }
 
-    console.log('✅ Email enviado com sucesso via SendGrid');
+    console.log('✅ Email enviado com sucesso via SendGrid TLS');
 
-    // 10. Encerrar sessão SMTP
-    await sendCommand('QUIT');
-    conn.close();
+    // 13. Encerrar sessão SMTP
+    await sendTlsCommand('QUIT');
+    tlsConn.close();
 
     return { 
       success: true, 
-      message: 'Email enviado com sucesso via SendGrid SMTP (porta 465)',
+      message: 'Email enviado com sucesso via SendGrid SMTP TLS (porta 587)',
       messageId: response.match(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i)?.[0] || 'unknown'
     };
 
   } catch (error) {
-    console.error('❌ Erro na comunicação SMTP:', error);
+    console.error('❌ Erro na comunicação SMTP TLS:', error);
     throw error;
   }
 }
@@ -304,7 +344,7 @@ Deno.serve(async (req) => {
       </html>
     `;
 
-    // Enviar email via SendGrid SMTP
+    // Enviar email via SendGrid SMTP TLS
     const emailResult = await sendSMTPEmail(
       profile.email,
       `🚨 Novo Lead Capturado - ${leadData.name || 'Lead'}`,
@@ -315,7 +355,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      message: 'Email de alerta enviado com sucesso via SendGrid',
+      message: 'Email de alerta enviado com sucesso via SendGrid TLS',
       recipient: profile.email,
       emailResult
     }), {
