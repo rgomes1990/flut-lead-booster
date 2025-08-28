@@ -52,6 +52,7 @@ const Dashboard = () => {
             *,
             clients(script_id, website_url)
           `)
+          .range(0, 50000)
           .order("created_at", { ascending: false });
         
         allLeads = data || [];
