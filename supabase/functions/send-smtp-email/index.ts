@@ -7,25 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Função para conectar via TLS
-async function connectWithTLS(hostname: string, port: number) {
-  console.log(`Tentando conectar via TLS para ${hostname}:${port}`);
-  
-  try {
-    // Conectar via TLS diretamente
-    const conn = await Deno.connectTls({
-      hostname,
-      port,
-      alpnProtocols: ["http/1.1"],
-    });
-    console.log('Conexão TLS estabelecida com sucesso');
-    return conn;
-  } catch (error) {
-    console.error('Erro na conexão TLS:', error);
-    throw error;
-  }
-}
-
 // Função para limpar o hostname removendo protocolo e barras
 function cleanHostname(hostname: string): string {
   if (!hostname) return '';
@@ -71,55 +52,50 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
   let conn;
   
   try {
-    // Decidir o método de conexão baseado na porta
-    if (smtpPort === 465) {
-      // SSL direto
-      conn = await connectWithTLS(smtpHost, smtpPort);
-    } else {
-      // STARTTLS
-      conn = await Deno.connect({
-        hostname: smtpHost,
-        port: smtpPort,
-      });
-    }
+    // Conectar sempre em modo não-SSL primeiro para o SendGrid
+    conn = await Deno.connect({
+      hostname: smtpHost,
+      port: smtpPort,
+    });
 
     const textEncoder = new TextEncoder();
     const textDecoder = new TextDecoder();
-    let buffer = new Uint8Array(2048); // Aumentar buffer
+    let buffer = new Uint8Array(4096);
 
     // Função para ler resposta completa
     async function readResponse(): Promise<string> {
-      await new Promise(resolve => setTimeout(resolve, 200)); // Aguardar um pouco mais
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       const bytesRead = await conn.read(buffer);
       const response = textDecoder.decode(buffer.subarray(0, bytesRead || 0));
-      console.log('Resposta completa recebida:', response.trim());
+      console.log('Resposta recebida:', response.trim());
       return response;
     }
 
     // Função para enviar comando e ler resposta
     async function sendCommand(command: string): Promise<string> {
-      console.log('Enviando comando:', command.replace(/AUTH.*/, 'AUTH [HIDDEN]'));
+      const logCommand = command.startsWith('AUTH') ? 'AUTH [HIDDEN]' : command;
+      console.log('Enviando comando:', logCommand);
       
       await conn.write(textEncoder.encode(command + '\r\n'));
       return await readResponse();
     }
 
-    // Ler banner inicial do servidor SEMPRE (tanto SSL quanto não-SSL)
-    console.log('Lendo banner inicial do servidor...');
+    // Ler banner inicial do servidor
+    console.log('Lendo banner inicial...');
     let response = await readResponse();
     
     if (!response.includes('220')) {
       throw new Error(`Banner inválido do servidor: ${response}`);
     }
 
-    // EHLO
+    // EHLO inicial
     response = await sendCommand(`EHLO ${smtpHost}`);
     if (!response.includes('250')) {
       throw new Error(`EHLO falhou: ${response}`);
     }
 
-    // STARTTLS se necessário (porta 587)
+    // STARTTLS para SendGrid (porta 587)
     if (smtpPort === 587 && response.includes('STARTTLS')) {
       console.log('Iniciando STARTTLS...');
       response = await sendCommand('STARTTLS');
@@ -128,12 +104,24 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
         throw new Error(`STARTTLS falhou: ${response}`);
       }
 
-      // Atualizar conexão para TLS
+      // Fechar conexão atual e reconectar com TLS
       conn.close();
-      conn = await connectWithTLS(smtpHost, smtpPort);
+      
+      console.log('Estabelecendo conexão TLS...');
+      conn = await Deno.connectTls({
+        hostname: smtpHost,
+        port: smtpPort,
+      });
+      
+      // Aguardar um pouco para estabilizar a conexão TLS
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       // EHLO novamente após TLS
+      console.log('Enviando EHLO após TLS...');
       response = await sendCommand(`EHLO ${smtpHost}`);
+      if (!response.includes('250')) {
+        throw new Error(`EHLO após TLS falhou: ${response}`);
+      }
     }
 
     // AUTH LOGIN
@@ -158,7 +146,7 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
 
     console.log('Autenticação SMTP bem-sucedida');
 
-    // MAIL FROM - usando o endereço específico solicitado
+    // MAIL FROM
     response = await sendCommand(`MAIL FROM:<${mailFromAddress}>`);
     if (!response.includes('250')) {
       throw new Error(`MAIL FROM falhou: ${response}`);
@@ -176,7 +164,7 @@ async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
       throw new Error(`DATA falhou: ${response}`);
     }
 
-    // Cabeçalhos e conteúdo do email - usando o endereço correto no From
+    // Cabeçalhos e conteúdo do email
     const emailContent = [
       `From: Sistema FLUT <${mailFromAddress}>`,
       `To: ${to}`,
