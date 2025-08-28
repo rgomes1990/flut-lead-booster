@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,353 +9,293 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Users, Eye, KeyRound } from "lucide-react";
+import { Plus, Edit, Trash2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminNavigation from "@/components/AdminNavigation";
 import SearchInput from "@/components/SearchInput";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Profile, Client, Site, SiteConfig } from "@/types";
-
-interface UserWithDetails extends Profile {
-  client?: Client;
-  sites?: Site[];
-  siteConfigs?: SiteConfig[];
-  whatsapp?: string;
-  domain?: string;
-}
 
 const Admin = () => {
-  const { userProfile, signOut } = useAuth();
-  const [users, setUsers] = useState<UserWithDetails[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<UserWithDetails[]>([]);
+  const { userProfile } = useAuth();
+  const [users, setUsers] = useState<any[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [userTypeFilter, setUserTypeFilter] = useState("all");
+  const [newUser, setNewUser] = useState({ 
+    name: "", 
+    email: "", 
+    password: "", 
+    user_type: "client",
+    website_url: "",
+    whatsapp: ""
+  });
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [changePasswordDialogOpen, setChangePasswordDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserWithDetails | null>(null);
-  const [editingUser, setEditingUser] = useState<UserWithDetails | null>(null);
-  const [newPassword, setNewPassword] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
 
-  const formSchema = z.object({
-    name: z.string().min(2, {
-      message: "Nome deve ter pelo menos 2 caracteres.",
-    }),
-    email: z.string().email({
-      message: "Por favor, insira um email válido.",
-    }),
-    password: z.string().min(6, {
-      message: "Senha deve ter pelo menos 6 caracteres.",
-    }),
-    user_type: z.enum(["admin", "client"]),
-  })
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      user_type: "client",
-    },
-  })
+  // Determinar se é modo "Meu Perfil" (cliente) ou "Gerenciar Usuários" (admin)
+  const isClientMode = userProfile?.user_type === 'client';
 
   useEffect(() => {
-    if (userProfile?.user_type === 'admin') {
-      loadAllUsers();
+    if (userProfile) {
+      if (isClientMode) {
+        // Carregar apenas o próprio perfil do cliente
+        loadOwnProfile();
+      } else if (userProfile.user_type === 'admin') {
+        // Carregar todos os usuários para admin
+        loadUsers();
+      }
     }
-  }, [userProfile]);
+  }, [userProfile, isClientMode]);
 
   useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredUsers(users);
-    } else {
-      const filtered = users.filter(user =>
-        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    // Filtrar usuários baseado no termo de busca e tipo (apenas para admin)
+    if (!isClientMode) {
+      let filtered = users;
+
+      // Filtrar por termo de busca
+      if (searchTerm.trim() !== "") {
+        filtered = filtered.filter(user => 
+          user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+
+      // Filtrar por tipo de usuário
+      if (userTypeFilter !== "all") {
+        filtered = filtered.filter(user => user.user_type === userTypeFilter);
+      }
+
       setFilteredUsers(filtered);
     }
-  }, [users, searchTerm]);
+  }, [users, searchTerm, userTypeFilter, isClientMode]);
 
-  const loadAllUsers = async () => {
+  const loadOwnProfile = async () => {
     try {
-      // Buscar todos os perfis
-      const { data: profilesData, error: profilesError } = await supabase
+      // Carregar perfil do próprio cliente
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("*")
-        .order("name", { ascending: true });
-
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-        throw profilesError;
-      }
-
-      // Buscar dados dos clientes
-      const { data: clientsData, error: clientsError } = await supabase
-        .from("clients")
-        .select("*");
-
-      if (clientsError) {
-        console.error('Error fetching clients:', clientsError);
-        throw clientsError;
-      }
-
-      // Buscar dados dos sites
-      const { data: sitesData, error: sitesError } = await supabase
-        .from("sites")
-        .select("*");
-
-      if (sitesError) {
-        console.error('Error fetching sites:', sitesError);
-        throw sitesError;
-      }
-
-      // Buscar configurações dos sites
-      const { data: siteConfigsData, error: siteConfigsError } = await supabase
-        .from("site_configs")
-        .select("*");
-
-      if (siteConfigsError) {
-        console.error('Error fetching site configs:', siteConfigsError);
-        throw siteConfigsError;
-      }
-
-      // Combinar os dados
-      const usersWithDetails: UserWithDetails[] = profilesData.map(profile => {
-        const client = clientsData.find(c => c.user_id === profile.user_id);
-        const sites = sitesData.filter(s => s.user_id === profile.user_id);
-        const userSiteIds = sites.map(s => s.id);
-        const siteConfigs = siteConfigsData.filter(sc => userSiteIds.includes(sc.site_id));
-        
-        // Pegar o telefone das configurações do site ou do cliente
-        const mainSiteConfig = siteConfigs[0];
-        const whatsapp = mainSiteConfig?.phone || client?.whatsapp || '';
-        
-        // Usar website_domain do perfil, ou o primeiro domínio dos sites, ou website_url do cliente
-        const domain = profile.website_domain || 
-                      (sites.length > 0 ? sites[0].domain : '') || 
-                      client?.website_url || '';
-        
-        return {
-          ...profile,
-          client,
-          sites,
-          siteConfigs,
-          whatsapp,
-          domain
-        };
-      });
-
-      setUsers(usersWithDetails);
-      console.log('All users loaded:', usersWithDetails);
-    } catch (error) {
-      console.error("Error loading users:", error);
-      toast({
-        title: "Erro ao carregar usuários",
-        description: "Não foi possível carregar a lista de usuários",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const loadUserDetails = async (userId: string) => {
-    try {
-      // Buscar perfil do usuário
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", userProfile.user_id)
         .single();
 
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
-        throw profileError;
-      }
+      if (profileError) throw profileError;
 
-      // Buscar dados do cliente
+      // Carregar dados do cliente para obter website_url e WhatsApp
       const { data: clientData, error: clientError } = await supabase
         .from("clients")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", userProfile.user_id)
         .single();
 
-      if (clientError && clientError.code !== 'PGRST116') {
-        console.error('Error fetching client:', clientError);
-      }
+      if (clientError) throw clientError;
 
-      // Buscar sites do usuário
-      const { data: sitesData, error: sitesError } = await supabase
-        .from("sites")
-        .select("*")
-        .eq("user_id", userId);
-
-      if (sitesError) {
-        console.error('Error fetching sites:', sitesError);
-      }
-
-      // Buscar configurações dos sites
-      let siteConfigsData = [];
-      if (sitesData && sitesData.length > 0) {
-        const siteIds = sitesData.map(s => s.id);
-        const { data: configs, error: configsError } = await supabase
-          .from("site_configs")
-          .select("*")
-          .in("site_id", siteIds);
-
-        if (configsError) {
-          console.error('Error fetching site configs:', configsError);
-        } else {
-          siteConfigsData = configs || [];
-        }
-      }
-
-      const mainSiteConfig = siteConfigsData[0];
-      const whatsapp = mainSiteConfig?.phone || clientData?.whatsapp || '';
-      const domain = profileData.website_domain || 
-                    (sitesData && sitesData.length > 0 ? sitesData[0].domain : '') || 
-                    clientData?.website_url || '';
-
-      const userWithDetails: UserWithDetails = {
-        ...profileData,
-        client: clientData || undefined,
-        sites: sitesData || [],
-        siteConfigs: siteConfigsData,
-        whatsapp,
-        domain
+      // Combinar dados
+      const userWithClientData = {
+        ...profile,
+        website_url: clientData?.website_url || '',
+        whatsapp: clientData?.whatsapp || ''
       };
 
-      console.log('Client profile loaded:', userWithDetails);
-      return userWithDetails;
+      setUsers([userWithClientData]);
+      setFilteredUsers([userWithClientData]);
     } catch (error) {
-      console.error("Error loading user details:", error);
-      throw error;
+      console.error("Error loading own profile:", error);
     }
   };
 
-  const createUser = async (values: z.infer<typeof formSchema>) => {
+  const loadUsers = async () => {
     try {
-      const { email, password, name, user_type } = values;
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      // Chamar a função Supabase
-      const { data, error } = await supabase.functions.invoke('create-user', {
-        body: {
-          email,
-          password,
-          name,
-          user_type,
-        }
-      });
+      if (profilesError) throw profilesError;
 
-      if (error) {
-        console.error('Erro ao criar usuário:', error);
+      // Carregar dados de clientes para obter website_url e WhatsApp
+      const { data: clients, error: clientsError } = await supabase
+        .from("clients")
+        .select("*");
+
+      if (clientsError) throw clientsError;
+
+      // Combinar dados
+      const usersWithClientData = profiles?.map(profile => {
+        const clientData = clients?.find(c => c.user_id === profile.user_id);
+        return {
+          ...profile,
+          website_url: clientData?.website_url || '',
+          whatsapp: clientData?.whatsapp || ''
+        };
+      }) || [];
+
+      setUsers(usersWithClientData);
+    } catch (error) {
+      console.error("Error loading users:", error);
+    }
+  };
+
+  const createUser = async () => {
+    if (isCreating) return;
+    
+    try {
+      setIsCreating(true);
+      
+      if (!newUser.name || !newUser.email || !newUser.password) {
         toast({
-          title: "Erro ao criar usuário",
-          description: error.message,
+          title: "Erro",
+          description: "Nome, email e senha são obrigatórios",
           variant: "destructive",
         });
         return;
       }
 
-      toast({
-        title: "Usuário criado com sucesso!",
-        description: data.message,
+      const response = await fetch(`https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/create-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3aXNubmlwZGpxbXhwZ2Z2aGlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxMjQ2NzcsImV4cCI6MjA3MDcwMDY3N30.xMOfCDIniXTn5TnlOdcUiQycp-5yPetalylgzm2_VeQ`,
+        },
+        body: JSON.stringify(newUser),
       });
 
-      form.reset();
-      setCreateDialogOpen(false);
-      loadAllUsers();
+      const result = await response.json();
+
+      if (!result.success) {
+        // Melhor tratamento de erro para email duplicado
+        if (result.error && result.error.includes('already registered') || result.error.includes('duplicate') || result.error.includes('email')) {
+          toast({
+            title: "Email já cadastrado",
+            description: "Este email já está sendo usado por outro usuário. Tente um email diferente.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Erro ao criar usuário",
+            description: result.error || 'Erro desconhecido ao criar usuário',
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+
+      toast({
+        title: "Usuário criado com sucesso!",
+        description: result.message,
+      });
+
+      setNewUser({ 
+        name: "", 
+        email: "", 
+        password: "", 
+        user_type: "client",
+        website_url: "",
+        whatsapp: ""
+      });
+      setDialogOpen(false);
+      loadUsers();
     } catch (error: any) {
-      console.error("Erro ao criar usuário:", error);
       toast({
         title: "Erro ao criar usuário",
-        description: error.message,
+        description: error.message || "Erro de conexão. Tente novamente.",
         variant: "destructive",
       });
+    } finally {
+      setIsCreating(false);
     }
   };
 
   const updateUser = async () => {
+    if (isUpdating) return;
+    
     try {
-      if (!editingUser) return;
+      setIsUpdating(true);
+      
+      if (!editingUser.name || !editingUser.email) {
+        toast({
+          title: "Erro",
+          description: "Nome e email são obrigatórios",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      console.log('Updating user:', editingUser);
+      // Se há uma nova senha, fazer update via edge function
+      if (editingUser.newPassword && editingUser.newPassword.trim()) {
+        const response = await fetch(`https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/update-user-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3aXNubmlwZGpxbXhwZ2Z2aGlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxMjQ2NzcsImV4cCI6MjA3MDcwMDY3N30.xMOfCDIniXTn5TnlOdcUiQycp-5yPetalylgzm2_VeQ`,
+          },
+          body: JSON.stringify({
+            user_id: editingUser.user_id,
+            password: editingUser.newPassword
+          }),
+        });
 
-      // Atualizar perfil do usuário
+        const result = await response.json();
+        if (!result.success) {
+          throw new Error(result.error || 'Erro ao atualizar senha');
+        }
+      }
+
+      // Atualizar profile
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
           name: editingUser.name,
-          user_type: editingUser.user_type,
-          website_domain: editingUser.domain || null
+          email: editingUser.email,
+          user_type: editingUser.user_type
         })
         .eq("user_id", editingUser.user_id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile update error:', profileError);
+        throw new Error(`Erro ao atualizar perfil: ${profileError.message}`);
+      }
 
       // Se for cliente, atualizar dados do cliente
       if (editingUser.user_type === 'client') {
-        const clientData = {
-          website_url: editingUser.client?.website_url || editingUser.domain || '',
-          whatsapp: editingUser.whatsapp || ''
-        };
-
-        // Verificar se cliente já existe
-        const { data: existingClient, error: checkError } = await supabase
+        // Verificar se já existe um registro de cliente
+        const { data: existingClient } = await supabase
           .from("clients")
-          .select("id")
+          .select("*")
           .eq("user_id", editingUser.user_id)
           .single();
 
-        if (checkError && checkError.code !== 'PGRST116') {
-          throw checkError;
-        }
-
         if (existingClient) {
-          // Atualizar cliente existente
+          // Atualizar registro existente
           const { error: clientError } = await supabase
             .from("clients")
-            .update(clientData)
+            .update({
+              website_url: editingUser.website_url || '',
+              whatsapp: editingUser.whatsapp || ''
+            })
             .eq("user_id", editingUser.user_id);
 
-          if (clientError) throw clientError;
+          if (clientError) {
+            console.error('Client update error:', clientError);
+            throw new Error(`Erro ao atualizar dados do cliente: ${clientError.message}`);
+          }
         } else {
-          // Criar novo cliente
+          // Criar novo registro de cliente
           const { error: clientError } = await supabase
             .from("clients")
             .insert({
               user_id: editingUser.user_id,
-              ...clientData,
-              script_id: '' // Será gerado pelo trigger
+              website_url: editingUser.website_url || '',
+              whatsapp: editingUser.whatsapp || '',
+              script_id: '' // Será preenchido pelo trigger
             });
 
-          if (clientError) throw clientError;
-        }
-
-        // Atualizar configurações do site se existirem
-        if (editingUser.siteConfigs && editingUser.siteConfigs.length > 0) {
-          const siteConfig = editingUser.siteConfigs[0];
-          const { error: configError } = await supabase
-            .from("site_configs")
-            .update({
-              phone: editingUser.whatsapp || null
-            })
-            .eq("id", siteConfig.id);
-
-          if (configError) {
-            console.error('Error updating site config:', configError);
+          if (clientError) {
+            console.error('Client creation error:', clientError);
+            throw new Error(`Erro ao criar dados do cliente: ${clientError.message}`);
           }
         }
       }
@@ -365,123 +306,76 @@ const Admin = () => {
 
       setEditDialogOpen(false);
       setEditingUser(null);
-      loadAllUsers();
+      
+      // Recarregar dados baseado no modo
+      if (isClientMode) {
+        loadOwnProfile();
+      } else {
+        loadUsers();
+      }
     } catch (error: any) {
-      console.error("Error updating user:", error);
+      console.error('Update user error:', error);
       toast({
         title: "Erro ao atualizar usuário",
-        description: error.message,
+        description: error.message || "Erro desconhecido ao atualizar usuário",
         variant: "destructive",
       });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   const deleteUser = async (userId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este usuário?")) return;
+    if (!confirm("Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.")) return;
 
     try {
-      const { data, error } = await supabase.auth.admin.deleteUser(userId);
+      // Get current session to use proper auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Você precisa estar logado para excluir usuários");
+      }
 
-      if (error) throw error;
+      const response = await fetch(`https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/delete-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ userId: userId }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro na requisição: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao excluir usuário');
+      }
 
       toast({
         title: "Usuário excluído com sucesso!",
       });
 
-      loadAllUsers();
+      loadUsers();
     } catch (error: any) {
+      console.error('Delete user error:', error);
       toast({
         title: "Erro ao excluir usuário",
-        description: error.message,
+        description: error.message || "Erro de conexão. Tente novamente.",
         variant: "destructive",
       });
     }
   };
 
-  const changePassword = async () => {
-    if (!editingUser) return;
-
-    if (newPassword.length < 6) {
-      toast({
-        title: "Erro",
-        description: "A nova senha deve ter pelo menos 6 caracteres.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      // Chamar a função Supabase para atualizar a senha
-      const { data, error } = await supabase.functions.invoke('update-user-password', {
-        body: {
-          user_id: editingUser.user_id,
-          password: newPassword
-        }
-      });
-
-      if (error) {
-        console.error('Erro ao alterar senha:', error);
-        toast({
-          title: "Erro ao alterar senha",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Senha alterada com sucesso!",
-        description: data.message,
-      });
-
-      setChangePasswordDialogOpen(false);
-      setNewPassword("");
-    } catch (error: any) {
-      console.error("Erro ao alterar senha:", error);
-      toast({
-        title: "Erro ao alterar senha",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const openUserDetails = async (profile: UserWithDetails) => {
-    try {
-      const userDetails = await loadUserDetails(profile.user_id);
-      setSelectedUser(userDetails);
-      setDetailsDialogOpen(true);
-    } catch (error) {
-      console.error("Error loading user details:", error);
-      toast({
-        title: "Erro ao carregar detalhes do usuário",
-        description: "Não foi possível carregar as informações completas do usuário",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const openEditDialog = async (profile: UserWithDetails) => {
-    try {
-      const userDetails = await loadUserDetails(profile.user_id);
-      setEditingUser(userDetails);
-      setEditDialogOpen(true);
-    } catch (error) {
-      console.error("Error loading user details for edit:", error);
-      toast({
-        title: "Erro ao carregar detalhes do usuário",
-        description: "Não foi possível carregar as informações para edição",
-        variant: "destructive",
-      });
-    }
-  };
-
-  if (!userProfile || userProfile.user_type !== 'admin') {
+  if (!userProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card>
           <CardContent className="pt-6">
-            <p>Acesso negado. Você não tem permissão para acessar esta página.</p>
+            <p>Carregando...</p>
           </CardContent>
         </Card>
       </div>
@@ -495,92 +389,113 @@ const Admin = () => {
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold">Gerenciar Usuários</h1>
-              <p className="text-muted-foreground">Administrar usuários e seus respectivos acessos</p>
+              <h1 className="text-3xl font-bold">
+                {isClientMode ? "Meu Perfil" : "Gerenciar Usuários"}
+              </h1>
+              <p className="text-muted-foreground">
+                {isClientMode 
+                  ? "Gerencie suas informações pessoais" 
+                  : "Administrar contas de usuários do sistema"
+                }
+              </p>
             </div>
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Usuário
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Criar Novo Usuário</DialogTitle>
-                  <DialogDescription>
-                    Preencha os campos abaixo para criar um novo usuário
-                  </DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(createUser)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nome</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Nome completo" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input placeholder="seuemail@exemplo.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Senha</FormLabel>
-                          <FormControl>
-                            <Input type="password" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="user_type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tipo de Usuário</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione um tipo" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="bg-background border shadow-lg">
-                              <SelectItem value="client">Cliente</SelectItem>
-                              <SelectItem value="admin">Administrador</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit" className="w-full">
-                      Criar Usuário
+            
+            {!isClientMode && (
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Usuário
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Criar Novo Usuário</DialogTitle>
+                    <DialogDescription>
+                      Adicione um novo usuário ao sistema
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="name">Nome</Label>
+                      <Input
+                        id="name"
+                        value={newUser.name}
+                        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                        placeholder="Nome completo"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                        placeholder="email@exemplo.com"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="password">Senha</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        placeholder="Senha (mínimo 6 caracteres)"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="user_type">Tipo de Usuário</Label>
+                      <Select 
+                        value={newUser.user_type} 
+                        onValueChange={(value) => setNewUser({ ...newUser, user_type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border shadow-lg">
+                          <SelectItem value="client">Cliente</SelectItem>
+                          <SelectItem value="admin">Administrador</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {newUser.user_type === 'client' && (
+                      <>
+                        <div>
+                          <Label htmlFor="website_url">Site (opcional)</Label>
+                          <Input
+                            id="website_url"
+                            value={newUser.website_url}
+                            onChange={(e) => setNewUser({ ...newUser, website_url: e.target.value })}
+                            placeholder="exemplo.com"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="whatsapp">WhatsApp (opcional)</Label>
+                          <Input
+                            id="whatsapp"
+                            value={newUser.whatsapp}
+                            onChange={(e) => setNewUser({ ...newUser, whatsapp: e.target.value })}
+                            placeholder="(11) 99999-9999"
+                          />
+                        </div>
+                      </>
+                    )}
+                    <Button 
+                      onClick={createUser} 
+                      className="w-full"
+                      disabled={isCreating}
+                    >
+                      {isCreating ? "Criando..." : "Criar Usuário"}
                     </Button>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
 
           <Card>
@@ -589,18 +504,38 @@ const Admin = () => {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5" />
-                    Usuários Cadastrados
+                    {isClientMode ? "Meus Dados" : "Usuários Cadastrados"}
                   </CardTitle>
                   <CardDescription>
-                    Lista de todos os usuários do sistema
+                    {isClientMode 
+                      ? "Suas informações pessoais e de contato"
+                      : "Lista de todos os usuários do sistema"
+                    }
                   </CardDescription>
                 </div>
-                <SearchInput
-                  value={searchTerm}
-                  onChange={setSearchTerm}
-                  placeholder="Buscar por nome ou email..."
-                  className="w-72"
-                />
+                {!isClientMode && (
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="userTypeFilter">Filtrar por tipo:</Label>
+                      <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
+                        <SelectTrigger className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          <SelectItem value="admin">Administrador</SelectItem>
+                          <SelectItem value="client">Cliente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <SearchInput
+                      value={searchTerm}
+                      onChange={setSearchTerm}
+                      placeholder="Buscar por nome ou email..."
+                      className="w-72"
+                    />
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -609,7 +544,7 @@ const Admin = () => {
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Tipo</TableHead>
+                    {!isClientMode && <TableHead>Tipo</TableHead>}
                     <TableHead>Site</TableHead>
                     <TableHead>WhatsApp</TableHead>
                     <TableHead>Data Criação</TableHead>
@@ -617,46 +552,47 @@ const Admin = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers.map((profile) => (
-                    <TableRow key={profile.user_id}>
-                      <TableCell className="font-medium">{profile.name}</TableCell>
-                      <TableCell className="text-muted-foreground">{profile.email}</TableCell>
+                  {filteredUsers.map((user) => (
+                    <TableRow key={user.user_id}>
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      {!isClientMode && (
+                        <TableCell>
+                          <Badge variant={user.user_type === 'admin' ? 'default' : 'secondary'}>
+                            {user.user_type === 'admin' ? 'Administrador' : 'Cliente'}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      <TableCell>{user.website_url || '-'}</TableCell>
+                      <TableCell>{user.whatsapp || '-'}</TableCell>
                       <TableCell>
-                        <Badge variant={profile.user_type === 'admin' ? 'default' : 'secondary'}>
-                          {profile.user_type === 'admin' ? 'Administrador' : 'Cliente'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {profile.domain || '-'}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {profile.whatsapp || '-'}
-                      </TableCell>
-                      <TableCell>
-                        {new Date(profile.created_at).toLocaleDateString('pt-BR')}
+                        {new Date(user.created_at).toLocaleDateString("pt-BR")}
                       </TableCell>
                       <TableCell className="space-x-2">
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => openUserDetails(profile)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openEditDialog(profile)}
+                          onClick={() => {
+                            console.log("Setting editing user with whatsapp:", user.whatsapp);
+                            setEditingUser({
+                              ...user,
+                              whatsapp: user.whatsapp || '',
+                              newPassword: '' // Campo para nova senha
+                            });
+                            setEditDialogOpen(true);
+                          }}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => deleteUser(profile.user_id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {!isClientMode && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => deleteUser(user.user_id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -665,63 +601,19 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          {/* User Details Dialog */}
-          <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Detalhes do Usuário</DialogTitle>
-                <DialogDescription>
-                  Informações completas do usuário selecionado
-                </DialogDescription>
-              </DialogHeader>
-              {selectedUser && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Nome</Label>
-                      <p className="text-sm text-muted-foreground">{selectedUser.name}</p>
-                    </div>
-                    <div>
-                      <Label>Email</Label>
-                      <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
-                    </div>
-                    <div>
-                      <Label>Tipo de Usuário</Label>
-                      <Badge variant={selectedUser.user_type === 'admin' ? 'default' : 'secondary'}>
-                        {selectedUser.user_type === 'admin' ? 'Administrador' : 'Cliente'}
-                      </Badge>
-                    </div>
-                    <div>
-                      <Label>Data de Criação</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(selectedUser.created_at).toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
-                    {selectedUser.domain && (
-                      <div>
-                        <Label>Site</Label>
-                        <p className="text-sm text-muted-foreground">{selectedUser.domain}</p>
-                      </div>
-                    )}
-                    {selectedUser.whatsapp && (
-                      <div>
-                        <Label>WhatsApp</Label>
-                        <p className="text-sm text-muted-foreground">{selectedUser.whatsapp}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
 
-          {/* Edit User Dialog */}
+          {/* Edit Dialog */}
           <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Editar Usuário</DialogTitle>
+                <DialogTitle>
+                  {isClientMode ? "Editar Meu Perfil" : "Editar Usuário"}
+                </DialogTitle>
                 <DialogDescription>
-                  Edite as informações do usuário selecionado
+                  {isClientMode 
+                    ? "Edite suas informações pessoais"
+                    : "Edite as informações do usuário selecionado"
+                  }
                 </DialogDescription>
               </DialogHeader>
               {editingUser && (
@@ -732,6 +624,7 @@ const Admin = () => {
                       id="edit-name"
                       value={editingUser.name}
                       onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                      placeholder="Nome completo"
                     />
                   </div>
                   <div>
@@ -740,93 +633,74 @@ const Admin = () => {
                       id="edit-email"
                       type="email"
                       value={editingUser.email}
-                      disabled
-                      className="bg-muted"
+                      onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                      placeholder="email@exemplo.com"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="edit-user-type">Tipo de Usuário</Label>
-                    <Select
-                      value={editingUser.user_type}
-                      onValueChange={(value: 'admin' | 'client') => 
-                        setEditingUser({ ...editingUser, user_type: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border shadow-lg">
-                        <SelectItem value="client">Cliente</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-site">Site (opcional)</Label>
+                    <Label htmlFor="edit-new-password">Nova Senha (opcional)</Label>
                     <Input
-                      id="edit-site"
-                      value={editingUser.domain || ""}
-                      onChange={(e) => setEditingUser({
-                        ...editingUser, 
-                        domain: e.target.value
-                      })}
-                      placeholder="exemplo.com"
+                      id="edit-new-password"
+                      type="password"
+                      value={editingUser.newPassword || ''}
+                      onChange={(e) => setEditingUser({ ...editingUser, newPassword: e.target.value })}
+                      placeholder="Deixe em branco para manter a senha atual"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="edit-whatsapp">WhatsApp (opcional)</Label>
-                    <Input
-                      id="edit-whatsapp"
-                      value={editingUser.whatsapp || ""}
-                      onChange={(e) => setEditingUser({
-                        ...editingUser, 
-                        whatsapp: e.target.value
-                      })}
-                      placeholder="(11) 99999-9999"
-                    />
-                  </div>
-                  <Button onClick={updateUser} className="w-full">
-                    Atualizar Usuário
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setChangePasswordDialogOpen(true);
-                      setEditDialogOpen(false);
-                    }}
+                  {!isClientMode && (
+                    <div>
+                      <Label htmlFor="edit-user_type">Tipo de Usuário</Label>
+                      <Select 
+                        value={editingUser.user_type} 
+                        onValueChange={(value) => setEditingUser({ ...editingUser, user_type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border shadow-lg">
+                          <SelectItem value="client">Cliente</SelectItem>
+                          <SelectItem value="admin">Administrador</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {editingUser.user_type === 'client' && (
+                    <>
+                      <div>
+                        <Label htmlFor="edit-website_url">Site</Label>
+                        <Input
+                          id="edit-website_url"
+                          value={editingUser.website_url || ''}
+                          onChange={(e) => setEditingUser({ ...editingUser, website_url: e.target.value })}
+                          placeholder="exemplo.com"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-whatsapp">WhatsApp do Usuário</Label>
+                        <Input
+                          id="edit-whatsapp"
+                          value={editingUser.whatsapp || ''}
+                          onChange={(e) => {
+                            console.log("Updating whatsapp field:", e.target.value);
+                            setEditingUser({ ...editingUser, whatsapp: e.target.value });
+                          }}
+                          placeholder="(11) 99999-9999"
+                        />
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Este é o WhatsApp do usuário. Cada site pode ter seu próprio WhatsApp nas configurações.
+                        </p>
+                      </div>
+                    </>
+                  )}
+                  <Button 
+                    onClick={updateUser} 
                     className="w-full"
+                    disabled={isUpdating}
                   >
-                    Alterar Senha
+                    {isUpdating ? "Atualizando..." : `${isClientMode ? "Atualizar Perfil" : "Atualizar Usuário"}`}
                   </Button>
                 </div>
               )}
-            </DialogContent>
-          </Dialog>
-
-          {/* Change Password Dialog */}
-          <Dialog open={changePasswordDialogOpen} onOpenChange={setChangePasswordDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Alterar Senha</DialogTitle>
-                <DialogDescription>
-                  Digite a nova senha para o usuário
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="new-password">Nova Senha</Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Nova senha"
-                  />
-                </div>
-                <Button onClick={changePassword} className="w-full">
-                  Alterar Senha
-                </Button>
-              </div>
             </DialogContent>
           </Dialog>
         </div>
