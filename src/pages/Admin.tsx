@@ -1,323 +1,489 @@
-
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, UserPlus, Search, Eye, EyeOff, Edit } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import AdminNavigation from "@/components/AdminNavigation";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Edit, Trash2, Users, Eye, KeyRound } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAuth } from "@/hooks/useAuth";
+import AdminNavigation from "@/components/AdminNavigation";
 import SearchInput from "@/components/SearchInput";
-
-interface Profile {
-  id: string;
-  user_id: string;
-  name: string;
-  email: string;
-  user_type: 'admin' | 'client';
-  created_at: string;
-}
-
-interface Client {
-  id: string;
-  user_id: string;
-  website_url?: string;
-  whatsapp?: string;
-}
-
-interface Site {
-  id: string;
-  user_id: string;
-  domain: string;
-}
-
-interface SiteConfig {
-  id: string;
-  site_id: string;
-  company_name?: string;
-  attendant_name?: string;
-  email?: string;
-  phone?: string;
-}
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Profile, Client, Site, SiteConfig } from "@/types";
 
 interface UserWithDetails extends Profile {
   client?: Client;
   sites?: Site[];
   siteConfigs?: SiteConfig[];
-  phone?: string;
-  company_name?: string;
+  whatsapp?: string;
+  domain?: string;
 }
 
 const Admin = () => {
-  const { toast } = useToast();
-  const { userProfile } = useAuth();
+  const { userProfile, signOut } = useAuth();
+  const [users, setUsers] = useState<UserWithDetails[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserWithDetails[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [newUser, setNewUser] = useState({
-    name: "",
-    email: "",
-    password: "",
-    website_url: "",
-    whatsapp: "",
-    user_type: "client" as "admin" | "client"
-  });
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [changePasswordDialogOpen, setChangePasswordDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserWithDetails | null>(null);
   const [editingUser, setEditingUser] = useState<UserWithDetails | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const { toast } = useToast();
 
-  // Se for cliente, mostrar apenas seu próprio perfil
-  const isAdmin = userProfile?.user_type === 'admin';
+  const formSchema = z.object({
+    name: z.string().min(2, {
+      message: "Nome deve ter pelo menos 2 caracteres.",
+    }),
+    email: z.string().email({
+      message: "Por favor, insira um email válido.",
+    }),
+    password: z.string().min(6, {
+      message: "Senha deve ter pelo menos 6 caracteres.",
+    }),
+    user_type: z.enum(["admin", "client"]),
+  })
 
-  const { data: profiles, isLoading, refetch } = useQuery({
-    queryKey: ["profiles-with-details", userProfile?.user_id],
-    queryFn: async () => {
-      console.log('Fetching profiles for user:', userProfile?.user_id, 'isAdmin:', isAdmin);
-      
-      if (isAdmin) {
-        // Admin vê todos os perfis com detalhes
-        const { data: profilesData, error: profilesError } = await supabase
-          .from("profiles")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (profilesError) {
-          console.error('Error fetching profiles:', profilesError);
-          throw profilesError;
-        }
-
-        // Buscar dados dos clientes
-        const { data: clientsData, error: clientsError } = await supabase
-          .from("clients")
-          .select("*");
-
-        if (clientsError) {
-          console.error('Error fetching clients:', clientsError);
-          throw clientsError;
-        }
-
-        // Buscar dados dos sites
-        const { data: sitesData, error: sitesError } = await supabase
-          .from("sites")
-          .select("*");
-
-        if (sitesError) {
-          console.error('Error fetching sites:', sitesError);
-          throw sitesError;
-        }
-
-        // Buscar configurações dos sites
-        const { data: siteConfigsData, error: siteConfigsError } = await supabase
-          .from("site_configs")
-          .select("*");
-
-        if (siteConfigsError) {
-          console.error('Error fetching site configs:', siteConfigsError);
-          throw siteConfigsError;
-        }
-
-        // Combinar os dados
-        const usersWithDetails: UserWithDetails[] = profilesData.map(profile => {
-          const client = clientsData.find(c => c.user_id === profile.user_id);
-          const sites = sitesData.filter(s => s.user_id === profile.user_id);
-          const userSiteIds = sites.map(s => s.id);
-          const siteConfigs = siteConfigsData.filter(sc => userSiteIds.includes(sc.site_id));
-          
-          // Pegar o telefone e nome da empresa das configurações do site
-          const mainSiteConfig = siteConfigs[0];
-          
-          return {
-            ...profile,
-            client,
-            sites,
-            siteConfigs,
-            phone: mainSiteConfig?.phone || client?.whatsapp,
-            company_name: mainSiteConfig?.company_name
-          };
-        });
-
-        console.log('Users with details loaded:', usersWithDetails.length);
-        return usersWithDetails;
-      } else {
-        // Cliente vê apenas seu próprio perfil
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("user_id", userProfile?.user_id)
-          .single();
-
-        if (profileError) {
-          console.error('Error fetching client profile:', profileError);
-          throw profileError;
-        }
-
-        // Buscar dados do cliente
-        const { data: clientData, error: clientError } = await supabase
-          .from("clients")
-          .select("*")
-          .eq("user_id", userProfile?.user_id)
-          .maybeSingle();
-
-        if (clientError) {
-          console.error('Error fetching client data:', clientError);
-        }
-
-        // Buscar sites do cliente
-        const { data: sitesData, error: sitesError } = await supabase
-          .from("sites")
-          .select("*")
-          .eq("user_id", userProfile?.user_id);
-
-        if (sitesError) {
-          console.error('Error fetching sites:', sitesError);
-        }
-
-        // Buscar configurações dos sites
-        let siteConfigsData = [];
-        if (sitesData && sitesData.length > 0) {
-          const siteIds = sitesData.map(s => s.id);
-          const { data: configs, error: configsError } = await supabase
-            .from("site_configs")
-            .select("*")
-            .in("site_id", siteIds);
-
-          if (configsError) {
-            console.error('Error fetching site configs:', configsError);
-          } else {
-            siteConfigsData = configs || [];
-          }
-        }
-
-        const mainSiteConfig = siteConfigsData[0];
-
-        const userWithDetails: UserWithDetails = {
-          ...profileData,
-          client: clientData || undefined,
-          sites: sitesData || [],
-          siteConfigs: siteConfigsData,
-          phone: mainSiteConfig?.phone || clientData?.whatsapp,
-          company_name: mainSiteConfig?.company_name
-        };
-
-        console.log('Client profile loaded:', userWithDetails);
-        return [userWithDetails];
-      }
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      user_type: "client",
     },
-    enabled: !!userProfile?.user_id
-  });
+  })
 
-  const filteredProfiles = profiles?.filter(profile =>
-    profile.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    profile.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    if (userProfile?.user_type === 'admin') {
+      loadAllUsers();
+    }
+  }, [userProfile]);
 
-  const createUser = async () => {
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      setFilteredUsers(users);
+    } else {
+      const filtered = users.filter(user =>
+        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredUsers(filtered);
+    }
+  }, [users, searchTerm]);
+
+  const loadAllUsers = async () => {
     try {
-      const response = await supabase.functions.invoke('create-user', {
-        body: newUser
+      // Buscar todos os perfis
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
+      }
+
+      // Buscar dados dos clientes
+      const { data: clientsData, error: clientsError } = await supabase
+        .from("clients")
+        .select("*");
+
+      if (clientsError) {
+        console.error('Error fetching clients:', clientsError);
+        throw clientsError;
+      }
+
+      // Buscar dados dos sites
+      const { data: sitesData, error: sitesError } = await supabase
+        .from("sites")
+        .select("*");
+
+      if (sitesError) {
+        console.error('Error fetching sites:', sitesError);
+        throw sitesError;
+      }
+
+      // Buscar configurações dos sites
+      const { data: siteConfigsData, error: siteConfigsError } = await supabase
+        .from("site_configs")
+        .select("*");
+
+      if (siteConfigsError) {
+        console.error('Error fetching site configs:', siteConfigsError);
+        throw siteConfigsError;
+      }
+
+      // Combinar os dados
+      const usersWithDetails: UserWithDetails[] = profilesData.map(profile => {
+        const client = clientsData.find(c => c.user_id === profile.user_id);
+        const sites = sitesData.filter(s => s.user_id === profile.user_id);
+        const userSiteIds = sites.map(s => s.id);
+        const siteConfigs = siteConfigsData.filter(sc => userSiteIds.includes(sc.site_id));
+        
+        // Pegar o telefone das configurações do site ou do cliente
+        const mainSiteConfig = siteConfigs[0];
+        const whatsapp = mainSiteConfig?.phone || client?.whatsapp || '';
+        
+        // Usar website_domain do perfil, ou o primeiro domínio dos sites, ou website_url do cliente
+        const domain = profile.website_domain || 
+                      (sites.length > 0 ? sites[0].domain : '') || 
+                      client?.website_url || '';
+        
+        return {
+          ...profile,
+          client,
+          sites,
+          siteConfigs,
+          whatsapp,
+          domain
+        };
       });
 
-      if (response.error) throw response.error;
+      setUsers(usersWithDetails);
+      console.log('All users loaded:', usersWithDetails);
+    } catch (error) {
+      console.error("Error loading users:", error);
+      toast({
+        title: "Erro ao carregar usuários",
+        description: "Não foi possível carregar a lista de usuários",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const loadUserDetails = async (userId: string) => {
+    try {
+      // Buscar perfil do usuário
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        throw profileError;
+      }
+
+      // Buscar dados do cliente
+      const { data: clientData, error: clientError } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+
+      if (clientError && clientError.code !== 'PGRST116') {
+        console.error('Error fetching client:', clientError);
+      }
+
+      // Buscar sites do usuário
+      const { data: sitesData, error: sitesError } = await supabase
+        .from("sites")
+        .select("*")
+        .eq("user_id", userId);
+
+      if (sitesError) {
+        console.error('Error fetching sites:', sitesError);
+      }
+
+      // Buscar configurações dos sites
+      let siteConfigsData = [];
+      if (sitesData && sitesData.length > 0) {
+        const siteIds = sitesData.map(s => s.id);
+        const { data: configs, error: configsError } = await supabase
+          .from("site_configs")
+          .select("*")
+          .in("site_id", siteIds);
+
+        if (configsError) {
+          console.error('Error fetching site configs:', configsError);
+        } else {
+          siteConfigsData = configs || [];
+        }
+      }
+
+      const mainSiteConfig = siteConfigsData[0];
+      const whatsapp = mainSiteConfig?.phone || clientData?.whatsapp || '';
+      const domain = profileData.website_domain || 
+                    (sitesData && sitesData.length > 0 ? sitesData[0].domain : '') || 
+                    clientData?.website_url || '';
+
+      const userWithDetails: UserWithDetails = {
+        ...profileData,
+        client: clientData || undefined,
+        sites: sitesData || [],
+        siteConfigs: siteConfigsData,
+        whatsapp,
+        domain
+      };
+
+      console.log('Client profile loaded:', userWithDetails);
+      return userWithDetails;
+    } catch (error) {
+      console.error("Error loading user details:", error);
+      throw error;
+    }
+  };
+
+  const createUser = async (values: z.infer<typeof formSchema>) => {
+    try {
+      const { email, password, name, user_type } = values;
+
+      // Chamar a função Supabase
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email,
+          password,
+          name,
+          user_type,
+        }
+      });
+
+      if (error) {
+        console.error('Erro ao criar usuário:', error);
+        toast({
+          title: "Erro ao criar usuário",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
 
       toast({
-        title: "Sucesso",
-        description: response.data.message,
+        title: "Usuário criado com sucesso!",
+        description: data.message,
       });
 
-      setNewUser({
-        name: "",
-        email: "",
-        password: "",
-        website_url: "",
-        whatsapp: "",
-        user_type: "client"
-      });
-      
-      setIsDialogOpen(false);
-      refetch();
+      form.reset();
+      setCreateDialogOpen(false);
+      loadAllUsers();
     } catch (error: any) {
-      console.error('Erro ao criar usuário:', error);
+      console.error("Erro ao criar usuário:", error);
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao criar usuário",
+        title: "Erro ao criar usuário",
+        description: error.message,
         variant: "destructive",
       });
     }
   };
 
   const updateUser = async () => {
-    if (!editingUser) return;
-
     try {
-      const response = await supabase.functions.invoke('update-user', {
-        body: {
-          user_id: editingUser.user_id,
+      if (!editingUser) return;
+
+      console.log('Updating user:', editingUser);
+
+      // Atualizar perfil do usuário
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
           name: editingUser.name,
-          email: editingUser.email,
-          website_url: editingUser.client?.website_url,
-          whatsapp: editingUser.phone,
-          user_type: editingUser.user_type
+          user_type: editingUser.user_type,
+          website_domain: editingUser.domain || null
+        })
+        .eq("user_id", editingUser.user_id);
+
+      if (profileError) throw profileError;
+
+      // Se for cliente, atualizar dados do cliente
+      if (editingUser.user_type === 'client') {
+        const clientData = {
+          website_url: editingUser.client?.website_url || editingUser.domain || '',
+          whatsapp: editingUser.whatsapp || ''
+        };
+
+        // Verificar se cliente já existe
+        const { data: existingClient, error: checkError } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("user_id", editingUser.user_id)
+          .single();
+
+        if (checkError && checkError.code !== 'PGRST116') {
+          throw checkError;
         }
-      });
 
-      if (response.error) throw response.error;
+        if (existingClient) {
+          // Atualizar cliente existente
+          const { error: clientError } = await supabase
+            .from("clients")
+            .update(clientData)
+            .eq("user_id", editingUser.user_id);
+
+          if (clientError) throw clientError;
+        } else {
+          // Criar novo cliente
+          const { error: clientError } = await supabase
+            .from("clients")
+            .insert({
+              user_id: editingUser.user_id,
+              ...clientData,
+              script_id: '' // Será gerado pelo trigger
+            });
+
+          if (clientError) throw clientError;
+        }
+
+        // Atualizar configurações do site se existirem
+        if (editingUser.siteConfigs && editingUser.siteConfigs.length > 0) {
+          const siteConfig = editingUser.siteConfigs[0];
+          const { error: configError } = await supabase
+            .from("site_configs")
+            .update({
+              phone: editingUser.whatsapp || null
+            })
+            .eq("id", siteConfig.id);
+
+          if (configError) {
+            console.error('Error updating site config:', configError);
+          }
+        }
+      }
 
       toast({
-        title: "Sucesso",
-        description: "Usuário atualizado com sucesso",
+        title: "Usuário atualizado com sucesso!",
       });
 
+      setEditDialogOpen(false);
       setEditingUser(null);
-      setIsEditDialogOpen(false);
-      refetch();
+      loadAllUsers();
     } catch (error: any) {
-      console.error('Erro ao atualizar usuário:', error);
+      console.error("Error updating user:", error);
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao atualizar usuário",
+        title: "Erro ao atualizar usuário",
+        description: error.message,
         variant: "destructive",
       });
     }
   };
 
-  const deleteUser = async (userId: string, userEmail: string) => {
+  const deleteUser = async (userId: string) => {
+    if (!confirm("Tem certeza que deseja excluir este usuário?")) return;
+
     try {
-      const { error } = await supabase.functions.invoke('delete-user', {
-        body: { user_id: userId }
-      });
+      const { data, error } = await supabase.auth.admin.deleteUser(userId);
 
       if (error) throw error;
 
       toast({
-        title: "Sucesso",
-        description: `Usuário ${userEmail} foi removido com sucesso`,
+        title: "Usuário excluído com sucesso!",
       });
 
-      refetch();
+      loadAllUsers();
     } catch (error: any) {
-      console.error('Erro ao deletar usuário:', error);
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao deletar usuário",
+        title: "Erro ao excluir usuário",
+        description: error.message,
         variant: "destructive",
       });
     }
   };
 
-  if (isLoading) {
+  const changePassword = async () => {
+    if (!editingUser) return;
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Erro",
+        description: "A nova senha deve ter pelo menos 6 caracteres.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Chamar a função Supabase para atualizar a senha
+      const { data, error } = await supabase.functions.invoke('update-user-password', {
+        body: {
+          user_id: editingUser.user_id,
+          password: newPassword
+        }
+      });
+
+      if (error) {
+        console.error('Erro ao alterar senha:', error);
+        toast({
+          title: "Erro ao alterar senha",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Senha alterada com sucesso!",
+        description: data.message,
+      });
+
+      setChangePasswordDialogOpen(false);
+      setNewPassword("");
+    } catch (error: any) {
+      console.error("Erro ao alterar senha:", error);
+      toast({
+        title: "Erro ao alterar senha",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openUserDetails = async (profile: UserWithDetails) => {
+    try {
+      const userDetails = await loadUserDetails(profile.user_id);
+      setSelectedUser(userDetails);
+      setDetailsDialogOpen(true);
+    } catch (error) {
+      console.error("Error loading user details:", error);
+      toast({
+        title: "Erro ao carregar detalhes do usuário",
+        description: "Não foi possível carregar as informações completas do usuário",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openEditDialog = async (profile: UserWithDetails) => {
+    try {
+      const userDetails = await loadUserDetails(profile.user_id);
+      setEditingUser(userDetails);
+      setEditDialogOpen(true);
+    } catch (error) {
+      console.error("Error loading user details for edit:", error);
+      toast({
+        title: "Erro ao carregar detalhes do usuário",
+        description: "Não foi possível carregar as informações para edição",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (!userProfile || userProfile.user_type !== 'admin') {
     return (
-      <div className="min-h-screen bg-background">
-        <AdminNavigation />
-        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-          <div className="text-center">Carregando...</div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Card>
+          <CardContent className="pt-6">
+            <p>Acesso negado. Você não tem permissão para acessar esta página.</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -325,135 +491,108 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-background">
       <AdminNavigation />
-      
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              {isAdmin ? 'Gerenciar Usuários' : 'Meu Perfil'}
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              {isAdmin 
-                ? 'Gerencie administradores e clientes do sistema'
-                : 'Visualize as informações do seu perfil'
-              }
-            </p>
-          </div>
-
-          {isAdmin && (
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold">Gerenciar Usuários</h1>
+              <p className="text-muted-foreground">Administrar usuários e seus respectivos acessos</p>
+            </div>
+            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  Criar Usuário
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Usuário
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Criar Novo Usuário</DialogTitle>
                   <DialogDescription>
-                    Preencha os dados para criar um novo usuário no sistema.
+                    Preencha os campos abaixo para criar um novo usuário
                   </DialogDescription>
                 </DialogHeader>
-                
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Nome</Label>
-                    <Input
-                      id="name"
-                      value={newUser.name}
-                      onChange={(e) => setNewUser({...newUser, name: e.target.value})}
-                      placeholder="Nome completo"
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(createUser)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nome completo" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={newUser.email}
-                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                      placeholder="email@exemplo.com"
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="seuemail@exemplo.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="password">Senha</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        value={newUser.password}
-                        onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                        placeholder="Digite a senha"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="user_type">Tipo de Usuário</Label>
-                    <Select value={newUser.user_type} onValueChange={(value: "admin" | "client") => setNewUser({...newUser, user_type: value})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="client">Cliente</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="website_url">Site (opcional)</Label>
-                    <Input
-                      id="website_url"
-                      value={newUser.website_url}
-                      onChange={(e) => setNewUser({...newUser, website_url: e.target.value})}
-                      placeholder="www.exemplo.com"
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Senha</FormLabel>
+                          <FormControl>
+                            <Input type="password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="whatsapp">WhatsApp (opcional)</Label>
-                    <Input
-                      id="whatsapp"
-                      value={newUser.whatsapp}
-                      onChange={(e) => setNewUser({...newUser, whatsapp: e.target.value})}
-                      placeholder="(11) 99999-9999"
+                    <FormField
+                      control={form.control}
+                      name="user_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tipo de Usuário</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione um tipo" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-background border shadow-lg">
+                              <SelectItem value="client">Cliente</SelectItem>
+                              <SelectItem value="admin">Administrador</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-
-                  <Button onClick={createUser} className="w-full">
-                    Criar Usuário
-                  </Button>
-                </div>
+                    <Button type="submit" className="w-full">
+                      Criar Usuário
+                    </Button>
+                  </form>
+                </Form>
               </DialogContent>
             </Dialog>
-          )}
-        </div>
+          </div>
 
-        {isAdmin ? (
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Usuários do Sistema</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Usuários Cadastrados
+                  </CardTitle>
                   <CardDescription>
-                    Lista de todos os usuários cadastrados no sistema
+                    Lista de todos os usuários do sistema
                   </CardDescription>
                 </div>
                 <SearchInput
@@ -471,30 +610,27 @@ const Admin = () => {
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Tipo</TableHead>
-                    <TableHead>Sites</TableHead>
+                    <TableHead>Site</TableHead>
                     <TableHead>WhatsApp</TableHead>
                     <TableHead>Data Criação</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProfiles?.map((profile) => (
-                    <TableRow key={profile.id}>
+                  {filteredUsers.map((profile) => (
+                    <TableRow key={profile.user_id}>
                       <TableCell className="font-medium">{profile.name}</TableCell>
-                      <TableCell>{profile.email}</TableCell>
+                      <TableCell className="text-muted-foreground">{profile.email}</TableCell>
                       <TableCell>
                         <Badge variant={profile.user_type === 'admin' ? 'default' : 'secondary'}>
                           {profile.user_type === 'admin' ? 'Administrador' : 'Cliente'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {profile.sites && profile.sites.length > 0 
-                          ? profile.sites.map(site => site.domain).join(', ')
-                          : (profile.client?.website_url || '-')
-                        }
+                        {profile.domain || '-'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {profile.phone || '-'}
+                        {profile.whatsapp || '-'}
                       </TableCell>
                       <TableCell>
                         {new Date(profile.created_at).toLocaleDateString('pt-BR')}
@@ -503,40 +639,24 @@ const Admin = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => {
-                            setEditingUser(profile);
-                            setIsEditDialogOpen(true);
-                          }}
+                          onClick={() => openUserDetails(profile)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openEditDialog(profile)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        {profile.user_type !== 'admin' && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="sm">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja excluir o usuário <strong>{profile.name}</strong>? 
-                                  Esta ação não pode ser desfeita e todos os dados relacionados serão removidos.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => deleteUser(profile.user_id, profile.email)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Excluir
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => deleteUser(profile.user_id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -544,157 +664,175 @@ const Admin = () => {
               </Table>
             </CardContent>
           </Card>
-        ) : (
-          // Layout para clientes visualizarem seu próprio perfil
-          <Card>
-            <CardHeader>
-              <CardTitle>Meu Perfil</CardTitle>
-              <CardDescription>Informações do seu perfil no sistema</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {filteredProfiles?.map((profile) => (
-                <div key={profile.id} className="space-y-4">
+
+          {/* User Details Dialog */}
+          <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Detalhes do Usuário</DialogTitle>
+                <DialogDescription>
+                  Informações completas do usuário selecionado
+                </DialogDescription>
+              </DialogHeader>
+              {selectedUser && (
+                <div className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Nome</Label>
-                      <p className="text-sm text-muted-foreground">{profile.name}</p>
+                      <p className="text-sm text-muted-foreground">{selectedUser.name}</p>
                     </div>
                     <div>
                       <Label>Email</Label>
-                      <p className="text-sm text-muted-foreground">{profile.email}</p>
+                      <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
                     </div>
                     <div>
                       <Label>Tipo de Usuário</Label>
-                      <Badge variant="secondary">Cliente</Badge>
+                      <Badge variant={selectedUser.user_type === 'admin' ? 'default' : 'secondary'}>
+                        {selectedUser.user_type === 'admin' ? 'Administrador' : 'Cliente'}
+                      </Badge>
                     </div>
                     <div>
                       <Label>Data de Criação</Label>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(profile.created_at).toLocaleDateString('pt-BR')}
+                        {new Date(selectedUser.created_at).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
-                    {profile.sites && profile.sites.length > 0 && (
-                      <div>
-                        <Label>Sites</Label>
-                        <p className="text-sm text-muted-foreground">
-                          {profile.sites.map(site => site.domain).join(', ')}
-                        </p>
-                      </div>
-                    )}
-                    {profile.client?.website_url && (
+                    {selectedUser.domain && (
                       <div>
                         <Label>Site</Label>
-                        <p className="text-sm text-muted-foreground">{profile.client.website_url}</p>
+                        <p className="text-sm text-muted-foreground">{selectedUser.domain}</p>
                       </div>
                     )}
-                    {profile.phone && (
+                    {selectedUser.whatsapp && (
                       <div>
                         <Label>WhatsApp</Label>
-                        <p className="text-sm text-muted-foreground">{profile.phone}</p>
+                        <p className="text-sm text-muted-foreground">{selectedUser.whatsapp}</p>
                       </div>
                     )}
                   </div>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+              )}
+            </DialogContent>
+          </Dialog>
 
-        {(!profiles || profiles.length === 0) && (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">
-              {isAdmin 
-                ? (searchTerm ? 'Nenhum usuário encontrado com esse termo.' : 'Nenhum usuário encontrado.')
-                : 'Erro ao carregar perfil do usuário.'
-              }
-            </p>
-          </div>
-        )}
+          {/* Create User Dialog */}
+          
 
-        {/* Dialog de Edição de Usuário */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Editar Usuário</DialogTitle>
-              <DialogDescription>
-                Edite as informações do usuário selecionado.
-              </DialogDescription>
-            </DialogHeader>
-            
-            {editingUser && (
+          {/* Edit User Dialog */}
+          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Editar Usuário</DialogTitle>
+                <DialogDescription>
+                  Edite as informações do usuário selecionado
+                </DialogDescription>
+              </DialogHeader>
+              {editingUser && (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="edit-name">Nome</Label>
+                    <Input
+                      id="edit-name"
+                      value={editingUser.name}
+                      onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-email">Email</Label>
+                    <Input
+                      id="edit-email"
+                      type="email"
+                      value={editingUser.email}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-user-type">Tipo de Usuário</Label>
+                    <Select
+                      value={editingUser.user_type}
+                      onValueChange={(value: 'admin' | 'client') => 
+                        setEditingUser({ ...editingUser, user_type: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border shadow-lg">
+                        <SelectItem value="client">Cliente</SelectItem>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-site">Site (opcional)</Label>
+                    <Input
+                      id="edit-site"
+                      value={editingUser.domain || ""}
+                      onChange={(e) => setEditingUser({
+                        ...editingUser, 
+                        domain: e.target.value
+                      })}
+                      placeholder="exemplo.com"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-whatsapp">WhatsApp (opcional)</Label>
+                    <Input
+                      id="edit-whatsapp"
+                      value={editingUser.whatsapp || ""}
+                      onChange={(e) => setEditingUser({
+                        ...editingUser, 
+                        whatsapp: e.target.value
+                      })}
+                      placeholder="(11) 99999-9999"
+                    />
+                  </div>
+                  <Button onClick={updateUser} className="w-full">
+                    Atualizar Usuário
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setChangePasswordDialogOpen(true);
+                      setEditDialogOpen(false);
+                    }}
+                    className="w-full"
+                  >
+                    Alterar Senha
+                  </Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Change Password Dialog */}
+          <Dialog open={changePasswordDialogOpen} onOpenChange={setChangePasswordDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Alterar Senha</DialogTitle>
+                <DialogDescription>
+                  Digite a nova senha para o usuário
+                </DialogDescription>
+              </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="edit-name">Nome</Label>
+                  <Label htmlFor="new-password">Nova Senha</Label>
                   <Input
-                    id="edit-name"
-                    value={editingUser.name}
-                    onChange={(e) => setEditingUser({...editingUser, name: e.target.value})}
-                    placeholder="Nome completo"
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Nova senha"
                   />
                 </div>
-
-                <div>
-                  <Label htmlFor="edit-email">Email</Label>
-                  <Input
-                    id="edit-email"
-                    type="email"
-                    value={editingUser.email}
-                    onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
-                    placeholder="email@exemplo.com"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="edit-user_type">Tipo de Usuário</Label>
-                  <Select value={editingUser.user_type} onValueChange={(value: "admin" | "client") => setEditingUser({...editingUser, user_type: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="client">Cliente</SelectItem>
-                      <SelectItem value="admin">Administrador</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="edit-website_url">Site (opcional)</Label>
-                  <Input
-                    id="edit-website_url"
-                    value={editingUser.client?.website_url || ""}
-                    onChange={(e) => setEditingUser({
-                      ...editingUser, 
-                      client: {
-                        ...editingUser.client,
-                        id: editingUser.client?.id || '',
-                        user_id: editingUser.user_id,
-                        website_url: e.target.value
-                      }
-                    })}
-                    placeholder="www.exemplo.com"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="edit-whatsapp">WhatsApp (opcional)</Label>
-                  <Input
-                    id="edit-whatsapp"
-                    value={editingUser.phone || ""}
-                    onChange={(e) => setEditingUser({
-                      ...editingUser, 
-                      phone: e.target.value
-                    })}
-                    placeholder="(11) 99999-9999"
-                  />
-                </div>
-
-                <Button onClick={updateUser} className="w-full">
-                  Atualizar Usuário
+                <Button onClick={changePassword} className="w-full">
+                  Alterar Senha
                 </Button>
               </div>
-            )}
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
     </div>
   );
