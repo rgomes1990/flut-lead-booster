@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -71,7 +72,6 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
     try {
       console.log("Carregando clientes...");
       
-      // Buscar todos os perfis de usuários do tipo cliente
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select("user_id, name, email, user_type")
@@ -85,7 +85,6 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
 
       console.log("Profiles encontrados:", profilesData);
 
-      // Buscar dados dos clientes correspondentes
       const userIds = profilesData?.map(profile => profile.user_id) || [];
       
       if (userIds.length > 0) {
@@ -101,7 +100,6 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
 
         console.log("Clients encontrados:", clientsData);
 
-        // Combinar os dados
         const transformedClients = profilesData?.map((profile: any) => {
           const client = clientsData?.find(c => c.user_id === profile.user_id);
           return {
@@ -131,17 +129,17 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
     applyFilters();
   }, [filters, leads]);
 
-  const applyFilters = () => {
+  // Função para obter leads filtrados baseados nos filtros já aplicados
+  const getFilteredLeadsForOptions = () => {
     let filtered = [...leads];
 
-    // Filtro por cliente (apenas para admin) - PRIMEIRO
+    // Aplicar filtros na ordem: cliente -> data -> origem -> campanha -> anúncio -> público
     if (filters.client && filters.client !== "all" && userType === 'admin') {
       filtered = filtered.filter(lead => 
         lead.client?.user_id === filters.client
       );
     }
 
-    // Filtro por data
     if (filters.dateFrom) {
       const fromDate = new Date(filters.dateFrom);
       filtered = filtered.filter(lead => new Date(lead.created_at) >= fromDate);
@@ -149,40 +147,43 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
 
     if (filters.dateTo) {
       const toDate = new Date(filters.dateTo);
-      toDate.setHours(23, 59, 59, 999); // Incluir todo o dia
+      toDate.setHours(23, 59, 59, 999);
       filtered = filtered.filter(lead => new Date(lead.created_at) <= toDate);
     }
 
-    // Filtro por origem
     if (filters.origin && filters.origin !== "all") {
       filtered = filtered.filter(lead => 
         lead.origin?.toLowerCase().includes(filters.origin.toLowerCase())
       );
     }
 
-    // Filtro por campanha
     if (filters.campaign && filters.campaign !== "all") {
       filtered = filtered.filter(lead => 
         lead.campaign?.toLowerCase().includes(filters.campaign.toLowerCase())
       );
     }
 
-    // Filtro por anúncio
     if (filters.adContent && filters.adContent !== "all") {
       filtered = filtered.filter(lead => 
         lead.ad_content?.toLowerCase().includes(filters.adContent.toLowerCase())
       );
     }
 
-    // Filtro por público
-    if (filters.audience && filters.audience !== "all") {
-      filtered = filtered.filter(lead => 
-        lead.audience?.toLowerCase().includes(filters.audience.toLowerCase())
-      );
-    }
+    return filtered;
+  };
 
-    setFilteredCount(filtered.length);
-    onFilteredLeads(filtered);
+  const applyFilters = () => {
+    const filtered = getFilteredLeadsForOptions();
+    
+    // Aplicar último filtro (público) se estiver selecionado
+    const finalFiltered = filters.audience && filters.audience !== "all" 
+      ? filtered.filter(lead => 
+          lead.audience?.toLowerCase().includes(filters.audience.toLowerCase())
+        )
+      : filtered;
+
+    setFilteredCount(finalFiltered.length);
+    onFilteredLeads(finalFiltered);
   };
 
   const clearAllFilters = () => {
@@ -199,33 +200,97 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
 
   const hasActiveFilters = Object.values(filters).some(value => value !== "");
 
-  // Obter leads filtrados pelo cliente selecionado (para filtros subsequentes)
-  const getLeadsForCurrentClient = () => {
-    if (filters.client && filters.client !== "all" && userType === 'admin') {
-      return leads.filter(lead => lead.client?.user_id === filters.client);
+  // Obter valores únicos baseados nos filtros aplicados até o momento
+  const getOptionsForFilter = (filterType: string) => {
+    const currentFiltered = getFilteredLeadsForOptions();
+    
+    switch (filterType) {
+      case 'origin':
+        return [...new Set(currentFiltered.map(lead => lead.origin).filter(Boolean))];
+      case 'campaign':
+        // Se origem estiver selecionada, filtrar campanhas baseadas na origem
+        const originFiltered = filters.origin && filters.origin !== "all" 
+          ? currentFiltered.filter(lead => 
+              lead.origin?.toLowerCase().includes(filters.origin.toLowerCase())
+            )
+          : currentFiltered;
+        return [...new Set(originFiltered.map(lead => lead.campaign).filter(Boolean))];
+      case 'adContent':
+        // Filtrar anúncios baseados em origem e campanha
+        let adFiltered = currentFiltered;
+        if (filters.origin && filters.origin !== "all") {
+          adFiltered = adFiltered.filter(lead => 
+            lead.origin?.toLowerCase().includes(filters.origin.toLowerCase())
+          );
+        }
+        if (filters.campaign && filters.campaign !== "all") {
+          adFiltered = adFiltered.filter(lead => 
+            lead.campaign?.toLowerCase().includes(filters.campaign.toLowerCase())
+          );
+        }
+        return [...new Set(adFiltered.map(lead => lead.ad_content).filter(Boolean))];
+      case 'audience':
+        // Filtrar público baseado em todos os filtros anteriores
+        let audienceFiltered = currentFiltered;
+        if (filters.origin && filters.origin !== "all") {
+          audienceFiltered = audienceFiltered.filter(lead => 
+            lead.origin?.toLowerCase().includes(filters.origin.toLowerCase())
+          );
+        }
+        if (filters.campaign && filters.campaign !== "all") {
+          audienceFiltered = audienceFiltered.filter(lead => 
+            lead.campaign?.toLowerCase().includes(filters.campaign.toLowerCase())
+          );
+        }
+        if (filters.adContent && filters.adContent !== "all") {
+          audienceFiltered = audienceFiltered.filter(lead => 
+            lead.ad_content?.toLowerCase().includes(filters.adContent.toLowerCase())
+          );
+        }
+        return [...new Set(audienceFiltered.map(lead => lead.audience).filter(Boolean))];
+      default:
+        return [];
     }
-    return leads;
   };
 
-  // Obter valores únicos baseados no cliente selecionado
-  const currentLeads = getLeadsForCurrentClient();
-  const uniqueOrigins = [...new Set(currentLeads.map(lead => lead.origin).filter(Boolean))];
-  const uniqueCampaigns = [...new Set(currentLeads.map(lead => lead.campaign).filter(Boolean))];
-  const uniqueAdContents = [...new Set(currentLeads.map(lead => lead.ad_content).filter(Boolean))];
-  const uniqueAudiences = [...new Set(currentLeads.map(lead => lead.audience).filter(Boolean))];
+  // Lidar com mudanças de filtros e limpar filtros dependentes
+  const handleFilterChange = (filterType: string, value: string) => {
+    const newFilters = { ...filters };
+    newFilters[filterType as keyof typeof filters] = value === "all" ? "" : value;
 
-  // Limpar filtros subsequentes quando cliente mudar
-  const handleClientChange = (value: string) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      client: value === "all" ? "" : value,
-      // Limpar outros filtros quando cliente mudar
-      origin: "",
-      campaign: "",
-      adContent: "",
-      audience: ""
-    }));
+    // Limpar filtros dependentes quando um filtro pai muda
+    switch (filterType) {
+      case 'client':
+        // Limpar todos os outros filtros quando cliente mudar
+        newFilters.origin = "";
+        newFilters.campaign = "";
+        newFilters.adContent = "";
+        newFilters.audience = "";
+        break;
+      case 'origin':
+        // Limpar filtros dependentes da origem
+        newFilters.campaign = "";
+        newFilters.adContent = "";
+        newFilters.audience = "";
+        break;
+      case 'campaign':
+        // Limpar filtros dependentes da campanha
+        newFilters.adContent = "";
+        newFilters.audience = "";
+        break;
+      case 'adContent':
+        // Limpar apenas o público
+        newFilters.audience = "";
+        break;
+    }
+
+    setFilters(newFilters);
   };
+
+  const uniqueOrigins = getOptionsForFilter('origin');
+  const uniqueCampaigns = getOptionsForFilter('campaign');
+  const uniqueAdContents = getOptionsForFilter('adContent');
+  const uniqueAudiences = getOptionsForFilter('audience');
 
   return (
     <div className="space-y-4">
@@ -266,13 +331,13 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
         <Card>
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {/* Filtro por Cliente (apenas para admin) - PRIMEIRO FILTRO */}
+              {/* Filtro por Cliente (apenas para admin) */}
               {userType === 'admin' && (
                 <div className="space-y-2">
                   <Label htmlFor="client">Cliente</Label>
                   <Select
                     value={filters.client || "all"}
-                    onValueChange={handleClientChange}
+                    onValueChange={(value) => handleFilterChange('client', value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Todos os clientes" />
@@ -289,14 +354,14 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
                 </div>
               )}
 
-              {/* Filtro por Data */}
+              {/* Filtros de Data */}
               <div className="space-y-2">
                 <Label htmlFor="dateFrom">Data Inicial</Label>
                 <Input
                   id="dateFrom"
                   type="date"
                   value={filters.dateFrom}
-                  onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                  onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
                 />
               </div>
 
@@ -306,7 +371,7 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
                   id="dateTo"
                   type="date"
                   value={filters.dateTo}
-                  onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                  onChange={(e) => handleFilterChange('dateTo', e.target.value)}
                 />
               </div>
 
@@ -315,7 +380,7 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
                 <Label htmlFor="origin">Origem</Label>
                 <Select
                   value={filters.origin || "all"}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, origin: value === "all" ? "" : value }))}
+                  onValueChange={(value) => handleFilterChange('origin', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todas as origens" />
@@ -336,7 +401,7 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
                 <Label htmlFor="campaign">Campanha</Label>
                 <Select
                   value={filters.campaign || "all"}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, campaign: value === "all" ? "" : value }))}
+                  onValueChange={(value) => handleFilterChange('campaign', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todas as campanhas" />
@@ -357,7 +422,7 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
                 <Label htmlFor="adContent">Anúncio</Label>
                 <Select
                   value={filters.adContent || "all"}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, adContent: value === "all" ? "" : value }))}
+                  onValueChange={(value) => handleFilterChange('adContent', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todos os anúncios" />
@@ -378,7 +443,7 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
                 <Label htmlFor="audience">Público</Label>
                 <Select
                   value={filters.audience || "all"}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, audience: value === "all" ? "" : value }))}
+                  onValueChange={(value) => handleFilterChange('audience', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todos os públicos" />
