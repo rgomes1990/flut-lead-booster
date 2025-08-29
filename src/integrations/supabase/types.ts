@@ -355,6 +355,14 @@ export type Database = {
         Args: { url: string }
         Returns: string
       }
+      fix_lead_client_associations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          corrected_leads: number
+          orphaned_leads: number
+          total_leads: number
+        }[]
+      }
       generate_script_id: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -363,11 +371,30 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      report_orphaned_leads: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          current_client_id: string
+          lead_email: string
+          lead_id: string
+          lead_name: string
+          website_url: string
+        }[]
+      }
       reprocess_leads_utm_data: {
         Args: Record<PropertyKey, never>
         Returns: {
           processed_count: number
           updated_count: number
+        }[]
+      }
+      update_leads_by_client_email: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          skipped_null_emails: number
+          total_processed: number
+          updated_leads: number
         }[]
       }
       update_subscription_plan: {
