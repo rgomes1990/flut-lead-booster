@@ -1,9 +1,198 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// Função para envio via SendGrid SMTP com TLS
+async function sendSMTPEmail(to: string, subject: string, htmlContent: string) {
+  const smtpHost = Deno.env.get('HOSTGATOR_SMTP_HOST')?.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'smtp.sendgrid.net';
+  const smtpPort = parseInt(Deno.env.get('HOSTGATOR_SMTP_PORT') || '587');
+  const smtpUser = Deno.env.get('HOSTGATOR_SMTP_USER') || 'apikey';
+  const smtpPassword = Deno.env.get('HOSTGATOR_SMTP_PASSWORD');
+  const mailFromAddress = 'lead@flut.com.br';
+
+  console.log('📧 Configurações SMTP:', {
+    host: smtpHost,
+    port: smtpPort,
+    user: smtpUser,
+    from: mailFromAddress,
+    to: to
+  });
+
+  if (!smtpPassword) {
+    throw new Error('Senha SMTP não configurada');
+  }
+
+  try {
+    console.log('🔗 Conectando ao SendGrid SMTP via TLS (porta 587)...');
+    
+    // Conectar ao SendGrid com conexão normal na porta 587
+    const conn = await Deno.connect({
+      hostname: smtpHost,
+      port: smtpPort,
+    });
+
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    
+    // Função para ler resposta
+    async function readResponse(): Promise<string> {
+      const buffer = new Uint8Array(4096);
+      const n = await conn.read(buffer);
+      if (!n) throw new Error('Conexão fechada pelo servidor');
+      const response = decoder.decode(buffer.subarray(0, n)).trim();
+      console.log('← Servidor:', response);
+      return response;
+    }
+
+    // Função para enviar comando
+    async function sendCommand(command: string): Promise<string> {
+      const logCmd = command.startsWith('AUTH ') ? 'AUTH [HIDDEN]' : command;
+      console.log('→ Cliente:', logCmd);
+      
+      await conn.write(encoder.encode(command + '\r\n'));
+      
+      // Pequeno delay para permitir processamento
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      return await readResponse();
+    }
+
+    // 1. Ler banner inicial do servidor
+    console.log('📥 Aguardando banner inicial...');
+    let response = await readResponse();
+    if (!response.startsWith('220')) {
+      throw new Error(`Banner SMTP inválido: ${response}`);
+    }
+
+    // 2. Enviar EHLO
+    response = await sendCommand(`EHLO ${smtpHost}`);
+    if (!response.startsWith('250')) {
+      throw new Error(`Comando EHLO falhou: ${response}`);
+    }
+
+    // 3. Iniciar STARTTLS
+    console.log('🔒 Iniciando STARTTLS...');
+    response = await sendCommand('STARTTLS');
+    if (!response.startsWith('220')) {
+      throw new Error(`STARTTLS falhou: ${response}`);
+    }
+
+    // 4. Atualizar conexão para TLS
+    console.log('🔐 Atualizando conexão para TLS...');
+    const tlsConn = await Deno.startTls(conn, {
+      hostname: smtpHost,
+    });
+
+    // Atualizar funções para usar conexão TLS
+    async function readTlsResponse(): Promise<string> {
+      const buffer = new Uint8Array(4096);
+      const n = await tlsConn.read(buffer);
+      if (!n) throw new Error('Conexão TLS fechada pelo servidor');
+      const response = decoder.decode(buffer.subarray(0, n)).trim();
+      console.log('← Servidor TLS:', response);
+      return response;
+    }
+
+    async function sendTlsCommand(command: string): Promise<string> {
+      const logCmd = command.startsWith('AUTH ') ? 'AUTH [HIDDEN]' : command;
+      console.log('→ Cliente TLS:', logCmd);
+      
+      await tlsConn.write(encoder.encode(command + '\r\n'));
+      
+      // Pequeno delay para permitir processamento
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      return await readTlsResponse();
+    }
+
+    // 5. Enviar EHLO novamente após TLS
+    response = await sendTlsCommand(`EHLO ${smtpHost}`);
+    if (!response.startsWith('250')) {
+      throw new Error(`Comando EHLO após TLS falhou: ${response}`);
+    }
+
+    // 6. Iniciar autenticação LOGIN
+    response = await sendTlsCommand('AUTH LOGIN');
+    if (!response.startsWith('334')) {
+      throw new Error(`AUTH LOGIN não suportado: ${response}`);
+    }
+
+    // 7. Enviar username (codificado em base64)
+    const encodedUser = btoa(smtpUser);
+    response = await sendTlsCommand(encodedUser);
+    if (!response.startsWith('334')) {
+      throw new Error(`Username rejeitado: ${response}`);
+    }
+
+    // 8. Enviar password (codificado em base64)
+    const encodedPassword = btoa(smtpPassword);
+    response = await sendTlsCommand(encodedPassword);
+    if (!response.startsWith('235')) {
+      throw new Error(`Falha na autenticação SMTP: ${response}`);
+    }
+
+    console.log('✅ Autenticação SMTP TLS realizada com sucesso');
+
+    // 9. Definir remetente
+    response = await sendTlsCommand(`MAIL FROM:<${mailFromAddress}>`);
+    if (!response.startsWith('250')) {
+      throw new Error(`MAIL FROM rejeitado: ${response}`);
+    }
+
+    // 10. Definir destinatário
+    response = await sendTlsCommand(`RCPT TO:<${to}>`);
+    if (!response.startsWith('250')) {
+      throw new Error(`RCPT TO rejeitado: ${response}`);
+    }
+
+    // 11. Iniciar envio de dados
+    response = await sendTlsCommand('DATA');
+    if (!response.startsWith('354')) {
+      throw new Error(`Comando DATA rejeitado: ${response}`);
+    }
+
+    // 12. Construir e enviar o conteúdo do email
+    const emailHeaders = [
+      `From: Sistema FLUT <${mailFromAddress}>`,
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=UTF-8',
+      'Content-Transfer-Encoding: 8bit',
+      'Date: ' + new Date().toUTCString(),
+      ''
+    ].join('\r\n');
+
+    const fullEmailContent = emailHeaders + htmlContent + '\r\n.\r\n';
+    
+    console.log('📤 Enviando conteúdo do email...');
+    await tlsConn.write(encoder.encode(fullEmailContent));
+    
+    // Aguardar confirmação do envio
+    response = await readTlsResponse();
+    if (!response.startsWith('250')) {
+      throw new Error(`Falha no envio do email: ${response}`);
+    }
+
+    console.log('✅ Email enviado com sucesso via SendGrid TLS');
+
+    // 13. Encerrar sessão SMTP
+    await sendTlsCommand('QUIT');
+    tlsConn.close();
+
+    return { 
+      success: true, 
+      message: 'Email enviado com sucesso via SendGrid SMTP TLS (porta 587)',
+      messageId: response.match(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i)?.[0] || 'unknown'
+    };
+
+  } catch (error) {
+    console.error('❌ Erro na comunicação SMTP TLS:', error);
+    throw error;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -26,9 +215,13 @@ Deno.serve(async (req) => {
 
     const { leadData } = await req.json();
 
-    console.log('Enviando email de alerta:', leadData);
+    console.log('📧 Processando envio de email para lead:', {
+      name: leadData.name,
+      email: leadData.email,
+      client_id: leadData.client_id
+    });
 
-    // Buscar dados do cliente através da tabela clients
+    // Buscar dados do cliente
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .select(`
@@ -40,9 +233,11 @@ Deno.serve(async (req) => {
 
     if (clientError || !client) {
       console.error('Erro ao buscar cliente:', clientError);
-      return new Response('Cliente não encontrado', { 
+      return new Response(JSON.stringify({ 
+        error: 'Cliente não encontrado' 
+      }), { 
         status: 404, 
-        headers: corsHeaders 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -55,201 +250,132 @@ Deno.serve(async (req) => {
 
     if (profileError || !profile) {
       console.error('Erro ao buscar perfil do usuário:', profileError);
-      return new Response('Perfil do usuário não encontrado', { 
-        status: 404, 
-        headers: corsHeaders 
-      });
-    }
-
-    // Ajustar a data para o fuso horário brasileiro (UTC-3)
-    const leadDate = new Date(leadData.created_at || Date.now());
-    const brazilDate = new Date(leadDate.getTime() - (3 * 60 * 60 * 1000)); // Subtrair 3 horas
-    const formattedDate = brazilDate.toLocaleString('pt-BR', {
-      timeZone: 'America/Sao_Paulo',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-    // Configurações SMTP
-    const smtpHost = Deno.env.get('HOSTGATOR_SMTP_HOST') || 'mail.flut.com.br';
-    const smtpPort = parseInt(Deno.env.get('HOSTGATOR_SMTP_PORT') || '587');
-    const smtpUser = Deno.env.get('HOSTGATOR_SMTP_USER') || 'lead@flut.com.br';
-    const smtpPass = Deno.env.get('HOSTGATOR_SMTP_PASSWORD') || '';
-
-    console.log('Configurações SMTP:', {
-      host: smtpHost,
-      port: smtpPort,
-      user: smtpUser,
-      secure: false,
-      requireTLS: true
-    });
-
-    if (!smtpPass) {
-      console.error('Senha SMTP não configurada');
       return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Configuração SMTP incompleta' 
-      }), {
-        status: 500,
+        error: 'Perfil do usuário não encontrado' 
+      }), { 
+        status: 404, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Preparar conteúdo do email
-    const emailSubject = `🚨 Novo Lead Recebido - Sistema Flut`;
-    const emailBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">
-          📩 Novo Lead Recebido!
-        </h2>
-        
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #1f2937; margin-top: 0;">Dados do Lead:</h3>
-          <p><strong>Nome:</strong> ${leadData.name}</p>
-          <p><strong>Email:</strong> ${leadData.email}</p>
-          <p><strong>Telefone:</strong> ${leadData.phone}</p>
-          <p><strong>Mensagem:</strong> ${leadData.message || 'Não informada'}</p>
-          <p><strong>Origem:</strong> ${leadData.origin || 'Tráfego Direto'}</p>
-          <p><strong>Campanha:</strong> ${leadData.campaign || 'Não informada'}</p>
-          <p><strong>Site de Origem:</strong> ${leadData.website_url || 'Não informado'}</p>
-          <p><strong>Data/Hora:</strong> ${formattedDate}</p>
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Novo Lead Recebido</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+          .content { background-color: #f8f9fa; padding: 20px; border-radius: 0 0 8px 8px; }
+          .lead-info { background-color: white; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #2563eb; }
+          .field { margin-bottom: 10px; }
+          .field strong { color: #1f2937; }
+          .footer { text-align: center; margin-top: 20px; padding: 15px; background-color: #e5e7eb; border-radius: 8px; font-size: 12px; color: #6b7280; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>🚨 Novo Lead Capturado!</h1>
+          <p>Sistema FLUT - Gestão de Leads Inteligente</p>
         </div>
         
-        <div style="background-color: #dbeafe; padding: 15px; border-radius: 8px; border-left: 4px solid #2563eb;">
-          <p style="margin: 0; color: #1e40af;">
-            <strong>💡 Sistema Flut:</strong> Este lead foi capturado automaticamente pelo seu sistema de captura de leads. 
-            Acesse o painel administrativo para gerenciar todos os seus leads.
-          </p>
+        <div class="content">
+          <p><strong>Olá ${profile.name},</strong></p>
+          <p>Um novo lead foi capturado pelo seu sistema! Confira os detalhes abaixo:</p>
+          
+          <div class="lead-info">
+            <h3 style="margin-top: 0; color: #1f2937;">📋 Dados do Lead</h3>
+            
+            <div class="field">
+              <strong>👤 Nome:</strong> ${leadData.name || 'Não informado'}
+            </div>
+            
+            <div class="field">
+              <strong>📧 Email:</strong> ${leadData.email || 'Não informado'}
+            </div>
+            
+            <div class="field">
+              <strong>📱 Telefone:</strong> ${leadData.phone || 'Não informado'}
+            </div>
+            
+            <div class="field">
+              <strong>💬 Mensagem:</strong> ${leadData.message || 'Não informada'}
+            </div>
+            
+            <div class="field">
+              <strong>🌐 Site de Origem:</strong> ${leadData.website_url || 'Não informado'}
+            </div>
+            
+            <div class="field">
+              <strong>📍 Origem do Tráfego:</strong> ${leadData.origin || 'Site Orgânico'}
+            </div>
+            
+            <div class="field">
+              <strong>🎯 Campanha:</strong> ${leadData.campaign || 'Não informada'}
+            </div>
+            
+            <div class="field">
+              <strong>⏰ Data/Hora:</strong> ${new Date(leadData.created_at || Date.now()).toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          </div>
+          
+          <div style="background-color: #dbeafe; padding: 15px; border-radius: 8px; border-left: 4px solid #2563eb; margin: 20px 0;">
+            <p style="margin: 0; color: #1e40af;">
+              <strong>💡 Próximos Passos:</strong><br>
+              • Entre em contato com o lead o quanto antes<br>
+              • Acesse o painel administrativo para gerenciar este e outros leads<br>
+              • Monitore as métricas de conversão no dashboard
+            </p>
+          </div>
         </div>
         
-        <div style="text-align: center; margin: 30px 0;">
-          <p style="color: #6b7280; font-size: 14px;">
-            Sistema Flut - Captura de Leads Automatizada<br>
-            Este é um email automático, não responda a esta mensagem.
-          </p>
+        <div class="footer">
+          <p><strong>Sistema FLUT - Gestão de Leads Inteligente</strong></p>
+          <p>Este é um email automático do sistema. Não responda a esta mensagem.</p>
         </div>
-      </div>
+      </body>
+      </html>
     `;
 
-    try {
-      // Conectar ao servidor SMTP
-      const conn = await Deno.connect({
-        hostname: smtpHost,
-        port: smtpPort,
-      });
+    // Enviar email via SendGrid SMTP TLS
+    const emailResult = await sendSMTPEmail(
+      profile.email,
+      `🚨 Novo Lead Capturado - ${leadData.name || 'Lead'}`,
+      htmlContent
+    );
 
-      console.log('Conectado ao servidor SMTP');
+    console.log('✅ Email de alerta enviado com sucesso para:', profile.email);
 
-      const encoder = new TextEncoder();
-      const decoder = new TextDecoder();
-
-      // Função para ler resposta do servidor
-      const readResponse = async () => {
-        const buffer = new Uint8Array(1024);
-        const n = await conn.read(buffer);
-        const response = decoder.decode(buffer.subarray(0, n || 0));
-        console.log('SMTP Response:', response.trim());
-        return response;
-      };
-
-      // Função para enviar comando
-      const sendCommand = async (command: string) => {
-        console.log('SMTP Command:', command.trim());
-        await conn.write(encoder.encode(command));
-      };
-
-      // Sequência SMTP
-      await readResponse(); // Ler greeting
-
-      await sendCommand(`EHLO ${smtpHost}\r\n`);
-      await readResponse();
-
-      // Iniciar TLS
-      await sendCommand('STARTTLS\r\n');
-      await readResponse();
-
-      // Upgrade para TLS
-      const tlsConn = await Deno.startTls(conn, { hostname: smtpHost });
-      
-      // Reenviar EHLO após TLS
-      await tlsConn.write(encoder.encode(`EHLO ${smtpHost}\r\n`));
-      const tlsBuffer = new Uint8Array(1024);
-      await tlsConn.read(tlsBuffer);
-
-      // Autenticação
-      const authString = btoa(`\0${smtpUser}\0${smtpPass}`);
-      await tlsConn.write(encoder.encode(`AUTH PLAIN ${authString}\r\n`));
-      const authBuffer = new Uint8Array(1024);
-      await tlsConn.read(authBuffer);
-
-      // Envio do email
-      await tlsConn.write(encoder.encode(`MAIL FROM:<${smtpUser}>\r\n`));
-      const mailBuffer = new Uint8Array(1024);
-      await tlsConn.read(mailBuffer);
-
-      await tlsConn.write(encoder.encode(`RCPT TO:<${profile.email}>\r\n`));
-      const rcptBuffer = new Uint8Array(1024);
-      await tlsConn.read(rcptBuffer);
-
-      await tlsConn.write(encoder.encode('DATA\r\n'));
-      const dataBuffer = new Uint8Array(1024);
-      await tlsConn.read(dataBuffer);
-
-      const emailContent = [
-        `From: ${smtpUser}`,
-        `To: ${profile.email}`,
-        `Subject: ${emailSubject}`,
-        'MIME-Version: 1.0',
-        'Content-Type: text/html; charset=UTF-8',
-        '',
-        emailBody,
-        '.',
-        ''
-      ].join('\r\n');
-
-      await tlsConn.write(encoder.encode(emailContent));
-      const sendBuffer = new Uint8Array(1024);
-      await tlsConn.read(sendBuffer);
-
-      await tlsConn.write(encoder.encode('QUIT\r\n'));
-      
-      tlsConn.close();
-
-      console.log('Email enviado com sucesso via SMTP');
-
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'Email enviado com sucesso',
-        to: profile.email,
-        date: formattedDate
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-
-    } catch (smtpError) {
-      console.error('Erro SMTP:', smtpError);
-      
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Erro no envio do email',
-        details: smtpError.message 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: 'Email de alerta enviado com sucesso via SendGrid TLS',
+      recipient: profile.email,
+      emailResult
+    }), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+      },
+    });
 
   } catch (error) {
-    console.error('Erro geral:', error);
+    console.error('❌ Erro geral no envio de email:', error);
     return new Response(JSON.stringify({ 
-      error: 'Erro interno do servidor',
+      error: 'Erro ao enviar email',
       details: error.message 
     }), { 
       status: 500, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+      }
     });
   }
 });

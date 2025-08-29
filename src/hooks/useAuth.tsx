@@ -7,7 +7,6 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   userProfile: any;
-  userType: string | null;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -18,7 +17,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [userType, setUserType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,16 +41,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .select("*")
                 .eq("user_id", session.user.id)
                 .single();
-              
-              if (profile) {
-                setUserProfile(profile);
-                setUserType(profile.user_type || 'client');
-              }
+              setUserProfile(profile);
             }
           }, 0);
         } else {
           setUserProfile(null);
-          setUserType(null);
         }
         
         setLoading(false);
@@ -82,7 +75,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(null);
       setSession(null);
       setUserProfile(null);
-      setUserType(null);
       
       // Fazer logout no Supabase
       await supabase.auth.signOut();
@@ -101,12 +93,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(null);
       setSession(null);
       setUserProfile(null);
-      setUserType(null);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, userProfile, userType, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, userProfile, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
