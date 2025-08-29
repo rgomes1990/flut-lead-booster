@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,8 +83,20 @@ const Admin = () => {
     },
   });
 
-  // Calculate stats from leads data
-  const stats = leads ? (() => {
+  // Calculate stats from leads data with proper fallback
+  const stats = (() => {
+    if (!leads || leads.length === 0) {
+      return {
+        totalLeads: 0,
+        newLeads: 0,
+        leadsToday: 0,
+        leadsThisMonth: 0,
+        readLeads: 0,
+        unreadLeads: 0,
+        dailyAverage: 0
+      };
+    }
+
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -113,22 +124,20 @@ const Admin = () => {
       unreadLeads,
       dailyAverage
     };
-  })() : {
-    totalLeads: 0,
-    newLeads: 0,
-    leadsToday: 0,
-    leadsThisMonth: 0,
-    readLeads: 0,
-    unreadLeads: 0,
-    dailyAverage: 0
-  };
+  })();
 
-  // Calculate origin stats from leads data
-  const originStats = leads ? leads.reduce((acc, lead) => {
-    const origin = lead.origin || 'Não informado';
-    acc[origin] = (acc[origin] || 0) + 1;
-    return acc;
-  }, {} as {[key: string]: number}) : {};
+  // Calculate origin stats from leads data with proper fallback
+  const originStats = (() => {
+    if (!leads || leads.length === 0) {
+      return {};
+    }
+    
+    return leads.reduce((acc, lead) => {
+      const origin = lead.origin || 'Não informado';
+      acc[origin] = (acc[origin] || 0) + 1;
+      return acc;
+    }, {} as {[key: string]: number});
+  })();
 
   const fixLeadAssociations = useMutation({
     mutationFn: async () => {
@@ -220,7 +229,14 @@ const Admin = () => {
           </p>
         </div>
 
-        <DashboardStatsCards stats={stats} originStats={originStats} />
+        {isLoadingLeads ? (
+          <div className="flex items-center justify-center py-12">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2 text-lg">Carregando estatísticas...</span>
+          </div>
+        ) : (
+          <DashboardStatsCards stats={stats} originStats={originStats} />
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
           {/* Card de Correção de Leads */}
