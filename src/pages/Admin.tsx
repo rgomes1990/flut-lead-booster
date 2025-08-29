@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,6 +83,52 @@ const Admin = () => {
       return data;
     },
   });
+
+  // Calculate stats from leads data
+  const stats = leads ? (() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const leadsToday = leads.filter(lead => 
+      new Date(lead.created_at) >= today
+    ).length;
+    
+    const leadsThisMonth = leads.filter(lead => 
+      new Date(lead.created_at) >= thisMonth
+    ).length;
+
+    const readLeads = leads.filter(lead => lead.status === 'read').length;
+    const unreadLeads = leads.filter(lead => lead.status === 'new').length;
+    
+    const currentDay = now.getDate();
+    const dailyAverage = currentDay > 0 ? Math.round(leadsThisMonth / currentDay * 10) / 10 : 0;
+
+    return {
+      totalLeads: leads.length,
+      newLeads: unreadLeads,
+      leadsToday,
+      leadsThisMonth,
+      readLeads,
+      unreadLeads,
+      dailyAverage
+    };
+  })() : {
+    totalLeads: 0,
+    newLeads: 0,
+    leadsToday: 0,
+    leadsThisMonth: 0,
+    readLeads: 0,
+    unreadLeads: 0,
+    dailyAverage: 0
+  };
+
+  // Calculate origin stats from leads data
+  const originStats = leads ? leads.reduce((acc, lead) => {
+    const origin = lead.origin || 'Não informado';
+    acc[origin] = (acc[origin] || 0) + 1;
+    return acc;
+  }, {} as {[key: string]: number}) : {};
 
   const fixLeadAssociations = useMutation({
     mutationFn: async () => {
@@ -173,7 +220,7 @@ const Admin = () => {
           </p>
         </div>
 
-        <DashboardStatsCards />
+        <DashboardStatsCards stats={stats} originStats={originStats} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
           {/* Card de Correção de Leads */}
