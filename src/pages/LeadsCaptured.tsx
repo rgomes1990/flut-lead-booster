@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search, X, Phone, Send, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, Search, X, Phone, Send, Trash2, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -45,6 +45,7 @@ const LeadsCaptured = () => {
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [displayedLeads, setDisplayedLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reprocessing, setReprocessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -221,9 +222,6 @@ const LeadsCaptured = () => {
 
       setLeads(transformedLeads);
       
-      // Atualizar leads existentes no banco com dados UTM se necessário
-      await updateExistingLeadsWithUTM(transformedLeads);
-      
     } catch (error) {
       console.error("Erro ao carregar leads:", error);
       toast({
@@ -233,6 +231,39 @@ const LeadsCaptured = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const reprocessAllLeads = async () => {
+    try {
+      setReprocessing(true);
+      
+      // Chamar função do banco para reprocessar todos os leads
+      const { data, error } = await supabase.rpc('reprocess_leads_utm_data');
+      
+      if (error) {
+        throw error;
+      }
+      
+      const result = data[0];
+      
+      toast({
+        title: "Reprocessamento concluído!",
+        description: `${result.processed_count} leads processados, ${result.updated_count} leads atualizados com dados UTM`,
+      });
+      
+      // Recarregar leads para mostrar os dados atualizados
+      await loadLeads();
+      
+    } catch (error) {
+      console.error("Erro ao reprocessar leads:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao reprocessar leads. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setReprocessing(false);
     }
   };
 
@@ -548,6 +579,17 @@ const LeadsCaptured = () => {
                   </span>
                 </div>
               </div>
+              {userProfile?.user_type === 'admin' && (
+                <Button 
+                  onClick={reprocessAllLeads}
+                  disabled={reprocessing}
+                  className="flex items-center gap-2"
+                  variant="outline"
+                >
+                  <RefreshCw className={`h-4 w-4 ${reprocessing ? 'animate-spin' : ''}`} />
+                  {reprocessing ? 'Reprocessando...' : 'Reprocessar Leads'}
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent className="p-6">

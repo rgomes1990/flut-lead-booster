@@ -93,6 +93,8 @@ export type Database = {
       }
       leads: {
         Row: {
+          ad_content: string | null
+          audience: string | null
           campaign: string | null
           client_id: string
           created_at: string
@@ -108,6 +110,8 @@ export type Database = {
           website_url: string
         }
         Insert: {
+          ad_content?: string | null
+          audience?: string | null
           campaign?: string | null
           client_id: string
           created_at?: string
@@ -123,6 +127,8 @@ export type Database = {
           website_url: string
         }
         Update: {
+          ad_content?: string | null
+          audience?: string | null
           campaign?: string | null
           client_id?: string
           created_at?: string
@@ -356,6 +362,13 @@ export type Database = {
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      reprocess_leads_utm_data: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          processed_count: number
+          updated_count: number
+        }[]
       }
       update_subscription_plan: {
         Args: {
