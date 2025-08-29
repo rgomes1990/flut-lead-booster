@@ -56,7 +56,7 @@ const LeadsCaptured = () => {
       console.log("Iniciando carregamento de leads...");
       
       const BATCH_SIZE = 1000;
-      let allLeads: Lead[] = [];
+      let allLeads: any[] = [];
       let batch = 0;
       let hasMore = true;
 
@@ -128,21 +128,26 @@ const LeadsCaptured = () => {
       }
 
       // Processar leads com dados UTM atualizados
-      const leadsWithUTM = allLeads.map(lead => {
+      const leadsWithUTM: Lead[] = allLeads.map(lead => {
         const updatedLead = updateLeadWithUTMData(lead);
         return {
           ...updatedLead,
+          ad_content: updatedLead.ad_content || 'Não informado',
+          audience: updatedLead.audience || 'Não informado',
           profile: profiles[lead.client.user_id] || { name: 'Sem nome', email: 'Sem email' }
         };
       });
 
       // Verificar quantos leads precisam de atualização UTM
-      const leadsNeedingUpdate = leadsWithUTM.filter(lead => 
-        lead.origin !== allLeads.find(original => original.id === lead.id)?.origin ||
-        lead.campaign !== allLeads.find(original => original.id === lead.id)?.campaign ||
-        lead.ad_content !== allLeads.find(original => original.id === lead.id)?.ad_content ||
-        lead.audience !== allLeads.find(original => original.id === lead.id)?.audience
-      );
+      const leadsNeedingUpdate = leadsWithUTM.filter(lead => {
+        const original = allLeads.find(orig => orig.id === lead.id);
+        return (
+          lead.origin !== original?.origin ||
+          lead.campaign !== original?.campaign ||
+          lead.ad_content !== original?.ad_content ||
+          lead.audience !== original?.audience
+        );
+      });
 
       if (leadsNeedingUpdate.length > 0) {
         console.log(`Atualizando ${leadsNeedingUpdate.length} leads com dados UTM...`);
@@ -168,20 +173,21 @@ const LeadsCaptured = () => {
       for (let i = 0; i < leadsToUpdate.length; i += BATCH_SIZE) {
         const batch = leadsToUpdate.slice(i, i + BATCH_SIZE);
         
-        const updates = batch.map(lead => ({
-          id: lead.id,
-          origin: lead.origin,
-          campaign: lead.campaign,
-          ad_content: lead.ad_content,
-          audience: lead.audience
-        }));
+        // Atualizar leads usando update individual para cada lead
+        for (const lead of batch) {
+          const { error } = await supabase
+            .from('leads')
+            .update({
+              origin: lead.origin,
+              campaign: lead.campaign,
+              ad_content: lead.ad_content,
+              audience: lead.audience
+            })
+            .eq('id', lead.id);
 
-        const { error } = await supabase
-          .from('leads')
-          .upsert(updates);
-
-        if (error) {
-          console.error('Erro ao atualizar lote de leads:', error);
+          if (error) {
+            console.error(`Erro ao atualizar lead ${lead.id}:`, error);
+          }
         }
       }
       

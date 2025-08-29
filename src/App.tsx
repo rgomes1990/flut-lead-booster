@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
@@ -61,54 +61,56 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <BrowserRouter>
-          <Routes>
-            {/* Rotas públicas */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/lead-demo" element={<LeadDemo />} />
-            
-            {/* Rotas protegidas */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/sites" element={
-              <ProtectedRoute>
-                <Sites />
-              </ProtectedRoute>
-            } />
-            <Route path="/site-config/:siteId" element={
-              <ProtectedRoute>
-                <SiteConfig />
-              </ProtectedRoute>
-            } />
-            <Route path="/leads-captured" element={
-              <ProtectedRoute>
-                <LeadsCaptured />
-              </ProtectedRoute>
-            } />
-            <Route path="/plans" element={
-              <ProtectedRoute>
-                <Plans />
-              </ProtectedRoute>
-            } />
-            
-            {/* Rotas de admin */}
-            <Route path="/admin" element={
-              <AdminRoute>
-                <Admin />
-              </AdminRoute>
-            } />
-            <Route path="/audit" element={
-              <AdminRoute>
-                <Audit />
-              </AdminRoute>
-            } />
-            
-            {/* Rota de fallback */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AuthProvider>
+            <Routes>
+              {/* Rotas públicas */}
+              <Route path="/" element={<Landing />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/lead-demo" element={<LeadDemo />} />
+              
+              {/* Rotas protegidas */}
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/sites" element={
+                <ProtectedRoute>
+                  <Sites />
+                </ProtectedRoute>
+              } />
+              <Route path="/site-config/:siteId" element={
+                <ProtectedRoute>
+                  <SiteConfig />
+                </ProtectedRoute>
+              } />
+              <Route path="/leads-captured" element={
+                <ProtectedRoute>
+                  <LeadsCaptured />
+                </ProtectedRoute>
+              } />
+              <Route path="/plans" element={
+                <ProtectedRoute>
+                  <Plans />
+                </ProtectedRoute>
+              } />
+              
+              {/* Rotas de admin */}
+              <Route path="/admin" element={
+                <AdminRoute>
+                  <Admin />
+                </AdminRoute>
+              } />
+              <Route path="/audit" element={
+                <AdminRoute>
+                  <Audit />
+                </AdminRoute>
+              } />
+              
+              {/* Rota de fallback */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
