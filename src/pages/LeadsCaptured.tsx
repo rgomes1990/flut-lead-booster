@@ -528,11 +528,13 @@ const LeadsCaptured = () => {
     setCurrentPage(1); // Reset to first page when filters change
   };
 
-  // Fixed pagination controls
-  const goToPage = (page: number) => {
-    if (page >= 1 && page <= totalPages && page !== currentPage) {
-      console.log(`Mudando para página ${page} de ${totalPages}`);
-      setCurrentPage(page);
+  const handlePageChange = (newPage: number) => {
+    console.log(`Tentando mudar para página ${newPage} de ${totalPages}`);
+    if (newPage >= 1 && newPage <= totalPages && newPage !== currentPage) {
+      console.log(`Mudando para página ${newPage}`);
+      setCurrentPage(newPage);
+    } else {
+      console.log(`Página ${newPage} inválida ou igual à atual (${currentPage})`);
     }
   };
 
@@ -553,7 +555,7 @@ const LeadsCaptured = () => {
             key={i}
             variant={currentPage === i ? "default" : "outline"}
             size="sm"
-            onClick={() => goToPage(i)}
+            onClick={() => handlePageChange(i)}
             className="w-8 h-8 p-0"
           >
             {i}
@@ -575,7 +577,7 @@ const LeadsCaptured = () => {
             key={i}
             variant={currentPage === i ? "default" : "outline"}
             size="sm"
-            onClick={() => goToPage(i)}
+            onClick={() => handlePageChange(i)}
             className="w-8 h-8 p-0"
           >
             {i}
@@ -831,7 +833,7 @@ const LeadsCaptured = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => goToPage(currentPage - 1)}
+                        onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1}
                         className="flex items-center gap-1"
                       >
@@ -844,7 +846,7 @@ const LeadsCaptured = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => goToPage(currentPage + 1)}
+                        onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage === totalPages}
                         className="flex items-center gap-1"
                       >
