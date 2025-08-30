@@ -5,13 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search, X, Phone, Send, Trash2, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { Download, Search, X, Phone, Send, Trash2, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import AdminNavigation from "@/components/AdminNavigation";
 import LeadsFilters from "@/components/LeadsFilters";
 import { extractUTMFromUrl, updateLeadWithUTMData } from "@/utils/utmExtractor";
@@ -387,6 +388,16 @@ const LeadsCaptured = () => {
     }
   };
 
+  const handleFilteredLeads = (filtered: Lead[]) => {
+    setFilteredLeads(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(parseInt(value));
+    setCurrentPage(1); // Reset to first page when items per page changes
+  };
+
   const handleViewMessage = async (lead: Lead) => {
     setSelectedLead(lead);
     setIsModalOpen(true);
@@ -521,72 +532,6 @@ const LeadsCaptured = () => {
 
   const handleBulkDeleteCancel = () => {
     setIsBulkDeleteDialogOpen(false);
-  };
-
-  const handleFilteredLeads = (filtered: Lead[]) => {
-    setFilteredLeads(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
-  };
-
-  const handlePageChange = (newPage: number) => {
-    console.log(`Tentando mudar para página ${newPage} de ${totalPages}`);
-    if (newPage >= 1 && newPage <= totalPages && newPage !== currentPage) {
-      console.log(`Mudando para página ${newPage}`);
-      setCurrentPage(newPage);
-    } else {
-      console.log(`Página ${newPage} inválida ou igual à atual (${currentPage})`);
-    }
-  };
-
-  const handleItemsPerPageChange = (value: string) => {
-    setItemsPerPage(parseInt(value));
-    setCurrentPage(1); // Reset to first page when items per page changes
-  };
-
-  const renderPaginationNumbers = () => {
-    const pageNumbers = [];
-    const maxVisiblePages = 5;
-    
-    if (totalPages <= maxVisiblePages) {
-      // Se temos poucas páginas, mostrar todas
-      for (let i = 1; i <= totalPages; i++) {
-        pageNumbers.push(
-          <Button
-            key={i}
-            variant={currentPage === i ? "default" : "outline"}
-            size="sm"
-            onClick={() => handlePageChange(i)}
-            className="w-8 h-8 p-0"
-          >
-            {i}
-          </Button>
-        );
-      }
-    } else {
-      // Lógica para muitas páginas
-      let startPage = Math.max(1, currentPage - 2);
-      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-      
-      if (endPage - startPage < maxVisiblePages - 1) {
-        startPage = Math.max(1, endPage - maxVisiblePages + 1);
-      }
-      
-      for (let i = startPage; i <= endPage; i++) {
-        pageNumbers.push(
-          <Button
-            key={i}
-            variant={currentPage === i ? "default" : "outline"}
-            size="sm"
-            onClick={() => handlePageChange(i)}
-            className="w-8 h-8 p-0"
-          >
-            {i}
-          </Button>
-        );
-      }
-    }
-    
-    return pageNumbers;
   };
 
   if (!userProfile || (userProfile.user_type !== "admin" && userProfile.user_type !== "client")) {
@@ -823,37 +768,109 @@ const LeadsCaptured = () => {
                   )}
                 </div>
 
-                {/* Fixed Pagination Controls */}
+                {/* Pagination using shadcn/ui components */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6">
                     <div className="text-sm text-muted-foreground">
                       Mostrando {startIndex + 1} até {Math.min(endIndex, filteredLeads.length)} de {filteredLeads.length} resultados (Página {currentPage} de {totalPages})
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="flex items-center gap-1"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                        Anterior
-                      </Button>
-                      
-                      {renderPaginationNumbers()}
-                      
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="flex items-center gap-1"
-                      >
-                        Próxima
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (currentPage > 1) {
+                                setCurrentPage(currentPage - 1);
+                              }
+                            }}
+                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                        
+                        {/* Show first page */}
+                        {currentPage > 3 && (
+                          <>
+                            <PaginationItem>
+                              <PaginationLink 
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setCurrentPage(1);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                1
+                              </PaginationLink>
+                            </PaginationItem>
+                            {currentPage > 4 && (
+                              <PaginationItem>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            )}
+                          </>
+                        )}
+                        
+                        {/* Show pages around current page */}
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                          if (pageNum > totalPages) return null;
+                          
+                          return (
+                            <PaginationItem key={pageNum}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setCurrentPage(pageNum);
+                                }}
+                                className="cursor-pointer"
+                                isActive={currentPage === pageNum}
+                              >
+                                {pageNum}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        })}
+                        
+                        {/* Show last page */}
+                        {currentPage < totalPages - 2 && (
+                          <>
+                            {currentPage < totalPages - 3 && (
+                              <PaginationItem>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            )}
+                            <PaginationItem>
+                              <PaginationLink 
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setCurrentPage(totalPages);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                {totalPages}
+                              </PaginationLink>
+                            </PaginationItem>
+                          </>
+                        )}
+                        
+                        <PaginationItem>
+                          <PaginationNext 
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (currentPage < totalPages) {
+                                setCurrentPage(currentPage + 1);
+                              }
+                            }}
+                            className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
                   </div>
                 )}
               </>
