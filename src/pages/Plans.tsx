@@ -46,8 +46,8 @@ const Plans = () => {
   
   // Filtros
   const [searchTerm, setSearchTerm] = useState("");
-  const [planTypeFilter, setPlanTypeFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [planTypeFilter, setPlanTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   
   const { userProfile } = useAuth();
   const { toast } = useToast();
@@ -136,12 +136,12 @@ const Plans = () => {
     }
 
     // Filtro por tipo de plano
-    if (planTypeFilter) {
+    if (planTypeFilter && planTypeFilter !== "all") {
       filtered = filtered.filter(plan => plan.plan_type === planTypeFilter);
     }
 
     // Filtro por status (ativo/inativo)
-    if (statusFilter) {
+    if (statusFilter && statusFilter !== "all") {
       if (statusFilter === "active") {
         filtered = filtered.filter(plan => {
           const now = new Date();
@@ -259,8 +259,8 @@ const Plans = () => {
 
   const clearFilters = () => {
     setSearchTerm("");
-    setPlanTypeFilter("");
-    setStatusFilter("");
+    setPlanTypeFilter("all");
+    setStatusFilter("all");
   };
 
   if (!userProfile || userProfile.user_type !== "admin") {
@@ -318,7 +318,7 @@ const Plans = () => {
                       <SelectValue placeholder="Filtrar por plano" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todos os planos</SelectItem>
+                      <SelectItem value="all">Todos os planos</SelectItem>
                       <SelectItem value="free_7_days">Grátis 7 dias</SelectItem>
                       <SelectItem value="one_month">1 Mês</SelectItem>
                       <SelectItem value="three_months">3 Meses</SelectItem>
@@ -333,13 +333,13 @@ const Plans = () => {
                       <SelectValue placeholder="Filtrar por status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todos os status</SelectItem>
+                      <SelectItem value="all">Todos os status</SelectItem>
                       <SelectItem value="active">Ativo</SelectItem>
                       <SelectItem value="inactive">Inativo/Expirado</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                {(searchTerm || planTypeFilter || statusFilter) && (
+                {(searchTerm || planTypeFilter !== "all" || statusFilter !== "all") && (
                   <Button variant="outline" onClick={clearFilters}>
                     Limpar Filtros
                   </Button>
