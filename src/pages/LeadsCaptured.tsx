@@ -42,7 +42,6 @@ interface Lead {
 const LeadsCaptured = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
-  const [displayedLeads, setDisplayedLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [reprocessing, setReprocessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -57,10 +56,11 @@ const LeadsCaptured = () => {
   const { userProfile } = useAuth();
   const { toast } = useToast();
 
-  // Calculate pagination
+  // Calculate pagination - CORRIGIDO
   const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredLeads.length);
+  const displayedLeads = filteredLeads.slice(startIndex, endIndex);
 
   useEffect(() => {
     if (userProfile) {
@@ -79,11 +79,6 @@ const LeadsCaptured = () => {
     setFilteredLeads(filtered);
     setCurrentPage(1); // Reset to first page when search changes
   }, [searchTerm, leads]);
-
-  useEffect(() => {
-    const displayed = filteredLeads.slice(startIndex, endIndex);
-    setDisplayedLeads(displayed);
-  }, [filteredLeads, currentPage, itemsPerPage, startIndex, endIndex]);
 
   const loadLeads = async () => {
     try {
@@ -533,9 +528,11 @@ const LeadsCaptured = () => {
     setCurrentPage(1); // Reset to first page when filters change
   };
 
+  // CORRIGIDO - função de mudança de página
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
+      console.log(`Mudando para página ${page} de ${totalPages}`);
     }
   };
 
@@ -782,7 +779,7 @@ const LeadsCaptured = () => {
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6">
                     <div className="text-sm text-muted-foreground">
-                      Mostrando {startIndex + 1} até {Math.min(endIndex, filteredLeads.length)} de {filteredLeads.length} resultados
+                      Mostrando {startIndex + 1} até {endIndex} de {filteredLeads.length} resultados (Página {currentPage} de {totalPages})
                     </div>
                     <div className="flex items-center gap-2">
                       <Button

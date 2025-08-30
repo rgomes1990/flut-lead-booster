@@ -8,7 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus, Edit } from "lucide-react";
+import { Trash2, Plus, Edit, Search } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import AdminNavigation from "@/components/AdminNavigation";
 import EditPlanDialog from "@/components/EditPlanDialog";
 
@@ -36,11 +38,18 @@ interface SubscriptionPlan {
 
 const Plans = () => {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [filteredPlans, setFilteredPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [planToDelete, setPlanToDelete] = useState<SubscriptionPlan | null>(null);
   const [planToEdit, setPlanToEdit] = useState<SubscriptionPlan | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  
+  // Filtros
+  const [searchTerm, setSearchTerm] = useState("");
+  const [planTypeFilter, setPlanTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  
   const { userProfile } = useAuth();
   const { toast } = useToast();
 
@@ -49,6 +58,44 @@ const Plans = () => {
       loadPlans();
     }
   }, [userProfile]);
+
+  // Aplicar filtros
+  useEffect(() => {
+    let filtered = plans;
+
+    // Filtro de busca por cliente
+    if (searchTerm) {
+      filtered = filtered.filter(plan =>
+        plan.clients?.profiles?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        plan.clients?.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        plan.clients?.website_url?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filtro por tipo de plano
+    if (planTypeFilter !== "all") {
+      filtered = filtered.filter(plan => plan.plan_type === planTypeFilter);
+    }
+
+    // Filtro por status
+    if (statusFilter !== "all") {
+      if (statusFilter === "active") {
+        filtered = filtered.filter(plan => {
+          const now = new Date();
+          const end = new Date(plan.end_date);
+          return plan.is_active && end >= now;
+        });
+      } else if (statusFilter === "inactive") {
+        filtered = filtered.filter(plan => {
+          const now = new Date();
+          const end = new Date(plan.end_date);
+          return !plan.is_active || end < now;
+        });
+      }
+    }
+
+    setFilteredPlans(filtered);
+  }, [plans, searchTerm, planTypeFilter, statusFilter]);
 
   const loadPlans = async () => {
     try {
@@ -246,6 +293,44 @@ const Plans = () => {
             </div>
           </CardHeader>
           <CardContent className="p-6">
+            {/* Filtros */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Buscar por cliente..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <Select value={planTypeFilter} onValueChange={setPlanTypeFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filtrar por plano" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os planos</SelectItem>
+                  <SelectItem value="free_7_days">Grátis 7 dias</SelectItem>
+                  <SelectItem value="one_month">1 Mês</SelectItem>
+                  <SelectItem value="three_months">3 Meses</SelectItem>
+                  <SelectItem value="six_months">6 Meses</SelectItem>
+                  <SelectItem value="one_year">1 Ano</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="active">Ativo</SelectItem>
+                  <SelectItem value="inactive">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {loading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -267,7 +352,7 @@ const Plans = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {plans.map((plan) => (
+                    {filteredPlans.map((plan) => (
                       <TableRow key={plan.id}>
                         <TableCell>
                           <span className="font-medium">
@@ -329,9 +414,11 @@ const Plans = () => {
                   </TableBody>
                 </Table>
                 
-                {plans.length === 0 && !loading && (
+                {filteredPlans.length === 0 && !loading && (
                   <div className="text-center py-8">
-                    <p className="text-muted-foreground">Nenhum plano encontrado.</p>
+                    <p className="text-muted-foreground">
+                      {plans.length === 0 ? "Nenhum plano encontrado." : "Nenhum plano corresponde aos filtros aplicados."}
+                    </p>
                   </div>
                 )}
               </div>
