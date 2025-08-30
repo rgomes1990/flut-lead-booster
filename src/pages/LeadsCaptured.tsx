@@ -56,10 +56,10 @@ const LeadsCaptured = () => {
   const { userProfile } = useAuth();
   const { toast } = useToast();
 
-  // Calculate pagination - CORRIGIDO
+  // Calculate pagination
   const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, filteredLeads.length);
+  const endIndex = startIndex + itemsPerPage;
   const displayedLeads = filteredLeads.slice(startIndex, endIndex);
 
   useEffect(() => {
@@ -528,7 +528,7 @@ const LeadsCaptured = () => {
     setCurrentPage(1); // Reset to first page when filters change
   };
 
-  // CORRIGIDO - função de mudança de página
+  // Fixed pagination controls
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
@@ -539,6 +539,52 @@ const LeadsCaptured = () => {
   const handleItemsPerPageChange = (value: string) => {
     setItemsPerPage(parseInt(value));
     setCurrentPage(1); // Reset to first page when items per page changes
+  };
+
+  const renderPaginationNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Se temos poucas páginas, mostrar todas
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(
+          <Button
+            key={i}
+            variant={currentPage === i ? "default" : "outline"}
+            size="sm"
+            onClick={() => handlePageChange(i)}
+            className="w-8 h-8 p-0"
+          >
+            {i}
+          </Button>
+        );
+      }
+    } else {
+      // Lógica para muitas páginas
+      let startPage = Math.max(1, currentPage - 2);
+      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+      
+      if (endPage - startPage < maxVisiblePages - 1) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+      }
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pageNumbers.push(
+          <Button
+            key={i}
+            variant={currentPage === i ? "default" : "outline"}
+            size="sm"
+            onClick={() => handlePageChange(i)}
+            className="w-8 h-8 p-0"
+          >
+            {i}
+          </Button>
+        );
+      }
+    }
+    
+    return pageNumbers;
   };
 
   if (!userProfile || (userProfile.user_type !== "admin" && userProfile.user_type !== "client")) {
@@ -775,11 +821,11 @@ const LeadsCaptured = () => {
                   )}
                 </div>
 
-                {/* Pagination Controls - CORRIGIDO */}
+                {/* Fixed Pagination Controls */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6">
                     <div className="text-sm text-muted-foreground">
-                      Mostrando {startIndex + 1} até {endIndex} de {filteredLeads.length} resultados (Página {currentPage} de {totalPages})
+                      Mostrando {startIndex + 1} até {Math.min(endIndex, filteredLeads.length)} de {filteredLeads.length} resultados (Página {currentPage} de {totalPages})
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
@@ -793,30 +839,7 @@ const LeadsCaptured = () => {
                         Anterior
                       </Button>
                       
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNumber;
-                        if (totalPages <= 5) {
-                          pageNumber = i + 1;
-                        } else if (currentPage <= 3) {
-                          pageNumber = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNumber = totalPages - 4 + i;
-                        } else {
-                          pageNumber = currentPage - 2 + i;
-                        }
-                        
-                        return (
-                          <Button
-                            key={pageNumber}
-                            variant={currentPage === pageNumber ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => handlePageChange(pageNumber)}
-                            className="w-8 h-8 p-0"
-                          >
-                            {pageNumber}
-                          </Button>
-                        );
-                      })}
+                      {renderPaginationNumbers()}
                       
                       <Button
                         variant="outline"

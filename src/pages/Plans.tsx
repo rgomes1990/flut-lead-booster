@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -285,6 +284,17 @@ const Plans = () => {
                 <CardDescription className="text-base mt-2">
                   Visualize e gerencie todos os planos de assinatura dos clientes
                 </CardDescription>
+                {/* Contador de resultados */}
+                <div className="mt-3 text-sm text-muted-foreground">
+                  <span className="font-medium text-primary">
+                    {filteredPlans.length} {filteredPlans.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}
+                  </span>
+                  {(searchTerm || planTypeFilter !== "all" || statusFilter !== "all") && (
+                    <span className="ml-2 text-xs bg-primary/10 px-2 py-1 rounded">
+                      Filtros aplicados
+                    </span>
+                  )}
+                </div>
               </div>
               <Button className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
