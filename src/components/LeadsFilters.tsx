@@ -1,252 +1,149 @@
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { RotateCcw } from "lucide-react";
-
-interface Lead {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  message: string;
-  website_url: string;
-  status: string;
-  created_at: string;
-  campaign: string;
-  ad_content: string;
-  audience: string;
-  origin: string;
-  client: {
-    user_id: string;
-    website_url: string;
-  };
-  profile: {
-    name: string;
-    email: string;
-  };
-}
+import { Search, RotateCcw } from "lucide-react";
 
 interface LeadsFiltersProps {
-  leads: Lead[];
-  onFilteredLeads: (filtered: Lead[]) => void;
-  userType: 'admin' | 'client';
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  statusFilter: string;
+  onStatusChange: (value: string) => void;
+  clientFilter: string;
+  onClientChange: (value: string) => void;
+  dateRange: { start: string; end: string };
+  onDateRangeChange: (range: { start: string; end: string }) => void;
+  userProfile: any;
+  onFiltersApply: () => void;
 }
 
-const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) => {
-  const [selectedClient, setSelectedClient] = useState<string>("");
-  const [selectedOrigin, setSelectedOrigin] = useState<string>("");
-  const [selectedCampaign, setSelectedCampaign] = useState<string>("");
-  const [selectedAdContent, setSelectedAdContent] = useState<string>("");
-  const [selectedAudience, setSelectedAudience] = useState<string>("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("");
+const LeadsFilters = ({
+  searchTerm,
+  onSearchChange,
+  statusFilter,
+  onStatusChange,
+  clientFilter,
+  onClientChange,
+  dateRange,
+  onDateRangeChange,
+  userProfile,
+  onFiltersApply
+}: LeadsFiltersProps) => {
+  const [clients, setClients] = useState<Array<{ id: string; name: string }>>([]);
 
-  // Calcular dados únicos baseado nos filtros ativos
-  const uniqueData = useMemo(() => {
-    let filteredData = leads;
-
-    // Aplicar filtros em sequência para obter dados relacionados
-    if (selectedClient) {
-      filteredData = filteredData.filter(lead => lead.profile?.name === selectedClient);
-    }
-    if (selectedOrigin) {
-      filteredData = filteredData.filter(lead => lead.origin === selectedOrigin);
-    }
-    if (selectedCampaign) {
-      filteredData = filteredData.filter(lead => lead.campaign === selectedCampaign);
-    }
-    if (selectedAdContent) {
-      filteredData = filteredData.filter(lead => lead.ad_content === selectedAdContent);
-    }
-    if (selectedAudience) {
-      filteredData = filteredData.filter(lead => lead.audience === selectedAudience);
-    }
-
-    // Extrair valores únicos dos dados filtrados
-    const clients = [...new Set(filteredData.map(lead => lead.profile?.name).filter(Boolean))].sort();
-    const origins = [...new Set(filteredData.map(lead => lead.origin).filter(Boolean))].sort();
-    const campaigns = [...new Set(filteredData.map(lead => lead.campaign).filter(Boolean))].sort();
-    const adContents = [...new Set(filteredData.map(lead => lead.ad_content).filter(Boolean))].sort();
-    const audiences = [...new Set(filteredData.map(lead => lead.audience).filter(Boolean))].sort();
-    const statuses = [...new Set(filteredData.map(lead => lead.status).filter(Boolean))].sort();
-
-    return { clients, origins, campaigns, adContents, audiences, statuses };
-  }, [leads, selectedClient, selectedOrigin, selectedCampaign, selectedAdContent, selectedAudience]);
-
-  // Aplicar todos os filtros e retornar leads filtrados
   useEffect(() => {
-    let filtered = leads;
-
-    if (selectedClient) {
-      filtered = filtered.filter(lead => lead.profile?.name === selectedClient);
+    if (userProfile?.user_type === "admin") {
+      loadClients();
     }
-    if (selectedOrigin) {
-      filtered = filtered.filter(lead => lead.origin === selectedOrigin);
-    }
-    if (selectedCampaign) {
-      filtered = filtered.filter(lead => lead.campaign === selectedCampaign);
-    }
-    if (selectedAdContent) {
-      filtered = filtered.filter(lead => lead.ad_content === selectedAdContent);
-    }
-    if (selectedAudience) {
-      filtered = filtered.filter(lead => lead.audience === selectedAudience);
-    }
-    if (selectedStatus) {
-      filtered = filtered.filter(lead => lead.status === selectedStatus);
-    }
+  }, [userProfile]);
 
-    onFilteredLeads(filtered);
-  }, [leads, selectedClient, selectedOrigin, selectedCampaign, selectedAdContent, selectedAudience, selectedStatus, onFilteredLeads]);
+  const loadClients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("clients")
+        .select(`
+          id,
+          profiles (name)
+        `);
 
-  // Limpar filtros dependentes quando um filtro superior muda
-  const handleClientChange = (value: string) => {
-    setSelectedClient(value);
-    setSelectedOrigin("");
-    setSelectedCampaign("");
-    setSelectedAdContent("");
-    setSelectedAudience("");
-  };
+      if (error) throw error;
 
-  const handleOriginChange = (value: string) => {
-    setSelectedOrigin(value);
-    setSelectedCampaign("");
-    setSelectedAdContent("");
-    setSelectedAudience("");
-  };
+      const clientsData = data?.map(client => ({
+        id: client.id,
+        name: client.profiles?.name || 'N/A'
+      })) || [];
 
-  const handleCampaignChange = (value: string) => {
-    setSelectedCampaign(value);
-    setSelectedAdContent("");
-    setSelectedAudience("");
-  };
-
-  const handleAdContentChange = (value: string) => {
-    setSelectedAdContent(value);
-    setSelectedAudience("");
-  };
-
-  const clearAllFilters = () => {
-    setSelectedClient("");
-    setSelectedOrigin("");
-    setSelectedCampaign("");
-    setSelectedAdContent("");
-    setSelectedAudience("");
-    setSelectedStatus("");
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "new":
-        return "Não Lido";
-      case "read":
-        return "Lido";
-      case "contacted":
-        return "Contatado";
-      case "qualified":
-        return "Qualificado";
-      default:
-        return status;
+      setClients(clientsData);
+    } catch (error) {
+      console.error("Erro ao carregar clientes:", error);
     }
   };
+
+  const handleClearFilters = () => {
+    onSearchChange("");
+    onStatusChange("");
+    onClientChange("");
+    onDateRangeChange({ start: "", end: "" });
+    onFiltersApply();
+  };
+
+  const hasActiveFilters = searchTerm || statusFilter || clientFilter || dateRange.start || dateRange.end;
 
   return (
-    <div className="flex flex-wrap gap-4 p-4 bg-muted/50 rounded-lg">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        Filtros:
-      </div>
-      
-      {userType === 'admin' && (
-        <Select value={selectedClient} onValueChange={handleClientChange}>
+    <div className="space-y-4 p-4 bg-muted/50 rounded-lg mb-6">
+      <div className="flex flex-wrap gap-4">
+        {/* Search */}
+        <div className="relative min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Buscar por nome, email ou telefone..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Status Filter */}
+        <Select value={statusFilter} onValueChange={onStatusChange}>
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Selecione o cliente" />
+            <SelectValue placeholder="Filtrar por status" />
           </SelectTrigger>
           <SelectContent>
-            {uniqueData.clients.map(client => (
-              <SelectItem key={client} value={client}>
-                {client}
-              </SelectItem>
-            ))}
+            <SelectItem value="new">Novo</SelectItem>
+            <SelectItem value="contacted">Contatado</SelectItem>
+            <SelectItem value="qualified">Qualificado</SelectItem>
+            <SelectItem value="converted">Convertido</SelectItem>
           </SelectContent>
         </Select>
-      )}
 
-      <Select value={selectedOrigin} onValueChange={handleOriginChange}>
-        <SelectTrigger className="w-48">
-          <SelectValue placeholder="Selecione a origem" />
-        </SelectTrigger>
-        <SelectContent>
-          {uniqueData.origins.map(origin => (
-            <SelectItem key={origin} value={origin}>
-              {origin}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        {/* Client Filter (Admin only) */}
+        {userProfile?.user_type === "admin" && (
+          <Select value={clientFilter} onValueChange={onClientChange}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filtrar por cliente" />
+            </SelectTrigger>
+            <SelectContent>
+              {clients.map(client => (
+                <SelectItem key={client.id} value={client.id}>
+                  {client.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
-      <Select value={selectedCampaign} onValueChange={handleCampaignChange}>
-        <SelectTrigger className="w-48">
-          <SelectValue placeholder="Selecione a campanha" />
-        </SelectTrigger>
-        <SelectContent>
-          {uniqueData.campaigns.map(campaign => (
-            <SelectItem key={campaign} value={campaign}>
-              {campaign}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        {/* Date Range */}
+        <Input
+          type="date"
+          value={dateRange.start}
+          onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value })}
+          className="w-48"
+          placeholder="Data inicial"
+        />
 
-      <Select value={selectedAdContent} onValueChange={handleAdContentChange}>
-        <SelectTrigger className="w-48">
-          <SelectValue placeholder="Selecione o anúncio" />
-        </SelectTrigger>
-        <SelectContent>
-          {uniqueData.adContents.map(adContent => (
-            <SelectItem key={adContent} value={adContent}>
-              {adContent}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <Input
+          type="date"
+          value={dateRange.end}
+          onChange={(e) => onDateRangeChange({ ...dateRange, end: e.target.value })}
+          className="w-48"
+          placeholder="Data final"
+        />
 
-      <Select value={selectedAudience} onValueChange={setSelectedAudience}>
-        <SelectTrigger className="w-48">
-          <SelectValue placeholder="Selecione o público" />
-        </SelectTrigger>
-        <SelectContent>
-          {uniqueData.audiences.map(audience => (
-            <SelectItem key={audience} value={audience}>
-              {audience}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-        <SelectTrigger className="w-48">
-          <SelectValue placeholder="Selecione o status" />
-        </SelectTrigger>
-        <SelectContent>
-          {uniqueData.statuses.map(status => (
-            <SelectItem key={status} value={status}>
-              {getStatusLabel(status)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {(selectedClient || selectedOrigin || selectedCampaign || selectedAdContent || selectedAudience || selectedStatus) && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={clearAllFilters}
-          className="flex items-center gap-2"
-        >
-          <RotateCcw className="h-4 w-4" />
-          Limpar Filtros
-        </Button>
-      )}
+        {/* Clear Filters */}
+        {hasActiveFilters && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClearFilters}
+            className="flex items-center gap-2"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Limpar Filtros
+          </Button>
+        )}
+      </div>
     </div>
   );
 };
