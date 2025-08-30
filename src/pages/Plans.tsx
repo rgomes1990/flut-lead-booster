@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,8 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Trash2, Plus, Edit } from "lucide-react";
 import AdminNavigation from "@/components/AdminNavigation";
 import EditPlanDialog from "@/components/EditPlanDialog";
-import SearchInput from "@/components/SearchInput";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface SubscriptionPlan {
   id: string;
@@ -37,18 +36,11 @@ interface SubscriptionPlan {
 
 const Plans = () => {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [filteredPlans, setFilteredPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [planToDelete, setPlanToDelete] = useState<SubscriptionPlan | null>(null);
   const [planToEdit, setPlanToEdit] = useState<SubscriptionPlan | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  
-  // Filtros
-  const [searchTerm, setSearchTerm] = useState("");
-  const [planTypeFilter, setPlanTypeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  
   const { userProfile } = useAuth();
   const { toast } = useToast();
 
@@ -57,11 +49,6 @@ const Plans = () => {
       loadPlans();
     }
   }, [userProfile]);
-
-  useEffect(() => {
-    // Aplicar filtros sempre que os dados ou filtros mudarem
-    applyFilters();
-  }, [plans, searchTerm, planTypeFilter, statusFilter]);
 
   const loadPlans = async () => {
     try {
@@ -122,42 +109,6 @@ const Plans = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const applyFilters = () => {
-    let filtered = [...plans];
-
-    // Filtro por busca (nome ou email do cliente)
-    if (searchTerm) {
-      filtered = filtered.filter(plan => 
-        plan.clients?.profiles?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        plan.clients?.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filtro por tipo de plano
-    if (planTypeFilter && planTypeFilter !== "all") {
-      filtered = filtered.filter(plan => plan.plan_type === planTypeFilter);
-    }
-
-    // Filtro por status (ativo/inativo)
-    if (statusFilter && statusFilter !== "all") {
-      if (statusFilter === "active") {
-        filtered = filtered.filter(plan => {
-          const now = new Date();
-          const end = new Date(plan.end_date);
-          return plan.is_active && end >= now;
-        });
-      } else if (statusFilter === "inactive") {
-        filtered = filtered.filter(plan => {
-          const now = new Date();
-          const end = new Date(plan.end_date);
-          return !plan.is_active || end < now;
-        });
-      }
-    }
-
-    setFilteredPlans(filtered);
   };
 
   const formatDate = (dateString: string) => {
@@ -257,12 +208,6 @@ const Plans = () => {
     setPlanToDelete(null);
   };
 
-  const clearFilters = () => {
-    setSearchTerm("");
-    setPlanTypeFilter("all");
-    setStatusFilter("all");
-  };
-
   if (!userProfile || userProfile.user_type !== "admin") {
     return (
       <div className="min-h-screen bg-background">
@@ -291,7 +236,7 @@ const Plans = () => {
               <div>
                 <CardTitle className="text-2xl font-bold">📊 Gerenciar Planos</CardTitle>
                 <CardDescription className="text-base mt-2">
-                  Visualize e gerencie todos os planos de assinatura dos clientes ({filteredPlans.length} de {plans.length} planos)
+                  Visualize e gerencie todos os planos de assinatura dos clientes
                 </CardDescription>
               </div>
               <Button className="flex items-center gap-2">
@@ -301,52 +246,6 @@ const Plans = () => {
             </div>
           </CardHeader>
           <CardContent className="p-6">
-            {/* Filtros */}
-            <div className="mb-6 space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4 items-end">
-                <div className="flex-1">
-                  <SearchInput
-                    value={searchTerm}
-                    onChange={setSearchTerm}
-                    placeholder="Buscar por cliente (nome ou email)..."
-                    className="w-full"
-                  />
-                </div>
-                <div className="w-full sm:w-48">
-                  <Select value={planTypeFilter} onValueChange={setPlanTypeFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Filtrar por plano" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os planos</SelectItem>
-                      <SelectItem value="free_7_days">Grátis 7 dias</SelectItem>
-                      <SelectItem value="one_month">1 Mês</SelectItem>
-                      <SelectItem value="three_months">3 Meses</SelectItem>
-                      <SelectItem value="six_months">6 Meses</SelectItem>
-                      <SelectItem value="one_year">1 Ano</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="w-full sm:w-48">
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Filtrar por status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os status</SelectItem>
-                      <SelectItem value="active">Ativo</SelectItem>
-                      <SelectItem value="inactive">Inativo/Expirado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {(searchTerm || planTypeFilter !== "all" || statusFilter !== "all") && (
-                  <Button variant="outline" onClick={clearFilters}>
-                    Limpar Filtros
-                  </Button>
-                )}
-              </div>
-            </div>
-
             {loading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -368,7 +267,7 @@ const Plans = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredPlans.map((plan) => (
+                    {plans.map((plan) => (
                       <TableRow key={plan.id}>
                         <TableCell>
                           <span className="font-medium">
@@ -430,13 +329,9 @@ const Plans = () => {
                   </TableBody>
                 </Table>
                 
-                {filteredPlans.length === 0 && !loading && (
+                {plans.length === 0 && !loading && (
                   <div className="text-center py-8">
-                    {plans.length === 0 ? (
-                      <p className="text-muted-foreground">Nenhum plano encontrado.</p>
-                    ) : (
-                      <p className="text-muted-foreground">Nenhum plano encontrado com os filtros aplicados.</p>
-                    )}
+                    <p className="text-muted-foreground">Nenhum plano encontrado.</p>
                   </div>
                 )}
               </div>
