@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import AdminNavigation from "@/components/AdminNavigation";
 import StepNavigation from "@/components/StepNavigation";
+import FileUploadField from "@/components/FileUploadField";
+import TextareaWithCounter from "@/components/TextareaWithCounter";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save, Eye } from "lucide-react";
 
@@ -26,7 +27,7 @@ interface ProfileField {
 }
 
 interface LandingPageData {
-  [key: string]: string;
+  [key: string]: string | string[];
 }
 
 interface LandingPage {
@@ -108,7 +109,17 @@ const EditLandingPage = () => {
       
       const dataMap: LandingPageData = {};
       savedData?.forEach(item => {
-        dataMap[item.field_name] = item.field_value || '';
+        if (item.field_value) {
+          // Check if it's a JSON array for multiple files
+          try {
+            const parsed = JSON.parse(item.field_value);
+            dataMap[item.field_name] = Array.isArray(parsed) ? parsed : item.field_value;
+          } catch {
+            dataMap[item.field_name] = item.field_value;
+          }
+        } else {
+          dataMap[item.field_name] = '';
+        }
       });
       setLandingData(dataMap);
 
@@ -145,7 +156,7 @@ const EditLandingPage = () => {
     }
   };
 
-  const handleFieldChange = (fieldName: string, value: string) => {
+  const handleFieldChange = (fieldName: string, value: string | string[]) => {
     setLandingData(prev => ({
       ...prev,
       [fieldName]: value
@@ -160,7 +171,10 @@ const EditLandingPage = () => {
     
     return requiredFields.every(field => {
       const value = landingData[field.field_name];
-      return value && value.trim() !== '';
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
+      return value && String(value).trim() !== '';
     });
   };
 
@@ -205,12 +219,14 @@ const EditLandingPage = () => {
       for (const field of fieldsToSave) {
         const fieldValue = landingData[field.field_name];
         if (fieldValue !== undefined) {
+          const valueToSave = Array.isArray(fieldValue) ? JSON.stringify(fieldValue) : String(fieldValue);
+          
           await supabase
             .from("landing_page_data")
             .upsert({
               landing_page_id: id,
               field_name: field.field_name,
-              field_value: fieldValue
+              field_value: valueToSave
             });
         }
       }
@@ -231,53 +247,120 @@ const EditLandingPage = () => {
     const value = landingData[field.field_name] || '';
 
     switch (field.field_type) {
-      case 'textarea':
+      case 'file':
         return (
-          <Textarea
+          <FileUploadField
             id={field.field_name}
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+            label={field.field_label}
             placeholder={field.placeholder}
             required={field.is_required}
-            rows={4}
-            className="w-full"
+            multiple={false}
+            value={typeof value === 'string' ? value : ''}
+            onChange={(newValue) => handleFieldChange(field.field_name, newValue as string)}
           />
         );
+      
+      case 'multiple_files':
+        return (
+          <FileUploadField
+            id={field.field_name}
+            label={field.field_label}
+            placeholder={field.placeholder}
+            required={field.is_required}
+            multiple={true}
+            value={Array.isArray(value) ? value : (value ? [String(value)] : [])}
+            onChange={(newValue) => handleFieldChange(field.field_name, newValue as string[])}
+          />
+        );
+      
+      case 'textarea':
+        // Check if it's the banner subtitle with character limit
+        if (field.field_name === 'banner_subtitle' || field.placeholder?.includes('122 caracteres')) {
+          return (
+            <TextareaWithCounter
+              id={field.field_name}
+              label={field.field_label}
+              placeholder={field.placeholder}
+              required={field.is_required}
+              value={String(value)}
+              onChange={(newValue) => handleFieldChange(field.field_name, newValue)}
+              maxLength={122}
+            />
+          );
+        }
+        return (
+          <div className="space-y-2">
+            <Label htmlFor={field.field_name}>
+              {field.field_label}
+              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <Textarea
+              id={field.field_name}
+              value={String(value)}
+              onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+              placeholder={field.placeholder}
+              required={field.is_required}
+              rows={4}
+              className="w-full"
+            />
+          </div>
+        );
+      
       case 'number':
         return (
-          <Input
-            id={field.field_name}
-            type="number"
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
-            placeholder={field.placeholder}
-            required={field.is_required}
-            className="w-full"
-          />
+          <div className="space-y-2">
+            <Label htmlFor={field.field_name}>
+              {field.field_label}
+              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <Input
+              id={field.field_name}
+              type="number"
+              value={String(value)}
+              onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+              placeholder={field.placeholder}
+              required={field.is_required}
+              className="w-full"
+            />
+          </div>
         );
+      
       case 'email':
         return (
-          <Input
-            id={field.field_name}
-            type="email"
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
-            placeholder={field.placeholder}
-            required={field.is_required}
-            className="w-full"
-          />
+          <div className="space-y-2">
+            <Label htmlFor={field.field_name}>
+              {field.field_label}
+              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <Input
+              id={field.field_name}
+              type="email"
+              value={String(value)}
+              onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+              placeholder={field.placeholder}
+              required={field.is_required}
+              className="w-full"
+            />
+          </div>
         );
+      
       default:
         return (
-          <Input
-            id={field.field_name}
-            type="text"
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
-            placeholder={field.placeholder}
-            required={field.is_required}
-            className="w-full"
-          />
+          <div className="space-y-2">
+            <Label htmlFor={field.field_name}>
+              {field.field_label}
+              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <Input
+              id={field.field_name}
+              type="text"
+              value={String(value)}
+              onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+              placeholder={field.placeholder}
+              required={field.is_required}
+              className="w-full"
+            />
+          </div>
         );
     }
   };
@@ -370,11 +453,7 @@ const EditLandingPage = () => {
                 <div className="mt-8">
                   <div className="space-y-6">
                     {currentStepData?.fields.map((field) => (
-                      <div key={field.id} className="space-y-2">
-                        <Label htmlFor={field.field_name}>
-                          {field.field_label}
-                          {field.is_required && <span className="text-red-500 ml-1">*</span>}
-                        </Label>
+                      <div key={field.id}>
                         {renderField(field)}
                       </div>
                     ))}
