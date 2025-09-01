@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search, X, Phone, Send, Trash2, RefreshCw, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
+import { Download, Search, X, Phone, Send, Trash2, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -57,9 +57,10 @@ const LeadsCaptured = () => {
   const { toast } = useToast();
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
+  const totalItems = filteredLeads.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
   const displayedLeads = filteredLeads.slice(startIndex, endIndex);
 
   useEffect(() => {
@@ -396,6 +397,13 @@ const LeadsCaptured = () => {
     setItemsPerPage(parseInt(value));
     setCurrentPage(1); // Reset to first page when items per page changes
   };
+
+  // Pagination handlers
+  const goToFirstPage = () => setCurrentPage(1);
+  const goToPreviousPage = () => setCurrentPage(Math.max(1, currentPage - 1));
+  const goToNextPage = () => setCurrentPage(Math.min(totalPages, currentPage + 1));
+  const goToLastPage = () => setCurrentPage(totalPages);
+  const goToPage = (page: number) => setCurrentPage(page);
 
   const handleViewMessage = async (lead: Lead) => {
     setSelectedLead(lead);
@@ -767,19 +775,18 @@ const LeadsCaptured = () => {
                   )}
                 </div>
 
-                {/* Simplified Pagination */}
+                {/* Simple Pagination */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6">
                     <div className="text-sm text-muted-foreground">
-                      Mostrando {startIndex + 1} até {Math.min(endIndex, filteredLeads.length)} de {filteredLeads.length} resultados (Página {currentPage} de {totalPages})
+                      Mostrando {startIndex + 1} até {endIndex} de {totalItems} resultados (Página {currentPage} de {totalPages})
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      {/* Previous Button */}
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        onClick={goToPreviousPage}
                         disabled={currentPage === 1}
                         className="flex items-center gap-1"
                       >
@@ -787,70 +794,39 @@ const LeadsCaptured = () => {
                         Anterior
                       </Button>
 
-                      {/* Page Numbers */}
                       <div className="flex items-center space-x-1">
-                        {/* First page */}
-                        {currentPage > 3 && (
-                          <>
-                            <Button
-                              variant={1 === currentPage ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setCurrentPage(1)}
-                              className="w-10 h-10"
-                            >
-                              1
-                            </Button>
-                            {currentPage > 4 && (
-                              <div className="flex items-center justify-center w-10 h-10">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </div>
-                            )}
-                          </>
-                        )}
-
-                        {/* Pages around current page */}
+                        {/* Show page numbers */}
                         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
-                          if (pageNum > totalPages) return null;
+                          let pageNum;
+                          
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
                           
                           return (
                             <Button
                               key={pageNum}
                               variant={pageNum === currentPage ? "default" : "outline"}
                               size="sm"
-                              onClick={() => setCurrentPage(pageNum)}
+                              onClick={() => goToPage(pageNum)}
                               className="w-10 h-10"
                             >
                               {pageNum}
                             </Button>
                           );
                         })}
-
-                        {/* Last page */}
-                        {currentPage < totalPages - 2 && (
-                          <>
-                            {currentPage < totalPages - 3 && (
-                              <div className="flex items-center justify-center w-10 h-10">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </div>
-                            )}
-                            <Button
-                              variant={totalPages === currentPage ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setCurrentPage(totalPages)}
-                              className="w-10 h-10"
-                            >
-                              {totalPages}
-                            </Button>
-                          </>
-                        )}
                       </div>
 
-                      {/* Next Button */}
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        onClick={goToNextPage}
                         disabled={currentPage === totalPages}
                         className="flex items-center gap-1"
                       >
