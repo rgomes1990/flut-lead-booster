@@ -81,9 +81,11 @@ const AdminNavigation = () => {
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-6">
           <div className="flex items-center space-x-2">
-            <div className="bg-green-400 text-blue-600 font-bold text-lg px-3 py-1 rounded-full">
-              😊 flut
-            </div>
+            <img 
+              src="/lovable-uploads/f5619431-8313-40c2-84d7-beabfa0ba9cc.png"
+              alt="FLUT"
+              className="h-8 w-auto object-contain"
+            />
           </div>
           
           <div className="flex items-center space-x-1">
@@ -97,8 +99,8 @@ const AdminNavigation = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => navigate(item.path)}
-                  className={`flex items-center gap-2 text-white hover:bg-blue-500 ${
-                    active ? "bg-green-400 text-blue-600 font-semibold hover:bg-green-300" : ""
+                  className={`flex items-center gap-2 text-white hover:bg-blue-500 border-2 border-transparent ${
+                    active ? "border-[#b2ff00] font-semibold" : ""
                   }`}
                 >
                   <Icon className="h-4 w-4" />
