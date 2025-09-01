@@ -46,9 +46,12 @@ const FileUploadField = ({
       }
 
       if (multiple) {
+        // Para multiple files, substituir completamente se for uma nova seleção
+        // ou adicionar aos existentes se já houver arquivos
         const currentValues = Array.isArray(value) ? value : (value ? [value] : []);
         onChange([...currentValues, ...uploadedUrls]);
       } else {
+        // Para single file, sempre substituir
         onChange(uploadedUrls[0]);
       }
 
@@ -65,6 +68,8 @@ const FileUploadField = ({
       });
     } finally {
       setUploading(false);
+      // Reset the input value to allow re-uploading the same file
+      event.target.value = '';
     }
   };
 
@@ -72,6 +77,14 @@ const FileUploadField = ({
     if (multiple && Array.isArray(value)) {
       const newValues = value.filter((_, index) => index !== indexOrUrl);
       onChange(newValues);
+    } else {
+      onChange('');
+    }
+  };
+
+  const clearAll = () => {
+    if (multiple) {
+      onChange([]);
     } else {
       onChange('');
     }
@@ -94,6 +107,10 @@ const FileUploadField = ({
       </Button>
     </div>
   );
+
+  const hasFiles = multiple ? 
+    (Array.isArray(value) && value.length > 0) : 
+    (value && typeof value === 'string' && value !== '');
 
   return (
     <div className="space-y-2">
@@ -121,8 +138,20 @@ const FileUploadField = ({
             className="flex items-center gap-2"
           >
             <Upload className="h-4 w-4" />
-            {uploading ? "Enviando..." : placeholder || "Selecionar arquivo(s)"}
+            {uploading ? "Enviando..." : (hasFiles ? "Substituir arquivo(s)" : placeholder || "Selecionar arquivo(s)")}
           </Button>
+          
+          {hasFiles && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={clearAll}
+              className="text-red-600 hover:text-red-700"
+            >
+              Limpar tudo
+            </Button>
+          )}
         </div>
 
         {/* Preview uploaded files */}

@@ -163,7 +163,7 @@ const EditLandingPage = () => {
   };
 
   const handleFieldChange = (fieldName: string, value: string | string[] | boolean) => {
-    console.log("Field change:", fieldName, value);
+    console.log("Field change:", fieldName, value, typeof value);
     setLandingData(prev => ({
       ...prev,
       [fieldName]: value
@@ -223,10 +223,10 @@ const EditLandingPage = () => {
     try {
       setSaving(true);
 
-      // Salvar apenas os campos da etapa atual ou todos se for save manual
-      const fieldsToSave = currentStep < steps.length ? steps[currentStep].fields : steps.flatMap(s => s.fields);
+      // Salvar todos os campos que foram modificados
+      const allFields = steps.flatMap(s => s.fields);
       
-      for (const field of fieldsToSave) {
+      for (const field of allFields) {
         const fieldValue = landingData[field.field_name];
         if (fieldValue !== undefined) {
           let valueToSave: string;
@@ -239,15 +239,23 @@ const EditLandingPage = () => {
             valueToSave = String(fieldValue);
           }
           
-          console.log("Saving field:", field.field_name, "Value:", valueToSave);
+          console.log("Saving field:", field.field_name, "Value:", valueToSave, "Type:", typeof fieldValue);
           
-          await supabase
+          // Use upsert to insert or update the field data
+          const { error } = await supabase
             .from("landing_page_data")
             .upsert({
               landing_page_id: id,
               field_name: field.field_name,
               field_value: valueToSave
+            }, {
+              onConflict: 'landing_page_id,field_name'
             });
+
+          if (error) {
+            console.error("Error saving field:", field.field_name, error);
+            throw error;
+          }
         }
       }
 
@@ -273,6 +281,7 @@ const EditLandingPage = () => {
 
     switch (field.field_type) {
       case 'file':
+      case 'image':
         return (
           <FileUploadField
             id={field.field_name}
@@ -281,7 +290,10 @@ const EditLandingPage = () => {
             required={field.is_required}
             multiple={false}
             value={typeof value === 'string' ? value : ''}
-            onChange={(newValue) => handleFieldChange(field.field_name, newValue as string)}
+            onChange={(newValue) => {
+              console.log("Single file onChange:", field.field_name, newValue);
+              handleFieldChange(field.field_name, newValue as string);
+            }}
           />
         );
       
@@ -295,25 +307,12 @@ const EditLandingPage = () => {
             multiple={true}
             value={Array.isArray(value) ? value : (value ? [String(value)] : [])}
             onChange={(newValue) => {
-              console.log("Multiple files onChange:", newValue);
+              console.log("Multiple files onChange:", field.field_name, newValue);
               handleFieldChange(field.field_name, newValue as string[]);
             }}
           />
         );
 
-      case 'image':
-        return (
-          <FileUploadField
-            id={field.field_name}
-            label={field.field_label}
-            placeholder={field.placeholder}
-            required={field.is_required}
-            multiple={false}
-            value={typeof value === 'string' ? value : ''}
-            onChange={(newValue) => handleFieldChange(field.field_name, newValue as string)}
-          />
-        );
-      
       case 'checkbox':
         return (
           <div className="flex items-center space-x-2">
