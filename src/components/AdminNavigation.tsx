@@ -33,10 +33,10 @@ const AdminNavigation = () => {
       roles: ["admin", "client"]
     },
     {
-      label: "Landing Pages",
-      icon: PlusCircle,
-      path: "/landing-pages",
-      roles: ["admin", "client"]
+      label: "Usuários",
+      icon: Users,
+      path: "/admin",
+      roles: ["admin"]
     },
     {
       label: "Sites",
@@ -51,12 +51,6 @@ const AdminNavigation = () => {
       roles: ["admin", "client"]
     },
     {
-      label: "Usuários",
-      icon: Users,
-      path: "/admin",
-      roles: ["admin"]
-    },
-    {
       label: "Planos",
       icon: CreditCard,
       path: "/plans",
@@ -67,6 +61,12 @@ const AdminNavigation = () => {
       icon: FileText,
       path: "/audit",
       roles: ["admin"]
+    },
+    {
+      label: "Landing",
+      icon: PlusCircle,
+      path: "/landing-pages",
+      roles: ["admin", "client"]
     }
   ];
 
@@ -77,24 +77,29 @@ const AdminNavigation = () => {
   );
 
   return (
-    <nav className="bg-white border-b border-gray-200 px-4 py-3">
+    <nav className="bg-blue-600 px-4 py-2">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center space-x-8">
+        <div className="flex items-center space-x-6">
           <div className="flex items-center space-x-2">
-            <h1 className="text-xl font-bold text-primary">FLUT</h1>
-            <Badge variant="secondary">Dashboard</Badge>
+            <div className="bg-green-400 text-blue-600 font-bold text-lg px-3 py-1 rounded-full">
+              😊 flut
+            </div>
           </div>
           
           <div className="flex items-center space-x-1">
             {filteredMenuItems.map((item) => {
               const Icon = item.icon;
+              const active = isActive(item.path);
+              
               return (
                 <Button
                   key={item.path}
-                  variant={isActive(item.path) ? "default" : "ghost"}
+                  variant="ghost"
                   size="sm"
                   onClick={() => navigate(item.path)}
-                  className="flex items-center gap-2"
+                  className={`flex items-center gap-2 text-white hover:bg-blue-500 ${
+                    active ? "bg-green-400 text-blue-600 font-semibold hover:bg-green-300" : ""
+                  }`}
                 >
                   <Icon className="h-4 w-4" />
                   {item.label}
@@ -105,12 +110,13 @@ const AdminNavigation = () => {
         </div>
 
         <div className="flex items-center space-x-4">
-          <div className="text-sm">
-            <div className="font-medium">{userProfile?.name}</div>
-            <div className="text-muted-foreground">{user?.email}</div>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleLogout}
+            className="text-white hover:bg-blue-500 flex items-center gap-2"
+          >
+            <LogOut className="h-4 w-4" />
             Sair
           </Button>
         </div>

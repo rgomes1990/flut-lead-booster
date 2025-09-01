@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import AdminNavigation from "@/components/AdminNavigation";
+import StepNavigation from "@/components/StepNavigation";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save, Eye } from "lucide-react";
 
@@ -36,11 +37,19 @@ interface LandingPage {
   profile_id: string;
 }
 
+interface Step {
+  id: string;
+  name: string;
+  completed: boolean;
+  fields: ProfileField[];
+}
+
 const EditLandingPage = () => {
   const { userProfile } = useAuth();
   const { id } = useParams<{ id: string }>();
   const [landingPage, setLandingPage] = useState<LandingPage | null>(null);
-  const [profileFields, setProfileFields] = useState<ProfileField[]>([]);
+  const [steps, setSteps] = useState<Step[]>([]);
+  const [currentStep, setCurrentStep] = useState(0);
   const [landingData, setLandingData] = useState<LandingPageData>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -88,7 +97,6 @@ const EditLandingPage = () => {
         .order("field_order", { ascending: true });
 
       if (fieldsError) throw fieldsError;
-      setProfileFields(fieldsData || []);
 
       // Carregar dados salvos da landing page
       const { data: savedData, error: dataError } = await supabase
@@ -103,6 +111,26 @@ const EditLandingPage = () => {
         dataMap[item.field_name] = item.field_value || '';
       });
       setLandingData(dataMap);
+
+      // Organizar campos por etapas
+      const stepMap = new Map<string, ProfileField[]>();
+      fieldsData?.forEach(field => {
+        if (!stepMap.has(field.step_name)) {
+          stepMap.set(field.step_name, []);
+        }
+        stepMap.get(field.step_name)!.push(field);
+      });
+
+      const stepsArray: Step[] = Array.from(stepMap.entries())
+        .sort(([, a], [, b]) => a[0].step_order - b[0].step_order)
+        .map(([stepName, fields]) => ({
+          id: stepName.toLowerCase().replace(/\s+/g, '-'),
+          name: stepName,
+          completed: false,
+          fields: fields.sort((a, b) => a.field_order - b.field_order)
+        }));
+
+      setSteps(stepsArray);
 
     } catch (error: any) {
       console.error("Error loading landing page:", error);
@@ -124,25 +152,68 @@ const EditLandingPage = () => {
     }));
   };
 
+  const validateCurrentStep = () => {
+    if (steps.length === 0) return false;
+    
+    const currentStepData = steps[currentStep];
+    const requiredFields = currentStepData.fields.filter(field => field.is_required);
+    
+    return requiredFields.every(field => {
+      const value = landingData[field.field_name];
+      return value && value.trim() !== '';
+    });
+  };
+
+  const handleNext = async () => {
+    if (currentStep < steps.length - 1) {
+      // Marcar etapa atual como completa se válida
+      if (validateCurrentStep()) {
+        const updatedSteps = [...steps];
+        updatedSteps[currentStep].completed = true;
+        setSteps(updatedSteps);
+        await handleSave();
+      }
+      setCurrentStep(prev => prev + 1);
+    } else {
+      // Última etapa - finalizar
+      await handleSave();
+      toast({
+        title: "Landing page finalizada!",
+        description: "Sua landing page foi salva com sucesso.",
+      });
+      navigate("/landing-pages");
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
+    }
+  };
+
+  const handleStepChange = (step: number) => {
+    setCurrentStep(step);
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
 
-      // Salvar cada campo
-      for (const [fieldName, fieldValue] of Object.entries(landingData)) {
-        await supabase
-          .from("landing_page_data")
-          .upsert({
-            landing_page_id: id,
-            field_name: fieldName,
-            field_value: fieldValue
-          });
+      // Salvar apenas os campos da etapa atual ou todos se for save manual
+      const fieldsToSave = currentStep < steps.length ? steps[currentStep].fields : steps.flatMap(s => s.fields);
+      
+      for (const field of fieldsToSave) {
+        const fieldValue = landingData[field.field_name];
+        if (fieldValue !== undefined) {
+          await supabase
+            .from("landing_page_data")
+            .upsert({
+              landing_page_id: id,
+              field_name: field.field_name,
+              field_value: fieldValue
+            });
+        }
       }
-
-      toast({
-        title: "Landing page salva com sucesso!",
-        description: "Suas alterações foram salvas.",
-      });
 
     } catch (error: any) {
       console.error("Error saving landing page:", error);
@@ -169,6 +240,7 @@ const EditLandingPage = () => {
             placeholder={field.placeholder}
             required={field.is_required}
             rows={4}
+            className="w-full"
           />
         );
       case 'number':
@@ -180,6 +252,7 @@ const EditLandingPage = () => {
             onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
             placeholder={field.placeholder}
             required={field.is_required}
+            className="w-full"
           />
         );
       case 'email':
@@ -191,6 +264,7 @@ const EditLandingPage = () => {
             onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
             placeholder={field.placeholder}
             required={field.is_required}
+            className="w-full"
           />
         );
       default:
@@ -202,19 +276,11 @@ const EditLandingPage = () => {
             onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
             placeholder={field.placeholder}
             required={field.is_required}
+            className="w-full"
           />
         );
     }
   };
-
-  // Agrupar campos por etapa
-  const fieldsByStep = profileFields.reduce((acc, field) => {
-    if (!acc[field.step_name]) {
-      acc[field.step_name] = [];
-    }
-    acc[field.step_name].push(field);
-    return acc;
-  }, {} as Record<string, ProfileField[]>);
 
   if (loading) {
     return (
@@ -240,7 +306,7 @@ const EditLandingPage = () => {
             <div className="text-center">
               <h2 className="text-xl font-semibold mb-2">Landing page não encontrada</h2>
               <Button onClick={() => navigate("/landing-pages")}>
-                Voltar para Landing Pages
+                Voltar para Landing
               </Button>
             </div>
           </div>
@@ -248,6 +314,11 @@ const EditLandingPage = () => {
       </div>
     );
   }
+
+  const currentStepData = steps[currentStep];
+  const canGoNext = validateCurrentStep();
+  const isFirstStep = currentStep === 0;
+  const isLastStep = currentStep === steps.length - 1;
 
   return (
     <div className="min-h-screen bg-background">
@@ -262,7 +333,7 @@ const EditLandingPage = () => {
               </Button>
               <div>
                 <h1 className="text-3xl font-bold">{landingPage.name}</h1>
-                <p className="text-muted-foreground">Personalize sua landing page</p>
+                <p className="text-muted-foreground">Personalize sua landing page por etapas</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -275,36 +346,43 @@ const EditLandingPage = () => {
                   Visualizar
                 </Button>
               )}
-              <Button onClick={handleSave} disabled={saving}>
+              <Button onClick={handleSave} disabled={saving} variant="outline">
                 <Save className="h-4 w-4 mr-2" />
                 {saving ? "Salvando..." : "Salvar"}
               </Button>
             </div>
           </div>
 
-          <div className="space-y-6">
-            {Object.entries(fieldsByStep).map(([stepName, fields]) => (
-              <Card key={stepName}>
-                <CardHeader>
-                  <CardTitle>{stepName}</CardTitle>
-                  <CardDescription>
-                    Preencha as informações desta seção
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {fields.map((field) => (
-                    <div key={field.id} className="space-y-2">
-                      <Label htmlFor={field.field_name}>
-                        {field.field_label}
-                        {field.is_required && <span className="text-red-500 ml-1">*</span>}
-                      </Label>
-                      {renderField(field)}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {steps.length > 0 && (
+            <Card>
+              <CardContent className="p-6">
+                <StepNavigation
+                  steps={steps}
+                  currentStep={currentStep}
+                  onStepChange={handleStepChange}
+                  onNext={handleNext}
+                  onPrevious={handlePrevious}
+                  canGoNext={canGoNext}
+                  isFirstStep={isFirstStep}
+                  isLastStep={isLastStep}
+                />
+                
+                <div className="mt-8">
+                  <div className="space-y-6">
+                    {currentStepData?.fields.map((field) => (
+                      <div key={field.id} className="space-y-2">
+                        <Label htmlFor={field.field_name}>
+                          {field.field_label}
+                          {field.is_required && <span className="text-red-500 ml-1">*</span>}
+                        </Label>
+                        {renderField(field)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
