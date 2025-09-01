@@ -17,6 +17,10 @@ import Landing from "./pages/Landing";
 import LeadDemo from "./pages/LeadDemo";
 import Audit from "./pages/Audit";
 import NotFound from "./pages/NotFound";
+import LandingPages from "./pages/LandingPages";
+import CreateLandingPage from "./pages/CreateLandingPage";
+import EditLandingPage from "./pages/EditLandingPage";
+import PublicLandingPage from "./pages/PublicLandingPage";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +83,22 @@ const AppRoutes = () => (
         <Plans />
       </ProtectedRoute>
     } />
+    <Route path="/landing-pages" element={
+      <ProtectedRoute>
+        <LandingPages />
+      </ProtectedRoute>
+    } />
+    <Route path="/landing-pages/create" element={
+      <ProtectedRoute>
+        <CreateLandingPage />
+      </ProtectedRoute>
+    } />
+    <Route path="/landing-pages/:id/edit" element={
+      <ProtectedRoute>
+        <EditLandingPage />
+      </ProtectedRoute>
+    } />
+    <Route path="/public/:slug" element={<PublicLandingPage />} />
     <Route path="/" element={<Index />} />
     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
     <Route path="*" element={<NotFound />} />

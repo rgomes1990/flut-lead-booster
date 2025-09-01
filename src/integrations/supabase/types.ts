@@ -91,6 +91,121 @@ export type Database = {
           },
         ]
       }
+      landing_page_data: {
+        Row: {
+          created_at: string
+          field_name: string
+          field_value: string | null
+          id: string
+          landing_page_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_name: string
+          field_value?: string | null
+          id?: string
+          landing_page_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_name?: string
+          field_value?: string | null
+          id?: string
+          landing_page_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_page_data_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "user_landing_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      landing_profile_fields: {
+        Row: {
+          created_at: string
+          field_label: string
+          field_name: string
+          field_order: number
+          field_type: string
+          id: string
+          is_required: boolean
+          placeholder: string | null
+          profile_id: string
+          step_name: string
+          step_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_label: string
+          field_name: string
+          field_order?: number
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          placeholder?: string | null
+          profile_id: string
+          step_name: string
+          step_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_label?: string
+          field_name?: string
+          field_order?: number
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          placeholder?: string | null
+          profile_id?: string
+          step_name?: string
+          step_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_profile_fields_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "landing_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      landing_profiles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           ad_content: string | null
@@ -321,6 +436,47 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_landing_pages: {
+        Row: {
+          created_at: string
+          id: string
+          is_published: boolean
+          name: string
+          profile_id: string
+          slug: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          name: string
+          profile_id: string
+          slug: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          name?: string
+          profile_id?: string
+          slug?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_landing_pages_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "landing_profiles"
             referencedColumns: ["id"]
           },
         ]
