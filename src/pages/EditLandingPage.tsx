@@ -163,6 +163,7 @@ const EditLandingPage = () => {
   };
 
   const handleFieldChange = (fieldName: string, value: string | string[] | boolean) => {
+    console.log("Field change:", fieldName, value);
     setLandingData(prev => ({
       ...prev,
       [fieldName]: value
@@ -238,6 +239,8 @@ const EditLandingPage = () => {
             valueToSave = String(fieldValue);
           }
           
+          console.log("Saving field:", field.field_name, "Value:", valueToSave);
+          
           await supabase
             .from("landing_page_data")
             .upsert({
@@ -247,6 +250,10 @@ const EditLandingPage = () => {
             });
         }
       }
+
+      toast({
+        title: "Dados salvos com sucesso!",
+      });
 
     } catch (error: any) {
       console.error("Error saving landing page:", error);
@@ -262,6 +269,7 @@ const EditLandingPage = () => {
 
   const renderField = (field: ProfileField) => {
     const value = landingData[field.field_name] || '';
+    console.log("Rendering field:", field.field_name, "Type:", field.field_type, "Value:", value);
 
     switch (field.field_type) {
       case 'file':
@@ -286,7 +294,10 @@ const EditLandingPage = () => {
             required={field.is_required}
             multiple={true}
             value={Array.isArray(value) ? value : (value ? [String(value)] : [])}
-            onChange={(newValue) => handleFieldChange(field.field_name, newValue as string[])}
+            onChange={(newValue) => {
+              console.log("Multiple files onChange:", newValue);
+              handleFieldChange(field.field_name, newValue as string[]);
+            }}
           />
         );
       
