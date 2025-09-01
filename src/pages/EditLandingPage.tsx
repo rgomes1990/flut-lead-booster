@@ -300,6 +300,19 @@ const EditLandingPage = () => {
             }}
           />
         );
+
+      case 'image':
+        return (
+          <FileUploadField
+            id={field.field_name}
+            label={field.field_label}
+            placeholder={field.placeholder}
+            required={field.is_required}
+            multiple={false}
+            value={typeof value === 'string' ? value : ''}
+            onChange={(newValue) => handleFieldChange(field.field_name, newValue as string)}
+          />
+        );
       
       case 'checkbox':
         return (
