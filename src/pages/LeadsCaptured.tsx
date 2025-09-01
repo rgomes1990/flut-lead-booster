@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search, X, Phone, Send, Trash2, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, Search, X, Phone, Send, Trash2, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -398,12 +398,12 @@ const LeadsCaptured = () => {
     setCurrentPage(1); // Reset to first page when items per page changes
   };
 
-  // Pagination handlers
-  const goToFirstPage = () => setCurrentPage(1);
-  const goToPreviousPage = () => setCurrentPage(Math.max(1, currentPage - 1));
-  const goToNextPage = () => setCurrentPage(Math.min(totalPages, currentPage + 1));
-  const goToLastPage = () => setCurrentPage(totalPages);
-  const goToPage = (page: number) => setCurrentPage(page);
+  // Simple pagination function
+  const changePage = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
 
   const handleViewMessage = async (lead: Lead) => {
     setSelectedLead(lead);
@@ -775,27 +775,24 @@ const LeadsCaptured = () => {
                   )}
                 </div>
 
-                {/* Simple Pagination */}
+                {/* Simplified Pagination */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6">
                     <div className="text-sm text-muted-foreground">
                       Mostrando {startIndex + 1} até {endIndex} de {totalItems} resultados (Página {currentPage} de {totalPages})
                     </div>
                     
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={goToPreviousPage}
+                        onClick={() => changePage(currentPage - 1)}
                         disabled={currentPage === 1}
-                        className="flex items-center gap-1"
                       >
-                        <ChevronLeft className="h-4 w-4" />
                         Anterior
                       </Button>
 
-                      <div className="flex items-center space-x-1">
-                        {/* Show page numbers */}
+                      <div className="flex items-center gap-1">
                         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                           let pageNum;
                           
@@ -814,7 +811,7 @@ const LeadsCaptured = () => {
                               key={pageNum}
                               variant={pageNum === currentPage ? "default" : "outline"}
                               size="sm"
-                              onClick={() => goToPage(pageNum)}
+                              onClick={() => changePage(pageNum)}
                               className="w-10 h-10"
                             >
                               {pageNum}
@@ -826,12 +823,10 @@ const LeadsCaptured = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={goToNextPage}
+                        onClick={() => changePage(currentPage + 1)}
                         disabled={currentPage === totalPages}
-                        className="flex items-center gap-1"
                       >
                         Próximo
-                        <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
