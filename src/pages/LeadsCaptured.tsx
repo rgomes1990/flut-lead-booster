@@ -5,14 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search, X, Phone, Send, Trash2, RefreshCw } from "lucide-react";
+import { Download, Search, X, Phone, Send, Trash2, RefreshCw, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import AdminNavigation from "@/components/AdminNavigation";
 import LeadsFilters from "@/components/LeadsFilters";
 import { extractUTMFromUrl, updateLeadWithUTMData } from "@/utils/utmExtractor";
@@ -768,109 +767,97 @@ const LeadsCaptured = () => {
                   )}
                 </div>
 
-                {/* Pagination using shadcn/ui components */}
+                {/* Simplified Pagination */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6">
                     <div className="text-sm text-muted-foreground">
                       Mostrando {startIndex + 1} até {Math.min(endIndex, filteredLeads.length)} de {filteredLeads.length} resultados (Página {currentPage} de {totalPages})
                     </div>
-                    <Pagination>
-                      <PaginationContent>
-                        <PaginationItem>
-                          <PaginationPrevious 
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              if (currentPage > 1) {
-                                setCurrentPage(currentPage - 1);
-                              }
-                            }}
-                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                          />
-                        </PaginationItem>
-                        
-                        {/* Show first page */}
+                    
+                    <div className="flex items-center space-x-2">
+                      {/* Previous Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="flex items-center gap-1"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Anterior
+                      </Button>
+
+                      {/* Page Numbers */}
+                      <div className="flex items-center space-x-1">
+                        {/* First page */}
                         {currentPage > 3 && (
                           <>
-                            <PaginationItem>
-                              <PaginationLink 
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setCurrentPage(1);
-                                }}
-                                className="cursor-pointer"
-                              >
-                                1
-                              </PaginationLink>
-                            </PaginationItem>
+                            <Button
+                              variant={1 === currentPage ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(1)}
+                              className="w-10 h-10"
+                            >
+                              1
+                            </Button>
                             {currentPage > 4 && (
-                              <PaginationItem>
-                                <PaginationEllipsis />
-                              </PaginationItem>
+                              <div className="flex items-center justify-center w-10 h-10">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </div>
                             )}
                           </>
                         )}
-                        
-                        {/* Show pages around current page */}
+
+                        {/* Pages around current page */}
                         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                           const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
                           if (pageNum > totalPages) return null;
                           
                           return (
-                            <PaginationItem key={pageNum}>
-                              <PaginationLink
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setCurrentPage(pageNum);
-                                }}
-                                className="cursor-pointer"
-                                isActive={currentPage === pageNum}
-                              >
-                                {pageNum}
-                              </PaginationLink>
-                            </PaginationItem>
+                            <Button
+                              key={pageNum}
+                              variant={pageNum === currentPage ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(pageNum)}
+                              className="w-10 h-10"
+                            >
+                              {pageNum}
+                            </Button>
                           );
                         })}
-                        
-                        {/* Show last page */}
+
+                        {/* Last page */}
                         {currentPage < totalPages - 2 && (
                           <>
                             {currentPage < totalPages - 3 && (
-                              <PaginationItem>
-                                <PaginationEllipsis />
-                              </PaginationItem>
+                              <div className="flex items-center justify-center w-10 h-10">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </div>
                             )}
-                            <PaginationItem>
-                              <PaginationLink 
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setCurrentPage(totalPages);
-                                }}
-                                className="cursor-pointer"
-                              >
-                                {totalPages}
-                              </PaginationLink>
-                            </PaginationItem>
+                            <Button
+                              variant={totalPages === currentPage ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(totalPages)}
+                              className="w-10 h-10"
+                            >
+                              {totalPages}
+                            </Button>
                           </>
                         )}
-                        
-                        <PaginationItem>
-                          <PaginationNext 
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              if (currentPage < totalPages) {
-                                setCurrentPage(currentPage + 1);
-                              }
-                            }}
-                            className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                          />
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
+                      </div>
+
+                      {/* Next Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        className="flex items-center gap-1"
+                      >
+                        Próximo
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 )}
               </>
