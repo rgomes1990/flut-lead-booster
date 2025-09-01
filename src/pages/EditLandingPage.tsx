@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import AdminNavigation from "@/components/AdminNavigation";
 import StepNavigation from "@/components/StepNavigation";
@@ -27,7 +28,7 @@ interface ProfileField {
 }
 
 interface LandingPageData {
-  [key: string]: string | string[];
+  [key: string]: string | string[] | boolean;
 }
 
 interface LandingPage {
@@ -115,7 +116,12 @@ const EditLandingPage = () => {
             const parsed = JSON.parse(item.field_value);
             dataMap[item.field_name] = Array.isArray(parsed) ? parsed : item.field_value;
           } catch {
-            dataMap[item.field_name] = item.field_value;
+            // For checkbox fields, convert "true"/"false" strings to boolean
+            if (item.field_value === 'true' || item.field_value === 'false') {
+              dataMap[item.field_name] = item.field_value === 'true';
+            } else {
+              dataMap[item.field_name] = item.field_value;
+            }
           }
         } else {
           dataMap[item.field_name] = '';
@@ -156,7 +162,7 @@ const EditLandingPage = () => {
     }
   };
 
-  const handleFieldChange = (fieldName: string, value: string | string[]) => {
+  const handleFieldChange = (fieldName: string, value: string | string[] | boolean) => {
     setLandingData(prev => ({
       ...prev,
       [fieldName]: value
@@ -173,6 +179,9 @@ const EditLandingPage = () => {
       const value = landingData[field.field_name];
       if (Array.isArray(value)) {
         return value.length > 0;
+      }
+      if (typeof value === 'boolean') {
+        return true; // Checkboxes are always valid
       }
       return value && String(value).trim() !== '';
     });
@@ -219,7 +228,15 @@ const EditLandingPage = () => {
       for (const field of fieldsToSave) {
         const fieldValue = landingData[field.field_name];
         if (fieldValue !== undefined) {
-          const valueToSave = Array.isArray(fieldValue) ? JSON.stringify(fieldValue) : String(fieldValue);
+          let valueToSave: string;
+          
+          if (Array.isArray(fieldValue)) {
+            valueToSave = JSON.stringify(fieldValue);
+          } else if (typeof fieldValue === 'boolean') {
+            valueToSave = fieldValue.toString();
+          } else {
+            valueToSave = String(fieldValue);
+          }
           
           await supabase
             .from("landing_page_data")
@@ -271,6 +288,21 @@ const EditLandingPage = () => {
             value={Array.isArray(value) ? value : (value ? [String(value)] : [])}
             onChange={(newValue) => handleFieldChange(field.field_name, newValue as string[])}
           />
+        );
+      
+      case 'checkbox':
+        return (
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id={field.field_name}
+              checked={typeof value === 'boolean' ? value : false}
+              onCheckedChange={(checked) => handleFieldChange(field.field_name, !!checked)}
+            />
+            <Label htmlFor={field.field_name}>
+              {field.field_label}
+              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+          </div>
         );
       
       case 'textarea':
