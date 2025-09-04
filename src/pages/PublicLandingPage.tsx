@@ -213,7 +213,7 @@ const PublicLandingPage = () => {
           </nav>
 
           {/* CTA Button */}
-          <Button onClick={handleWhatsAppClick} className="bg-green-600 hover:bg-green-700 text-white">
+          <Button className="bg-green-600 hover:bg-green-700 text-white trigger-flut">
             <MessageCircle className="h-4 w-4 mr-2" />
             Fale Conosco
           </Button>
@@ -234,9 +234,8 @@ const PublicLandingPage = () => {
               </p>
             )}
             <Button 
-              onClick={handleWhatsAppClick} 
               size="lg" 
-              className="bg-green-600 hover:bg-green-700 text-white text-lg px-8 py-4"
+              className="bg-green-600 hover:bg-green-700 text-white text-lg px-8 py-4 trigger-flut"
             >
               <MessageCircle className="h-5 w-5 mr-3" />
               Vamos Conversar?
@@ -335,15 +334,15 @@ const PublicLandingPage = () => {
                 Conheça todos os detalhes e acabamentos do seu futuro lar
               </p>
               <div className="flex flex-wrap gap-4">
-                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-gray-900">
+                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-gray-900 trigger-flut">
                   <ImageIcon className="h-4 w-4 mr-2" />
                   Galeria
                 </Button>
-                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-gray-900">
+                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-gray-900 trigger-flut">
                   <Play className="h-4 w-4 mr-2" />
                   Youtube
                 </Button>
-                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-gray-900">
+                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-gray-900 trigger-flut">
                   <MapPin className="h-4 w-4 mr-2" />
                   Mapa
                 </Button>
@@ -490,9 +489,8 @@ const PublicLandingPage = () => {
                   </p>
                 )}
                 <Button 
-                  onClick={handleWhatsAppClick} 
                   size="lg"
-                  className="bg-green-600 hover:bg-green-700 text-white text-lg px-8 py-4"
+                  className="bg-green-600 hover:bg-green-700 text-white text-lg px-8 py-4 trigger-flut"
                 >
                   <MessageCircle className="h-5 w-5 mr-3" />
                   Vamos Conversar?
@@ -599,12 +597,6 @@ const PublicLandingPage = () => {
         </div>
       </footer>
 
-      {/* Floating WhatsApp Button */}
-      {landingData.broker_whatsapp && (
-        <div className="fixed bottom-6 right-6 z-40">
-          <PulsatingWhatsAppButton onClick={handleWhatsAppClick} />
-        </div>
-      )}
     </div>
   );
 };
