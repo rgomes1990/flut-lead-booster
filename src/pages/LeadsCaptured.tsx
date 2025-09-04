@@ -111,6 +111,9 @@ const LeadsCaptured = () => {
         .order("created_at", { ascending: false })
         .range(offset, offset + itemsPerPage - 1);
 
+      console.log("Query executada com offset:", offset, "até:", offset + itemsPerPage - 1);
+      console.log("Dados retornados:", leadsData?.length, "Count:", count);
+
       if (error) throw error;
 
       // Set total count for pagination
