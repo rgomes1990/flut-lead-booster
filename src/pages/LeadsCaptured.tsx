@@ -798,8 +798,9 @@ const LeadsCaptured = () => {
                           changePage(currentPage + 1);
                         }}
                         disabled={currentPage === totalPages}
+                        style={{ backgroundColor: 'red', color: 'white' }}
                       >
-                        Próximo
+                        Próximo (Teste)
                       </Button>
                     </div>
                   </div>
