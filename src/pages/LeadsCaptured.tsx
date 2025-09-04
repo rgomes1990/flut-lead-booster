@@ -40,6 +40,7 @@ interface Lead {
 }
 
 const LeadsCaptured = () => {
+  console.log("🚀 LeadsCaptured component renderizado!");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -62,15 +63,27 @@ const LeadsCaptured = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalCount);
 
+  console.log("PAGINAÇÃO - Estado atual:", {
+    currentPage,
+    itemsPerPage,
+    totalCount,
+    totalPages,
+    startIndex,
+    endIndex
+  });
+
   useEffect(() => {
+    console.log("useEffect [userProfile, currentPage, itemsPerPage] disparado");
     if (userProfile) {
       loadLeads();
     }
   }, [userProfile, currentPage, itemsPerPage]);
 
   useEffect(() => {
+    console.log("useEffect [searchTerm] disparado, searchTerm:", searchTerm);
     // Reset to first page when search changes
     if (currentPage !== 1) {
+      console.log("Resetando para página 1 devido a mudança na pesquisa");
       setCurrentPage(1);
     } else {
       loadLeads();
