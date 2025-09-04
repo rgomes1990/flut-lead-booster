@@ -792,15 +792,16 @@ const LeadsCaptured = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => {
+                          alert("BOTÃO CLICADO!");
                           console.log("🔥 BOTÃO PRÓXIMO CLICADO!");
                           console.log("currentPage atual:", currentPage);
                           console.log("totalPages:", totalPages);
                           changePage(currentPage + 1);
                         }}
-                        disabled={currentPage === totalPages}
-                        style={{ backgroundColor: 'red', color: 'white' }}
+                        disabled={false}
+                        style={{ backgroundColor: 'red', color: 'white', zIndex: 9999 }}
                       >
-                        Próximo (Teste)
+                        TESTE CLIQUE
                       </Button>
                     </div>
                   </div>
