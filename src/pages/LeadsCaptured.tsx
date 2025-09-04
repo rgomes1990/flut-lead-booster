@@ -550,17 +550,6 @@ const LeadsCaptured = () => {
                   </span>
                 </div>
               </div>
-              {userProfile?.user_type === 'admin' && (
-                <Button 
-                  onClick={reprocessAllLeads}
-                  disabled={reprocessing}
-                  className="flex items-center gap-2"
-                  variant="outline"
-                >
-                  <RefreshCw className={`h-4 w-4 ${reprocessing ? 'animate-spin' : ''}`} />
-                  {reprocessing ? 'Reprocessando...' : 'Reprocessar Leads'}
-                </Button>
-              )}
             </div>
           </CardHeader>
           <CardContent className="p-6">

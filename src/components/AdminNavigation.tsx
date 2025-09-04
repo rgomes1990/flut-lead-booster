@@ -66,7 +66,7 @@ const AdminNavigation = () => {
       label: "Landing",
       icon: PlusCircle,
       path: "/landing-pages",
-      roles: ["admin", "client"]
+      roles: ["admin"]
     }
   ];
 
