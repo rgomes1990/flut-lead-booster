@@ -791,7 +791,12 @@ const LeadsCaptured = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => changePage(currentPage + 1)}
+                        onClick={() => {
+                          console.log("🔥 BOTÃO PRÓXIMO CLICADO!");
+                          console.log("currentPage atual:", currentPage);
+                          console.log("totalPages:", totalPages);
+                          changePage(currentPage + 1);
+                        }}
                         disabled={currentPage === totalPages}
                       >
                         Próximo
