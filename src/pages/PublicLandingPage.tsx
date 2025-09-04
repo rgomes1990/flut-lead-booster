@@ -2,9 +2,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useParams } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Phone, Mail, MessageCircle } from "lucide-react";
+import { Phone, Mail, MessageCircle, MapPin, Calendar, Video, Image as ImageIcon, Play, School, Hospital, ShoppingCart } from "lucide-react";
 
 interface LandingPageData {
   [key: string]: string;
@@ -119,213 +118,433 @@ const PublicLandingPage = () => {
     );
   }
 
+  const parseImages = (imageField: string) => {
+    try {
+      return JSON.parse(imageField);
+    } catch {
+      return imageField ? [imageField] : [];
+    }
+  };
+
+  const galleryImages = landingData.gallery_images ? parseImages(landingData.gallery_images) : [];
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Banner Section */}
-      <section className="relative h-[60vh] bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white">
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl md:text-6xl font-bold">
-            {landingData.banner_title || landingPage.name}
-          </h1>
-          {landingData.banner_subtitle && (
-            <p className="text-xl md:text-2xl opacity-90">
-              {landingData.banner_subtitle}
-            </p>
-          )}
+    <div className="min-h-screen bg-white">
+      {/* Fixed Header */}
+      <header className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm shadow-sm z-50">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center">
+            {landingData.banner_logo ? (
+              <img src={landingData.banner_logo} alt="Logo" className="h-10 w-auto" />
+            ) : (
+              <div className="text-xl font-bold text-gray-900">{landingPage.name}</div>
+            )}
+          </div>
+          
+          {/* Navigation */}
+          <nav className="hidden md:flex items-center space-x-8">
+            <a href="#empreendimento" className="text-gray-700 hover:text-gray-900 transition-colors">O Empreendimento</a>
+            <a href="#plantas" className="text-gray-700 hover:text-gray-900 transition-colors">Plantas</a>
+            <a href="#lazer" className="text-gray-700 hover:text-gray-900 transition-colors">Lazer</a>
+            <a href="#localizacao" className="text-gray-700 hover:text-gray-900 transition-colors">Localização</a>
+            <a href="#galeria" className="text-gray-700 hover:text-gray-900 transition-colors">Fotos</a>
+          </nav>
+
+          {/* CTA Button */}
+          <Button onClick={handleWhatsAppClick} className="bg-green-600 hover:bg-green-700 text-white">
+            <MessageCircle className="h-4 w-4 mr-2" />
+            Fale Conosco
+          </Button>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex items-center pt-20">
+        <div className="max-w-7xl mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
+          {/* Left Side - Text */}
+          <div className="bg-gray-900 text-white p-12 rounded-lg">
+            <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
+              {landingData.banner_title || landingPage.name}
+            </h1>
+            {landingData.banner_subtitle && (
+              <p className="text-xl mb-8 text-gray-300 leading-relaxed">
+                {landingData.banner_subtitle}
+              </p>
+            )}
+            <Button 
+              onClick={handleWhatsAppClick} 
+              size="lg" 
+              className="bg-green-600 hover:bg-green-700 text-white text-lg px-8 py-4"
+            >
+              <MessageCircle className="h-5 w-5 mr-3" />
+              Vamos Conversar?
+            </Button>
+          </div>
+          
+          {/* Right Side - Image */}
+          <div className="relative">
+            {landingData.banner_image ? (
+              <img 
+                src={landingData.banner_image} 
+                alt="Banner" 
+                className="w-full h-[600px] object-cover rounded-lg shadow-xl"
+              />
+            ) : (
+              <div className="w-full h-[600px] bg-gray-200 rounded-lg flex items-center justify-center">
+                <p className="text-gray-500">Imagem do banner</p>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
-      <div className="container mx-auto px-4 py-12 space-y-12">
-        {/* Descrição */}
-        {landingData.description_content && (
-          <section>
-            <Card>
-              <CardContent className="p-8">
-                <h2 className="text-3xl font-bold mb-6">
-                  {landingData.description_title || 'Sobre o Imóvel'}
-                </h2>
-                <div className="text-lg leading-relaxed whitespace-pre-line">
+      {/* About Section */}
+      <section id="empreendimento" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Left Side - Building Image */}
+            <div>
+              {landingData.description_image ? (
+                <img 
+                  src={landingData.description_image} 
+                  alt="Empreendimento" 
+                  className="w-full h-[500px] object-cover rounded-lg shadow-lg"
+                />
+              ) : (
+                <div className="w-full h-[500px] bg-gray-200 rounded-lg flex items-center justify-center">
+                  <p className="text-gray-500">Imagem do empreendimento</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Right Side - Text */}
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">
+                {landingData.description_title || `Conheça o novo ${landingPage.name}`}
+              </h2>
+              {landingData.description_content && (
+                <div className="text-lg leading-relaxed text-gray-700 mb-8">
                   {landingData.description_content}
                 </div>
-              </CardContent>
-            </Card>
-          </section>
-        )}
-
-        {/* Informações Técnicas */}
-        <section>
-          <Card>
-            <CardContent className="p-8">
-              <h2 className="text-3xl font-bold mb-6">
-                {landingData.info_title || 'Informações do Imóvel'}
-              </h2>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {landingData.info_price && (
-                  <div className="text-center p-4 bg-primary/10 rounded-lg">
-                    <div className="text-2xl font-bold text-primary">{landingData.info_price}</div>
-                    <div className="text-muted-foreground">Valor</div>
+              )}
+              
+              {/* Technical Info Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
+                {landingData.info_area && (
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-gray-900">{landingData.info_area}</div>
+                    <div className="text-sm text-gray-600">Metragem</div>
                   </div>
                 )}
                 {landingData.info_rooms && (
-                  <div className="text-center p-4 bg-secondary/10 rounded-lg">
-                    <div className="text-2xl font-bold text-secondary">{landingData.info_rooms}</div>
-                    <div className="text-muted-foreground">Quartos</div>
-                  </div>
-                )}
-                {landingData.info_bathrooms && (
-                  <div className="text-center p-4 bg-primary/10 rounded-lg">
-                    <div className="text-2xl font-bold text-primary">{landingData.info_bathrooms}</div>
-                    <div className="text-muted-foreground">Banheiros</div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-gray-900">{landingData.info_rooms}</div>
+                    <div className="text-sm text-gray-600">Suítes</div>
                   </div>
                 )}
                 {landingData.info_parking && (
-                  <div className="text-center p-4 bg-secondary/10 rounded-lg">
-                    <div className="text-2xl font-bold text-secondary">{landingData.info_parking}</div>
-                    <div className="text-muted-foreground">Vagas</div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-gray-900">{landingData.info_parking}</div>
+                    <div className="text-sm text-gray-600">Vagas</div>
                   </div>
                 )}
-                {landingData.info_area && (
-                  <div className="text-center p-4 bg-primary/10 rounded-lg">
-                    <div className="text-2xl font-bold text-primary">{landingData.info_area}</div>
-                    <div className="text-muted-foreground">Área</div>
-                  </div>
-                )}
-                {landingData.info_type && (
-                  <div className="text-center p-4 bg-secondary/10 rounded-lg">
-                    <div className="text-2xl font-bold text-secondary">{landingData.info_type}</div>
-                    <div className="text-muted-foreground">Tipo</div>
+                {landingData.info_price && (
+                  <div className="text-center p-4 bg-gray-50 rounded-lg col-span-2 md:col-span-3">
+                    <div className="text-2xl font-bold text-green-600">{landingData.info_price}</div>
+                    <div className="text-sm text-gray-600">Valor</div>
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* Localização */}
-        {landingData.location_address && (
-          <section>
-            <Card>
-              <CardContent className="p-8">
-                <h2 className="text-3xl font-bold mb-6">
-                  {landingData.location_title || 'Localização'}
-                </h2>
-                <div className="space-y-4">
-                  <div className="text-lg">
-                    <strong>Endereço:</strong> {landingData.location_address}
-                  </div>
-                  {landingData.location_neighborhood && (
-                    <div className="text-lg">
-                      <strong>Bairro:</strong> {landingData.location_neighborhood}
-                    </div>
-                  )}
-                  {landingData.location_city && (
-                    <div className="text-lg">
-                      <strong>Cidade:</strong> {landingData.location_city}
-                    </div>
-                  )}
-                  {landingData.location_description && (
-                    <div className="text-lg leading-relaxed whitespace-pre-line">
-                      {landingData.location_description}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-        )}
-
-        {/* Área de Lazer */}
-        {landingData.leisure_items && (
-          <section>
-            <Card>
-              <CardContent className="p-8">
-                <h2 className="text-3xl font-bold mb-6">
-                  {landingData.leisure_title || 'Área de Lazer'}
-                </h2>
-                {landingData.leisure_subtitle && (
-                  <p className="text-lg mb-6 text-muted-foreground">{landingData.leisure_subtitle}</p>
-                )}
-                <div className="grid md:grid-cols-2 gap-4">
-                  {landingData.leisure_items.split('\n').filter(item => item.trim()).map((item, index) => (
-                    <div key={index} className="flex items-center space-x-2 p-3 bg-primary/5 rounded-lg">
-                      <div className="w-2 h-2 bg-primary rounded-full"></div>
-                      <span>{item.trim()}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-        )}
-
-        {/* Sobre o Corretor */}
-        {landingData.broker_name && (
-          <section>
-            <Card>
-              <CardContent className="p-8">
-                <h2 className="text-3xl font-bold mb-6">Sobre o Corretor</h2>
-                <div className="grid md:grid-cols-3 gap-8">
-                  <div className="md:col-span-1">
-                    <div className="w-48 h-48 bg-muted rounded-full mx-auto flex items-center justify-center text-muted-foreground">
-                      Foto do Corretor
-                    </div>
-                  </div>
-                  <div className="md:col-span-2 space-y-4">
-                    <h3 className="text-2xl font-bold">{landingData.broker_name}</h3>
-                    {landingData.broker_creci && (
-                      <p className="text-lg">
-                        <strong>CRECI:</strong> {landingData.broker_creci}
-                      </p>
-                    )}
-                    {landingData.broker_description && (
-                      <p className="text-lg leading-relaxed whitespace-pre-line">
-                        {landingData.broker_description}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap gap-4 pt-4">
-                      {landingData.broker_whatsapp && (
-                        <Button onClick={handleWhatsAppClick} className="bg-green-600 hover:bg-green-700">
-                          <MessageCircle className="h-4 w-4 mr-2" />
-                          WhatsApp
-                        </Button>
-                      )}
-                      {landingData.broker_phone && (
-                        <Button onClick={handlePhoneClick} variant="outline">
-                          <Phone className="h-4 w-4 mr-2" />
-                          Telefone
-                        </Button>
-                      )}
-                      {landingData.broker_email && (
-                        <Button onClick={handleEmailClick} variant="outline">
-                          <Mail className="h-4 w-4 mr-2" />
-                          E-mail
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-        )}
-
-        {/* Rodapé */}
-        {landingData.footer_text && (
-          <footer className="text-center py-8 border-t">
-            <div className="text-muted-foreground whitespace-pre-line">
-              {landingData.footer_text}
             </div>
-          </footer>
-        )}
-      </div>
+          </div>
+        </div>
+      </section>
 
-      {/* Botão flutuante do WhatsApp */}
+      {/* Action Section */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Left Side - Text */}
+            <div className="bg-gray-900 text-white p-12 rounded-lg">
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">
+                Visite nosso decorado ou faça um Tour virtual
+              </h2>
+              <p className="text-xl text-gray-300 mb-8">
+                Conheça todos os detalhes e acabamentos do seu futuro lar
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-gray-900">
+                  <ImageIcon className="h-4 w-4 mr-2" />
+                  Galeria
+                </Button>
+                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-gray-900">
+                  <Play className="h-4 w-4 mr-2" />
+                  Youtube
+                </Button>
+                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-gray-900">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Mapa
+                </Button>
+              </div>
+            </div>
+            
+            {/* Right Side - Building Image */}
+            <div>
+              {landingData.action_image ? (
+                <img 
+                  src={landingData.action_image} 
+                  alt="Prédio" 
+                  className="w-full h-[400px] object-cover rounded-lg shadow-lg"
+                />
+              ) : (
+                <div className="w-full h-[400px] bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <p className="text-white text-lg">Imagem do prédio</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Location Section */}
+      {landingData.location_address && (
+        <section id="localizacao" className="py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              {/* Left Side - Aerial Image */}
+              <div>
+                {landingData.location_image ? (
+                  <img 
+                    src={landingData.location_image} 
+                    alt="Localização" 
+                    className="w-full h-[500px] object-cover rounded-lg shadow-lg"
+                  />
+                ) : (
+                  <div className="w-full h-[500px] bg-gray-200 rounded-lg flex items-center justify-center">
+                    <MapPin className="h-12 w-12 text-gray-400" />
+                  </div>
+                )}
+              </div>
+              
+              {/* Right Side - Text */}
+              <div>
+                <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">
+                  Conheça mais sobre o bairro
+                </h2>
+                <p className="text-lg text-gray-700 mb-8">
+                  {landingData.location_description || "Uma localização privilegiada com tudo por perto."}
+                </p>
+                
+                {/* Conveniences */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <School className="h-6 w-6 text-blue-600" />
+                    <span className="text-gray-700">Escolas próximas</span>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <Hospital className="h-6 w-6 text-red-600" />
+                    <span className="text-gray-700">Hospitais</span>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <ShoppingCart className="h-6 w-6 text-green-600" />
+                    <span className="text-gray-700">Shopping centers</span>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <MapPin className="h-6 w-6 text-purple-600" />
+                    <span className="text-gray-700">Parques</span>
+                  </div>
+                </div>
+                
+                {/* Address */}
+                <div className="bg-gray-900 text-white p-6 rounded-lg">
+                  <h3 className="text-xl font-bold mb-2">Endereço</h3>
+                  <p className="text-gray-300">
+                    {landingData.location_address}
+                    {landingData.location_neighborhood && `, ${landingData.location_neighborhood}`}
+                    {landingData.location_city && `, ${landingData.location_city}`}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Gallery Section */}
+      {galleryImages.length > 0 && (
+        <section id="galeria" className="py-20 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-gray-900">
+              Galeria de Imagens
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {galleryImages.map((image: string, index: number) => (
+                <div key={index} className="relative overflow-hidden rounded-lg shadow-lg group">
+                  <img 
+                    src={image} 
+                    alt={`Galeria ${index + 1}`}
+                    className="w-full h-80 object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Broker Section */}
+      {landingData.broker_name && (
+        <section className="py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              {/* Left Side - Photo */}
+              <div className="text-center">
+                {landingData.broker_photo ? (
+                  <img 
+                    src={landingData.broker_photo} 
+                    alt={landingData.broker_name}
+                    className="w-80 h-80 object-cover rounded-full mx-auto shadow-xl"
+                  />
+                ) : (
+                  <div className="w-80 h-80 bg-gray-200 rounded-full mx-auto flex items-center justify-center">
+                    <p className="text-gray-500">Foto do corretor</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Right Side - Info */}
+              <div>
+                <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
+                  Eu sou o {landingData.broker_name}
+                </h2>
+                {landingData.broker_creci && (
+                  <p className="text-lg text-gray-600 mb-4">
+                    CRECI: {landingData.broker_creci}
+                  </p>
+                )}
+                {landingData.broker_description && (
+                  <p className="text-lg text-gray-700 mb-8 leading-relaxed">
+                    {landingData.broker_description}
+                  </p>
+                )}
+                <Button 
+                  onClick={handleWhatsAppClick} 
+                  size="lg"
+                  className="bg-green-600 hover:bg-green-700 text-white text-lg px-8 py-4"
+                >
+                  <MessageCircle className="h-5 w-5 mr-3" />
+                  Vamos Conversar?
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Amenities Section */}
+      {landingData.leisure_items && (
+        <section id="lazer" className="py-20 bg-gray-900 text-white">
+          <div className="max-w-7xl mx-auto px-4 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">
+              {landingData.leisure_title || 'Diferenciais e Lazer'}
+            </h2>
+            {landingData.leisure_subtitle && (
+              <p className="text-xl text-gray-300 mb-12">
+                {landingData.leisure_subtitle}
+              </p>
+            )}
+            
+            {/* Featured Amenity Image */}
+            {landingData.leisure_image && (
+              <div className="mb-12">
+                <img 
+                  src={landingData.leisure_image} 
+                  alt="Lazer em destaque"
+                  className="w-full max-w-2xl mx-auto h-64 object-cover rounded-lg shadow-xl"
+                />
+              </div>
+            )}
+            
+            {/* Amenities List */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {landingData.leisure_items.split('\n').filter(item => item.trim()).map((item, index) => (
+                <div key={index} className="bg-gray-800 p-4 rounded-lg text-center">
+                  <span className="text-white">{item.trim()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid md:grid-cols-4 gap-8">
+            {/* Logo and About */}
+            <div className="md:col-span-2">
+              {landingData.banner_logo ? (
+                <img src={landingData.banner_logo} alt="Logo" className="h-12 w-auto mb-4" />
+              ) : (
+                <div className="text-2xl font-bold mb-4">{landingPage.name}</div>
+              )}
+              <p className="text-gray-400 leading-relaxed">
+                {landingData.footer_text || "Sobre a empresa - Especialista em imóveis de alto padrão."}
+              </p>
+            </div>
+            
+            {/* Menu Links */}
+            <div>
+              <h3 className="text-lg font-bold mb-4">Menu</h3>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#empreendimento" className="hover:text-white transition-colors">O Empreendimento</a></li>
+                <li><a href="#plantas" className="hover:text-white transition-colors">Plantas</a></li>
+                <li><a href="#lazer" className="hover:text-white transition-colors">Lazer</a></li>
+                <li><a href="#localizacao" className="hover:text-white transition-colors">Localização</a></li>
+                <li><a href="#galeria" className="hover:text-white transition-colors">Fotos</a></li>
+              </ul>
+            </div>
+            
+            {/* Contact */}
+            <div>
+              <h3 className="text-lg font-bold mb-4">Contato</h3>
+              <div className="space-y-2 text-gray-400">
+                {landingData.broker_phone && (
+                  <p className="flex items-center">
+                    <Phone className="h-4 w-4 mr-2" />
+                    {landingData.broker_phone}
+                  </p>
+                )}
+                {landingData.broker_whatsapp && (
+                  <p className="flex items-center">
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    {landingData.broker_whatsapp}
+                  </p>
+                )}
+                {landingData.broker_email && (
+                  <p className="flex items-center">
+                    <Mail className="h-4 w-4 mr-2" />
+                    {landingData.broker_email}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
+            <p>&copy; 2024 {landingPage.name}. Todos os direitos reservados.</p>
+          </div>
+        </div>
+      </footer>
+
+      {/* Floating WhatsApp Button */}
       {landingData.broker_whatsapp && (
-        <div className="fixed bottom-6 right-6">
+        <div className="fixed bottom-6 right-6 z-40">
           <Button
             onClick={handleWhatsAppClick}
             size="lg"
-            className="rounded-full w-16 h-16 bg-green-600 hover:bg-green-700 shadow-lg"
+            className="rounded-full w-16 h-16 bg-green-600 hover:bg-green-700 shadow-2xl animate-pulse"
           >
             <MessageCircle className="h-8 w-8" />
           </Button>
