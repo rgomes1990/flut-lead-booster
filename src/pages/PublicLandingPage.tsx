@@ -23,12 +23,28 @@ const PublicLandingPage = () => {
   const [landingData, setLandingData] = useState<LandingPageData>({});
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [userSiteId, setUserSiteId] = useState<string | null>(null);
 
   useEffect(() => {
     if (slug) {
       loadPublicLandingPage();
     }
   }, [slug]);
+
+  useEffect(() => {
+    if (userSiteId) {
+      // Adicionar script do widget dinamicamente
+      const script = document.createElement('script');
+      script.src = `https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/widget-script?siteId=${userSiteId}`;
+      script.async = true;
+      document.body.appendChild(script);
+
+      return () => {
+        // Cleanup - remover script quando componente for desmontado
+        document.body.removeChild(script);
+      };
+    }
+  }, [userSiteId]);
 
   const loadPublicLandingPage = async () => {
     try {
@@ -50,6 +66,19 @@ const PublicLandingPage = () => {
       }
 
       setLandingPage(pageData);
+
+      // Buscar site do usuário para usar o script do WhatsApp
+      const { data: siteData, error: siteError } = await supabase
+        .from("sites")
+        .select("id")
+        .eq("user_id", pageData.user_id)
+        .eq("is_active", true)
+        .limit(1)
+        .single();
+
+      if (!siteError && siteData) {
+        setUserSiteId(siteData.id);
+      }
 
       // Carregar dados salvos da landing page
       const { data: savedData, error: dataError } = await supabase
@@ -136,19 +165,26 @@ const PublicLandingPage = () => {
       return imagePath;
     }
     
-    // Se a imagem começa com "uploaded/", é um mock - usar from public folder
+    // Se a imagem começa com "uploaded/", é um mock - mapear para uma das imagens existentes
     if (imagePath.startsWith('uploaded/')) {
-      // Extract the original filename without the timestamp
+      // Mapear para imagens existentes no public/lovable-uploads baseado no nome
       const fileName = imagePath.replace('uploaded/', '').replace(/-\d+$/, '');
-      return `/lovable-uploads/${fileName}`;
+      
+      // Lista de mapeamentos conhecidos
+      const imageMappings: Record<string, string> = {
+        'logo-flut.svg': '/lovable-uploads/55c0da45-185f-4e1a-9bb7-be853452bb0f.png',
+        'banner-right.webp': '/lovable-uploads/7e3e4947-1420-463e-9783-4a6efb0c47ca.png', 
+        'sobre-left.webp': '/lovable-uploads/f5619431-8313-40c2-84d7-beabfa0ba9cc.png',
+        'foto1.webp': '/lovable-uploads/7e3e4947-1420-463e-9783-4a6efb0c47ca.png',
+        'foto2.webp': '/lovable-uploads/f5619431-8313-40c2-84d7-beabfa0ba9cc.png',
+        'foto3.webp': '/lovable-uploads/55c0da45-185f-4e1a-9bb7-be853452bb0f.png'
+      };
+      
+      return imageMappings[fileName] || '/lovable-uploads/55c0da45-185f-4e1a-9bb7-be853452bb0f.png';
     }
     
-    // Se a imagem não tem prefixo, assumir que é do Supabase Storage
-    const { data } = supabase.storage
-      .from('images')
-      .getPublicUrl(imagePath);
-    
-    return data.publicUrl;
+    // Se não tem prefixo, assumir que é do Supabase Storage
+    return imagePath;
   };
 
   const galleryImages = landingData.gallery_images ? parseImages(landingData.gallery_images) : [];

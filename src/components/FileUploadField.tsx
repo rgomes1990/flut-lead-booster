@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, X, FileImage } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FileUploadFieldProps {
   id: string;
@@ -39,10 +40,23 @@ const FileUploadField = ({
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
-        // Simulate file upload - In a real app, you'd upload to Supabase Storage
-        // For now, we'll create a mock URL
-        const mockUrl = `uploaded/${file.name}-${Date.now()}`;
-        uploadedUrls.push(mockUrl);
+        // Create unique filename
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+        
+        // Upload to Supabase Storage
+        const { data, error } = await supabase.storage
+          .from('images')
+          .upload(fileName, file);
+
+        if (error) throw error;
+        
+        // Get public URL
+        const { data: publicUrlData } = supabase.storage
+          .from('images')
+          .getPublicUrl(fileName);
+        
+        uploadedUrls.push(publicUrlData.publicUrl);
       }
 
       if (multiple) {
