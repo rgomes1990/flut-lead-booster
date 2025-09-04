@@ -364,13 +364,18 @@ const LeadsCaptured = () => {
 
   // Simple pagination function
   const changePage = (newPage: number) => {
-    console.log("Tentando mudar para página:", newPage, "Total páginas:", totalPages);
+    console.log("🎯 changePage function INICIADA");
+    console.log("🎯 Parâmetros:", { newPage, currentPage, totalPages });
+    
     if (newPage >= 1 && newPage <= totalPages) {
-      console.log("Mudando página para:", newPage);
+      console.log("🎯 Condição válida - MUDANDO PÁGINA para:", newPage);
       setCurrentPage(newPage);
+      console.log("🎯 setCurrentPage chamado com:", newPage);
     } else {
-      console.log("Página inválida:", newPage);
+      console.log("🎯 Página inválida:", newPage, "Range válido: 1 a", totalPages);
     }
+    
+    console.log("🎯 changePage function FINALIZADA");
   };
 
   const handleViewMessage = async (lead: Lead) => {
