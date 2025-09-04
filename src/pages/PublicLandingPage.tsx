@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Phone, Mail, MessageCircle, MapPin, Calendar, Video, Image as ImageIcon, Play, School, Hospital, ShoppingCart } from "lucide-react";
+import PulsatingWhatsAppButton from "@/components/PulsatingWhatsAppButton";
 
 interface LandingPageData {
   [key: string]: string;
@@ -126,6 +127,30 @@ const PublicLandingPage = () => {
     }
   };
 
+  // Helper function to get correct image URL
+  const getImageUrl = (imagePath: string) => {
+    if (!imagePath) return '';
+    
+    // Se a imagem já é uma URL completa, retorna como está
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    
+    // Se a imagem começa com "uploaded/", é um mock - usar from public folder
+    if (imagePath.startsWith('uploaded/')) {
+      // Extract the original filename without the timestamp
+      const fileName = imagePath.replace('uploaded/', '').replace(/-\d+$/, '');
+      return `/lovable-uploads/${fileName}`;
+    }
+    
+    // Se a imagem não tem prefixo, assumir que é do Supabase Storage
+    const { data } = supabase.storage
+      .from('images')
+      .getPublicUrl(imagePath);
+    
+    return data.publicUrl;
+  };
+
   const galleryImages = landingData.gallery_images ? parseImages(landingData.gallery_images) : [];
 
   return (
@@ -135,8 +160,8 @@ const PublicLandingPage = () => {
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center">
-            {landingData.banner_logo ? (
-              <img src={landingData.banner_logo} alt="Logo" className="h-10 w-auto" />
+            {landingData.logo_image ? (
+              <img src={getImageUrl(landingData.logo_image)} alt="Logo" className="h-10 w-auto" />
             ) : (
               <div className="text-xl font-bold text-gray-900">{landingPage.name}</div>
             )}
@@ -186,7 +211,7 @@ const PublicLandingPage = () => {
           <div className="relative">
             {landingData.banner_image ? (
               <img 
-                src={landingData.banner_image} 
+                src={getImageUrl(landingData.banner_image)} 
                 alt="Banner" 
                 className="w-full h-[600px] object-cover rounded-lg shadow-xl"
               />
@@ -207,7 +232,7 @@ const PublicLandingPage = () => {
             <div>
               {landingData.description_image ? (
                 <img 
-                  src={landingData.description_image} 
+                  src={getImageUrl(landingData.description_image)} 
                   alt="Empreendimento" 
                   className="w-full h-[500px] object-cover rounded-lg shadow-lg"
                 />
@@ -293,7 +318,7 @@ const PublicLandingPage = () => {
             <div>
               {landingData.action_image ? (
                 <img 
-                  src={landingData.action_image} 
+                  src={getImageUrl(landingData.action_image)} 
                   alt="Prédio" 
                   className="w-full h-[400px] object-cover rounded-lg shadow-lg"
                 />
@@ -316,7 +341,7 @@ const PublicLandingPage = () => {
               <div>
                 {landingData.location_image ? (
                   <img 
-                    src={landingData.location_image} 
+                    src={getImageUrl(landingData.location_image)} 
                     alt="Localização" 
                     className="w-full h-[500px] object-cover rounded-lg shadow-lg"
                   />
@@ -382,7 +407,7 @@ const PublicLandingPage = () => {
               {galleryImages.map((image: string, index: number) => (
                 <div key={index} className="relative overflow-hidden rounded-lg shadow-lg group">
                   <img 
-                    src={image} 
+                    src={getImageUrl(image)} 
                     alt={`Galeria ${index + 1}`}
                     className="w-full h-80 object-cover transition-transform duration-300 group-hover:scale-105"
                   />
@@ -402,7 +427,7 @@ const PublicLandingPage = () => {
               <div className="text-center">
                 {landingData.broker_photo ? (
                   <img 
-                    src={landingData.broker_photo} 
+                    src={getImageUrl(landingData.broker_photo)} 
                     alt={landingData.broker_name}
                     className="w-80 h-80 object-cover rounded-full mx-auto shadow-xl"
                   />
@@ -459,7 +484,7 @@ const PublicLandingPage = () => {
             {landingData.leisure_image && (
               <div className="mb-12">
                 <img 
-                  src={landingData.leisure_image} 
+                  src={getImageUrl(landingData.leisure_image)} 
                   alt="Lazer em destaque"
                   className="w-full max-w-2xl mx-auto h-64 object-cover rounded-lg shadow-xl"
                 />
@@ -484,8 +509,8 @@ const PublicLandingPage = () => {
           <div className="grid md:grid-cols-4 gap-8">
             {/* Logo and About */}
             <div className="md:col-span-2">
-              {landingData.banner_logo ? (
-                <img src={landingData.banner_logo} alt="Logo" className="h-12 w-auto mb-4" />
+              {landingData.logo_image ? (
+                <img src={getImageUrl(landingData.logo_image)} alt="Logo" className="h-12 w-auto mb-4" />
               ) : (
                 <div className="text-2xl font-bold mb-4">{landingPage.name}</div>
               )}
@@ -541,13 +566,7 @@ const PublicLandingPage = () => {
       {/* Floating WhatsApp Button */}
       {landingData.broker_whatsapp && (
         <div className="fixed bottom-6 right-6 z-40">
-          <Button
-            onClick={handleWhatsAppClick}
-            size="lg"
-            className="rounded-full w-16 h-16 bg-green-600 hover:bg-green-700 shadow-2xl animate-pulse"
-          >
-            <MessageCircle className="h-8 w-8" />
-          </Button>
+          <PulsatingWhatsAppButton onClick={handleWhatsAppClick} />
         </div>
       )}
     </div>
