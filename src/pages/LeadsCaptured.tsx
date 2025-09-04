@@ -80,8 +80,11 @@ const LeadsCaptured = () => {
   const loadLeads = async () => {
     try {
       setLoading(true);
+      console.log("=== loadLeads chamada ===");
+      console.log("currentPage:", currentPage, "itemsPerPage:", itemsPerPage, "searchTerm:", searchTerm);
       
       const offset = (currentPage - 1) * itemsPerPage;
+      console.log("offset calculado:", offset);
       let query = supabase.from("leads").select("*", { count: 'exact' });
       
       // Build search filters
@@ -111,7 +114,9 @@ const LeadsCaptured = () => {
       if (error) throw error;
 
       // Set total count for pagination
+      console.log("Count retornado:", count, "Leads data length:", leadsData?.length);
       setTotalCount(count || 0);
+      console.log("totalCount definido para:", count || 0);
 
       if (leadsData && leadsData.length > 0) {
         // Get client and profile information for the current page only
@@ -336,14 +341,19 @@ const LeadsCaptured = () => {
   };
 
   const handleItemsPerPageChange = (value: string) => {
+    console.log("Mudando items per page:", value);
     setItemsPerPage(parseInt(value));
     setCurrentPage(1); // Reset to first page when items per page changes
   };
 
   // Simple pagination function
   const changePage = (newPage: number) => {
+    console.log("Tentando mudar para página:", newPage, "Total páginas:", totalPages);
     if (newPage >= 1 && newPage <= totalPages) {
+      console.log("Mudando página para:", newPage);
       setCurrentPage(newPage);
+    } else {
+      console.log("Página inválida:", newPage);
     }
   };
 
