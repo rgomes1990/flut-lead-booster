@@ -42,6 +42,7 @@ interface Lead {
 const LeadsCaptured = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [reprocessing, setReprocessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -52,44 +53,45 @@ const LeadsCaptured = () => {
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const { userProfile } = useAuth();
   const { toast } = useToast();
 
-  // Calculate pagination
-  const totalItems = filteredLeads.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  // Calculate server-side pagination
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-  const displayedLeads = filteredLeads.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + itemsPerPage, totalCount);
 
   useEffect(() => {
     if (userProfile) {
       loadLeads();
     }
-  }, [userProfile]);
+  }, [userProfile, currentPage, itemsPerPage]);
 
   useEffect(() => {
-    const filtered = leads.filter(lead =>
-      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.phone.includes(searchTerm) ||
-      lead.website_url.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.profile?.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredLeads(filtered);
-    setCurrentPage(1); // Reset to first page when search changes
-  }, [searchTerm, leads]);
+    // Reset to first page when search changes
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    } else {
+      loadLeads();
+    }
+  }, [searchTerm]);
 
   const loadLeads = async () => {
     try {
       setLoading(true);
       
-      let allLeads: any[] = [];
+      const offset = (currentPage - 1) * itemsPerPage;
+      let query = supabase.from("leads").select("*", { count: 'exact' });
       
-      // Se for cliente, filtrar apenas leads relacionados ao cliente
+      // Build search filters
+      if (searchTerm.trim()) {
+        query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,website_url.ilike.%${searchTerm}%`);
+      }
+      
+      // Filter by client if user is not admin
       if (userProfile?.user_type === 'client') {
-        // Primeiro, buscar o ID do cliente baseado no user_id
+        // First, get the client ID
         const { data: clientData } = await supabase
           .from("clients")
           .select("id")
@@ -97,125 +99,65 @@ const LeadsCaptured = () => {
           .single();
 
         if (clientData) {
-          // Carregar leads do cliente em lotes
-          let from = 0;
-          const batchSize = 1000;
-          
-          while (true) {
-            console.log(`Carregando lote ${Math.floor(from / batchSize) + 1} - leads ${from} a ${from + batchSize - 1}`);
-            
-            const { data: leadsData, error } = await supabase
-              .from("leads")
-              .select("*")
-              .eq('client_id', clientData.id)
-              .range(from, from + batchSize - 1)
-              .order("created_at", { ascending: false });
-
-            if (error) {
-              console.error("Erro ao carregar lote:", error);
-              throw error;
-            }
-
-            if (leadsData && leadsData.length > 0) {
-              allLeads = [...allLeads, ...leadsData];
-              console.log(`Lote carregado: ${leadsData.length} leads. Total acumulado: ${allLeads.length}`);
-              
-              // Se retornou menos que o tamanho do lote, não há mais dados
-              if (leadsData.length < batchSize) {
-                console.log("Último lote carregado (menos que 1000 leads)");
-                break;
-              }
-              
-              from += batchSize;
-            } else {
-              console.log("Nenhum lead encontrado neste lote");
-              break;
-            }
-          }
-        }
-      } else {
-        // Admin: carregar todos os leads em lotes
-        let from = 0;
-        const batchSize = 1000;
-        
-        while (true) {
-          console.log(`Carregando lote ${Math.floor(from / batchSize) + 1} - leads ${from} a ${from + batchSize - 1}`);
-          
-          const { data: leadsData, error } = await supabase
-            .from("leads")
-            .select("*")
-            .range(from, from + batchSize - 1)
-            .order("created_at", { ascending: false });
-
-          if (error) {
-            console.error("Erro ao carregar lote:", error);
-            throw error;
-          }
-
-          if (leadsData && leadsData.length > 0) {
-            allLeads = [...allLeads, ...leadsData];
-            console.log(`Lote carregado: ${leadsData.length} leads. Total acumulado: ${allLeads.length}`);
-            
-            // Se retornou menos que o tamanho do lote, não há mais dados
-            if (leadsData.length < batchSize) {
-              console.log("Último lote carregado (menos que 1000 leads)");
-              break;
-            }
-            
-            from += batchSize;
-          } else {
-            console.log("Nenhum lead encontrado neste lote");
-            break;
-          }
+          query = query.eq('client_id', clientData.id);
         }
       }
+      
+      // Apply pagination and ordering
+      const { data: leadsData, error, count } = await query
+        .order("created_at", { ascending: false })
+        .range(offset, offset + itemsPerPage - 1);
 
-      console.log(`Total de leads carregados: ${allLeads.length}`);
+      if (error) throw error;
 
-      // Buscar informações dos clientes separadamente
-      const clientIds = [...new Set(allLeads?.map(lead => lead.client_id))];
-      const { data: clientsData, error: clientsError } = await supabase
-        .from("clients")
-        .select(`
-          id,
-          user_id,
-          website_url
-        `)
-        .in("id", clientIds);
+      // Set total count for pagination
+      setTotalCount(count || 0);
 
-      if (clientsError) throw clientsError;
+      if (leadsData && leadsData.length > 0) {
+        // Get client and profile information for the current page only
+        const clientIds = [...new Set(leadsData.map(lead => lead.client_id))];
+        const { data: clientsData, error: clientsError } = await supabase
+          .from("clients")
+          .select("id, user_id, website_url")
+          .in("id", clientIds);
 
-      // Buscar perfis dos usuários
-      const userIds = [...new Set(clientsData?.map(client => client.user_id))];
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("user_id, name, email")
-        .in("user_id", userIds);
+        if (clientsError) throw clientsError;
 
-      if (profilesError) throw profilesError;
+        // Get user profiles
+        const userIds = [...new Set(clientsData?.map(client => client.user_id) || [])];
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("user_id, name, email")
+          .in("user_id", userIds);
 
-      // Combinar os dados e atualizar com UTM
-      const transformedLeads = allLeads?.map((lead: any) => {
-        const client = clientsData?.find(c => c.id === lead.client_id);
-        const profile = profilesData?.find(p => p.user_id === client?.user_id);
-        
-        const baseData = {
-          ...lead,
-          client: {
-            user_id: client?.user_id,
-            website_url: client?.website_url,
-          },
-          profile: {
-            name: profile?.name || 'N/A',
-            email: profile?.email || 'N/A',
-          }
-        };
+        if (profilesError) throw profilesError;
 
-        // Atualizar com dados UTM
-        return updateLeadWithUTMData(baseData);
-      }) || [];
+        // Transform and combine data
+        const transformedLeads = leadsData.map((lead: any) => {
+          const client = clientsData?.find(c => c.id === lead.client_id);
+          const profile = profilesData?.find(p => p.user_id === client?.user_id);
+          
+          const baseData = {
+            ...lead,
+            client: {
+              user_id: client?.user_id,
+              website_url: client?.website_url,
+            },
+            profile: {
+              name: profile?.name || 'N/A',
+              email: profile?.email || 'N/A',
+            }
+          };
 
-      setLeads(transformedLeads);
+          return updateLeadWithUTMData(baseData);
+        });
+
+        setLeads(transformedLeads);
+        setFilteredLeads(transformedLeads);
+      } else {
+        setLeads([]);
+        setFilteredLeads([]);
+      }
       
     } catch (error) {
       console.error("Erro ao carregar leads:", error);
@@ -490,7 +432,7 @@ const LeadsCaptured = () => {
 
   const handleSelectAll = (isSelected: boolean) => {
     if (isSelected) {
-      setSelectedLeads(displayedLeads.map(lead => lead.id));
+      setSelectedLeads(leads.map(lead => lead.id));
     } else {
       setSelectedLeads([]);
     }
@@ -655,12 +597,12 @@ const LeadsCaptured = () => {
                     <TableHeader>
                       <TableRow>
                         {userProfile?.user_type === 'admin' && (
-                          <TableHead className="w-12">
-                            <Checkbox 
-                              checked={selectedLeads.length === displayedLeads.length && displayedLeads.length > 0}
-                              onCheckedChange={handleSelectAll}
-                            />
-                          </TableHead>
+                           <TableHead className="w-12">
+                             <Checkbox 
+                               checked={selectedLeads.length === leads.length && leads.length > 0}
+                               onCheckedChange={handleSelectAll}
+                             />
+                           </TableHead>
                         )}
                         <TableHead className="w-48">Nome</TableHead>
                         <TableHead>Site</TableHead>
@@ -676,7 +618,7 @@ const LeadsCaptured = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {displayedLeads.map((lead, index) => (
+                      {leads.map((lead, index) => (
                         <TableRow key={lead.id}>
                           {userProfile?.user_type === 'admin' && (
                             <TableCell>
@@ -768,7 +710,7 @@ const LeadsCaptured = () => {
                     </TableBody>
                   </Table>
                   
-                  {displayedLeads.length === 0 && !loading && (
+                  {leads.length === 0 && !loading && (
                     <div className="text-center py-8">
                       <p className="text-muted-foreground">Nenhum lead encontrado.</p>
                     </div>
@@ -779,7 +721,7 @@ const LeadsCaptured = () => {
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6">
                     <div className="text-sm text-muted-foreground">
-                      Mostrando {startIndex + 1} até {endIndex} de {totalItems} resultados (Página {currentPage} de {totalPages})
+                      Mostrando {startIndex + 1} até {endIndex} de {totalCount} resultados (Página {currentPage} de {totalPages})
                     </div>
                     
                     <div className="flex items-center gap-2">
