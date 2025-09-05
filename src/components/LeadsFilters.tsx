@@ -77,9 +77,10 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
     // Extrair valores únicos dos dados filtrados
     const clients = [...new Set(filteredData.map(lead => lead.profile?.name).filter(Boolean))].sort();
     
-    // Para origens, usar todas as origens do sistema, mas ordenar colocando as que têm dados primeiro
-    const existingOrigins = [...new Set(filteredData.map(lead => lead.origin).filter(Boolean))];
-    const origins = [...existingOrigins.sort(), ...allOrigins.filter(origin => !existingOrigins.includes(origin)).sort()];
+    // Para origens, usar TODAS as origens que existem no conjunto completo de leads + as origens do sistema
+    const allExistingOrigins = [...new Set(leads.map(lead => lead.origin).filter(Boolean))];
+    const allUniqueOrigins = [...new Set([...allExistingOrigins, ...allOrigins])];
+    const origins = allUniqueOrigins.sort();
     
     const campaigns = [...new Set(filteredData.map(lead => lead.campaign).filter(Boolean))].sort();
     const adContents = [...new Set(filteredData.map(lead => lead.ad_content).filter(Boolean))].sort();
