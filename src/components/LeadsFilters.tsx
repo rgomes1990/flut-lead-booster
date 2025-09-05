@@ -41,6 +41,18 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
   const [selectedAudience, setSelectedAudience] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
 
+  // Definir todas as origens possíveis do sistema
+  const allOrigins = [
+    'Meta Ads',
+    'Google Ads', 
+    'Tráfego Direto',
+    'Instagram',
+    'UTM Campaign',
+    'Tráfego Orgânico',
+    'Facebook',
+    'Site Orgânico'
+  ];
+
   // Calcular dados únicos baseado nos filtros ativos
   const uniqueData = useMemo(() => {
     let filteredData = leads;
@@ -64,7 +76,11 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
 
     // Extrair valores únicos dos dados filtrados
     const clients = [...new Set(filteredData.map(lead => lead.profile?.name).filter(Boolean))].sort();
-    const origins = [...new Set(filteredData.map(lead => lead.origin).filter(Boolean))].sort();
+    
+    // Para origens, usar todas as origens do sistema, mas ordenar colocando as que têm dados primeiro
+    const existingOrigins = [...new Set(filteredData.map(lead => lead.origin).filter(Boolean))];
+    const origins = [...existingOrigins.sort(), ...allOrigins.filter(origin => !existingOrigins.includes(origin)).sort()];
+    
     const campaigns = [...new Set(filteredData.map(lead => lead.campaign).filter(Boolean))].sort();
     const adContents = [...new Set(filteredData.map(lead => lead.ad_content).filter(Boolean))].sort();
     const audiences = [...new Set(filteredData.map(lead => lead.audience).filter(Boolean))].sort();
