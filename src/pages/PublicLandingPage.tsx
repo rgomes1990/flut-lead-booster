@@ -37,11 +37,23 @@ const PublicLandingPage = () => {
       const script = document.createElement('script');
       script.src = `https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/widget-script?siteId=${userSiteId}`;
       script.async = true;
+      script.onload = () => {
+        console.log('Widget script loaded successfully');
+      };
+      script.onerror = () => {
+        console.error('Failed to load widget script');
+      };
       document.body.appendChild(script);
 
       return () => {
         // Cleanup - remover script quando componente for desmontado
-        document.body.removeChild(script);
+        try {
+          if (script.parentNode) {
+            document.body.removeChild(script);
+          }
+        } catch (error) {
+          console.warn('Error removing script:', error);
+        }
       };
     }
   }, [userSiteId]);
