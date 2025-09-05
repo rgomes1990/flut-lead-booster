@@ -15,6 +15,7 @@ interface LandingPage {
   name: string;
   slug: string;
   is_published: boolean;
+  user_id: string;
 }
 
 const PublicLandingPage = () => {
@@ -92,7 +93,7 @@ const PublicLandingPage = () => {
         .eq("user_id", pageData.user_id)
         .eq("is_active", true)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       console.log('Site encontrado:', siteData, 'Erro:', siteError);
 
@@ -101,6 +102,52 @@ const PublicLandingPage = () => {
         setUserSiteId(siteData.id);
       } else {
         console.warn('Nenhum site ativo encontrado para o usuário');
+        // Se não encontrar site, criar um automaticamente para esta landing page
+        const domain = `landing.${pageData.slug}.com`;
+        
+        const { data: newSite, error: createError } = await supabase
+          .from("sites")
+          .insert({
+            user_id: pageData.user_id,
+            domain: domain,
+            is_active: true
+          })
+          .select()
+          .single();
+
+        if (!createError && newSite) {
+          console.log('Site criado automaticamente:', newSite.id);
+          setUserSiteId(newSite.id);
+
+          // Buscar dados do perfil do usuário para criar configurações padrão
+          const { data: userProfile } = await supabase
+            .from("profiles")
+            .select("name, email")
+            .eq("user_id", pageData.user_id)
+            .single();
+
+          // Criar configurações padrão do site
+          await supabase
+            .from("site_configs")
+            .insert({
+              site_id: newSite.id,
+              company_name: userProfile?.name || "Empresa",
+              email: userProfile?.email || "",
+              phone: "",
+              attendant_name: userProfile?.name || "Atendente",
+              default_message: "Olá! Vim através da landing page.",
+              icon_type: "whatsapp",
+              icon_position: "bottom",
+              field_name: true,
+              field_email: true,
+              field_phone: true,
+              field_message: true,
+              field_capture_page: true,
+              is_active: true
+            });
+        } else {
+          console.error('Erro ao criar site automaticamente:', createError);
+        }
       }
 
       // Carregar dados salvos da landing page

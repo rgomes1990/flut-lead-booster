@@ -37,6 +37,7 @@ interface LandingPage {
   slug: string;
   is_published: boolean;
   profile_id: string;
+  user_id: string;
 }
 
 interface Step {
@@ -275,6 +276,107 @@ const EditLandingPage = () => {
     }
   };
 
+  const handlePublishToggle = async () => {
+    if (!landingPage) return;
+
+    try {
+      const newPublishStatus = !landingPage.is_published;
+      
+      // Atualizar status de publicação
+      const { error: updateError } = await supabase
+        .from("user_landing_pages")
+        .update({ is_published: newPublishStatus })
+        .eq("id", landingPage.id);
+
+      if (updateError) throw updateError;
+
+      // Se está sendo publicada, criar um site correspondente
+      if (newPublishStatus) {
+        const domain = `landing.${landingPage.slug}.com`;
+        
+        // Verificar se já existe um site com este domínio
+        const { data: existingSite } = await supabase
+          .from("sites")
+          .select("id")
+          .eq("domain", domain)
+          .eq("user_id", landingPage.user_id)
+          .maybeSingle();
+
+        if (!existingSite) {
+          // Criar novo site
+          const { data: newSite, error: siteError } = await supabase
+            .from("sites")
+            .insert({
+              user_id: landingPage.user_id,
+              domain: domain,
+              is_active: true
+            })
+            .select()
+            .single();
+
+          if (siteError) throw siteError;
+
+          // Buscar dados do perfil do usuário para criar configurações padrão
+          const { data: userProfile } = await supabase
+            .from("profiles")
+            .select("name, email")
+            .eq("user_id", landingPage.user_id)
+            .single();
+
+          // Criar configurações padrão do site
+          const { error: configError } = await supabase
+            .from("site_configs")
+            .insert({
+              site_id: newSite.id,
+              company_name: userProfile?.name || "Empresa",
+              email: userProfile?.email || "",
+              phone: "",
+              attendant_name: userProfile?.name || "Atendente",
+              default_message: "Olá! Vim através da landing page.",
+              icon_type: "whatsapp",
+              icon_position: "bottom",
+              field_name: true,
+              field_email: true,
+              field_phone: true,
+              field_message: true,
+              field_capture_page: true,
+              is_active: true
+            });
+
+          if (configError) throw configError;
+
+          toast({
+            title: "Landing page publicada!",
+            description: `Site criado automaticamente: ${domain}`,
+          });
+        } else {
+          toast({
+            title: "Landing page publicada!",
+            description: "Site já existia para esta landing page.",
+          });
+        }
+      }
+
+      // Atualizar estado local
+      setLandingPage(prev => prev ? { ...prev, is_published: newPublishStatus } : null);
+
+      toast({
+        title: newPublishStatus ? "Landing page publicada!" : "Landing page despublicada!",
+        description: newPublishStatus 
+          ? "Sua landing page está agora disponível publicamente."
+          : "Sua landing page não está mais pública.",
+      });
+
+    } catch (error: any) {
+      console.error("Error updating publish status:", error);
+      toast({
+        title: "Erro ao alterar status de publicação",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const renderField = (field: ProfileField) => {
     const value = landingData[field.field_name] || '';
     console.log("Rendering field:", field.field_name, "Type:", field.field_type, "Value:", value);
@@ -484,6 +586,12 @@ const EditLandingPage = () => {
                   Visualizar
                 </Button>
               )}
+              <Button 
+                onClick={handlePublishToggle} 
+                variant={landingPage.is_published ? "secondary" : "default"}
+              >
+                {landingPage.is_published ? "Despublicar" : "Publicar"}
+              </Button>
               <Button onClick={handleSave} disabled={saving} variant="outline">
                 <Save className="h-4 w-4 mr-2" />
                 {saving ? "Salvando..." : "Salvar"}
