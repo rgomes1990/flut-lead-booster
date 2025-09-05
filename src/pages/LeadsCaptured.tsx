@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search, X, Phone, Send, Trash2, RefreshCw } from "lucide-react";
+import { Download, Search, X, Phone, Send, Trash2, RefreshCw, RotateCcw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -42,7 +42,6 @@ interface Lead {
 const LeadsCaptured = () => {
   console.log("🚀 LeadsCaptured component renderizado!");
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [reprocessing, setReprocessing] = useState(false);
@@ -55,6 +54,14 @@ const LeadsCaptured = () => {
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
+  
+  // Filtros
+  const [selectedClient, setSelectedClient] = useState<string>("");
+  const [selectedOrigin, setSelectedOrigin] = useState<string>("");
+  const [selectedCampaign, setSelectedCampaign] = useState<string>("");
+  const [selectedAdContent, setSelectedAdContent] = useState<string>("");
+  const [selectedAudience, setSelectedAudience] = useState<string>("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("");
   const { userProfile } = useAuth();
   const { toast } = useToast();
 
@@ -73,11 +80,11 @@ const LeadsCaptured = () => {
   });
 
   useEffect(() => {
-    console.log("useEffect [userProfile, currentPage, itemsPerPage] disparado");
+    console.log("useEffect [userProfile, currentPage, itemsPerPage, filters] disparado");
     if (userProfile) {
       loadLeads();
     }
-  }, [userProfile, currentPage, itemsPerPage]);
+  }, [userProfile, currentPage, itemsPerPage, selectedClient, selectedOrigin, selectedCampaign, selectedAdContent, selectedAudience, selectedStatus]);
 
   useEffect(() => {
     console.log("useEffect [searchTerm] disparado, searchTerm:", searchTerm);
@@ -105,6 +112,23 @@ const LeadsCaptured = () => {
         query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,website_url.ilike.%${searchTerm}%`);
       }
       
+      // Apply filters
+      if (selectedOrigin) {
+        query = query.eq('origin', selectedOrigin);
+      }
+      if (selectedCampaign) {
+        query = query.eq('campaign', selectedCampaign);
+      }
+      if (selectedAdContent) {
+        query = query.eq('ad_content', selectedAdContent);
+      }
+      if (selectedAudience) {
+        query = query.eq('audience', selectedAudience);
+      }
+      if (selectedStatus) {
+        query = query.eq('status', selectedStatus);
+      }
+      
       // Filter by client if user is not admin
       if (userProfile?.user_type === 'client') {
         // First, get the client ID
@@ -112,6 +136,21 @@ const LeadsCaptured = () => {
           .from("clients")
           .select("id")
           .eq("user_id", userProfile.user_id)
+          .single();
+
+        if (clientData) {
+          query = query.eq('client_id', clientData.id);
+        }
+      } else if (userProfile?.user_type === 'admin' && selectedClient) {
+        // Filter by selected client for admin users
+        const { data: clientData } = await supabase
+          .from("clients")
+          .select("id, user_id")
+          .eq("user_id", (await supabase
+            .from("profiles")
+            .select("user_id")
+            .eq("name", selectedClient)
+            .single()).data?.user_id)
           .single();
 
         if (clientData) {
@@ -174,10 +213,8 @@ const LeadsCaptured = () => {
         });
 
         setLeads(transformedLeads);
-        setFilteredLeads(transformedLeads);
       } else {
         setLeads([]);
-        setFilteredLeads([]);
       }
       
     } catch (error) {
@@ -273,7 +310,7 @@ const LeadsCaptured = () => {
     const headers = ["ID", "Nome", "E-mail", "WhatsApp", "Site", "Usuário", "Status", "Data e Hora", "Origem", "Campanha", "Anúncio", "Público"];
     const csvContent = [
       headers.join(","),
-      ...filteredLeads.map(lead =>
+      ...leads.map(lead =>
         [
           lead.id,
           `"${lead.name}"`,
@@ -351,9 +388,15 @@ const LeadsCaptured = () => {
     }
   };
 
-  const handleFilteredLeads = (filtered: Lead[]) => {
-    setFilteredLeads(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
+  // Função para limpar todos os filtros
+  const clearAllFilters = () => {
+    setSelectedClient("");
+    setSelectedOrigin("");
+    setSelectedCampaign("");
+    setSelectedAdContent("");
+    setSelectedAudience("");
+    setSelectedStatus("");
+    setCurrentPage(1);
   };
 
   const handleItemsPerPageChange = (value: string) => {
@@ -553,12 +596,122 @@ const LeadsCaptured = () => {
             </div>
           </CardHeader>
           <CardContent className="p-6">
-            {/* Componente de Filtros */}
-            <LeadsFilters
-              leads={leads}
-              onFilteredLeads={handleFilteredLeads}
-              userType={userProfile.user_type}
-            />
+            {/* Filtros */}
+            <div className="flex flex-wrap gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                Filtros:
+              </div>
+              
+              {userProfile?.user_type === 'admin' && (
+                <Select value={selectedClient} onValueChange={(value) => {
+                  setSelectedClient(value);
+                  setCurrentPage(1);
+                }}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Selecione o cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[...new Set(leads.map(lead => lead.profile?.name).filter(Boolean))].sort().map(client => (
+                      <SelectItem key={client} value={client}>
+                        {client}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              <Select value={selectedOrigin} onValueChange={(value) => {
+                setSelectedOrigin(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Selecione a origem" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...new Set(leads.map(lead => lead.origin).filter(Boolean))].sort().map(origin => (
+                    <SelectItem key={origin} value={origin}>
+                      {origin}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedCampaign} onValueChange={(value) => {
+                setSelectedCampaign(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Selecione a campanha" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...new Set(leads.map(lead => lead.campaign).filter(Boolean))].sort().map(campaign => (
+                    <SelectItem key={campaign} value={campaign}>
+                      {campaign}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedAdContent} onValueChange={(value) => {
+                setSelectedAdContent(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Selecione o anúncio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...new Set(leads.map(lead => lead.ad_content).filter(Boolean))].sort().map(adContent => (
+                    <SelectItem key={adContent} value={adContent}>
+                      {adContent}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedAudience} onValueChange={(value) => {
+                setSelectedAudience(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Selecione o público" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...new Set(leads.map(lead => lead.audience).filter(Boolean))].sort().map(audience => (
+                    <SelectItem key={audience} value={audience}>
+                      {audience}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedStatus} onValueChange={(value) => {
+                setSelectedStatus(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...new Set(leads.map(lead => lead.status).filter(Boolean))].sort().map(status => (
+                    <SelectItem key={status} value={status}>
+                      {status === "new" ? "Não Lido" : status === "read" ? "Lido" : status === "contacted" ? "Contatado" : status === "qualified" ? "Qualificado" : status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {(selectedClient || selectedOrigin || selectedCampaign || selectedAdContent || selectedAudience || selectedStatus) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="flex items-center gap-2"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Limpar Filtros
+                </Button>
+              )}
+            </div>
 
             <div className="flex items-center justify-between mb-6 mt-6">
               <div className="flex items-center gap-4">
@@ -599,7 +752,7 @@ const LeadsCaptured = () => {
                 )}
               </div>
               
-              <Button onClick={exportToCSV} className="flex items-center gap-2">
+                <Button onClick={exportToCSV} className="flex items-center gap-2">
                 <Download className="h-4 w-4" />
                 Excel
               </Button>
@@ -638,7 +791,7 @@ const LeadsCaptured = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {leads.map((lead, index) => (
+                       {leads.map((lead, index) => (
                         <TableRow key={lead.id}>
                           {userProfile?.user_type === 'admin' && (
                             <TableCell>
@@ -785,17 +938,10 @@ const LeadsCaptured = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          alert("BOTÃO CLICADO!");
-                          console.log("🔥 BOTÃO PRÓXIMO CLICADO!");
-                          console.log("currentPage atual:", currentPage);
-                          console.log("totalPages:", totalPages);
-                          changePage(currentPage + 1);
-                        }}
-                        disabled={false}
-                        style={{ backgroundColor: 'red', color: 'white', zIndex: 9999 }}
+                        onClick={() => changePage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
                       >
-                        TESTE CLIQUE
+                        Próximo
                       </Button>
                     </div>
                   </div>
