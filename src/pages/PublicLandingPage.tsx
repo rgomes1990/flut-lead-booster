@@ -32,16 +32,18 @@ const PublicLandingPage = () => {
   }, [slug]);
 
   useEffect(() => {
+    console.log('useEffect do script - userSiteId:', userSiteId);
     if (userSiteId) {
       // Adicionar script do widget dinamicamente
+      console.log('Carregando script do widget para siteId:', userSiteId);
       const script = document.createElement('script');
       script.src = `https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/widget-script?siteId=${userSiteId}`;
       script.async = true;
       script.onload = () => {
-        console.log('Widget script loaded successfully');
+        console.log('Widget script loaded successfully for siteId:', userSiteId);
       };
-      script.onerror = () => {
-        console.error('Failed to load widget script');
+      script.onerror = (error) => {
+        console.error('Failed to load widget script:', error);
       };
       document.body.appendChild(script);
 
@@ -50,11 +52,14 @@ const PublicLandingPage = () => {
         try {
           if (script.parentNode) {
             document.body.removeChild(script);
+            console.log('Script removido do DOM');
           }
         } catch (error) {
           console.warn('Error removing script:', error);
         }
       };
+    } else {
+      console.log('userSiteId ainda não definido, aguardando...');
     }
   }, [userSiteId]);
 
@@ -80,6 +85,7 @@ const PublicLandingPage = () => {
       setLandingPage(pageData);
 
       // Buscar site do usuário para usar o script do WhatsApp
+      console.log('Buscando site para user_id:', pageData.user_id);
       const { data: siteData, error: siteError } = await supabase
         .from("sites")
         .select("id")
@@ -88,8 +94,13 @@ const PublicLandingPage = () => {
         .limit(1)
         .single();
 
+      console.log('Site encontrado:', siteData, 'Erro:', siteError);
+
       if (!siteError && siteData) {
+        console.log('Definindo userSiteId:', siteData.id);
         setUserSiteId(siteData.id);
+      } else {
+        console.warn('Nenhum site ativo encontrado para o usuário');
       }
 
       // Carregar dados salvos da landing page
