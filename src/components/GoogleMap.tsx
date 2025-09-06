@@ -22,7 +22,7 @@ const GoogleMap = ({ address, neighborhood, city, className = "" }: GoogleMapPro
   return (
     <div className={`rounded-lg shadow-lg overflow-hidden ${className}`}>
       <iframe
-        src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBRr-1-5YX6BqzN7a5ILgBU4Fp9nF_4JOI&q=${encodeURIComponent(fullAddress)}&zoom=16`}
+        src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyD5bZF6tJN8fNn9qo4U7vT8xA3jQqG9bPm&q=${encodeURIComponent(fullAddress)}&zoom=16`}
         width="100%"
         height="100%"
         style={{ border: 0 }}
