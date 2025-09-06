@@ -415,7 +415,7 @@ const PublicLandingPage = () => {
               {/* Right Side - Text */}
               <div>
                 <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">
-                  Conheça mais sobre o bairro
+                  {landingData.location_title || "Conheça mais sobre o bairro"}
                 </h2>
                 <p className="text-lg text-gray-700 mb-8">
                   {landingData.location_description || "Uma localização privilegiada com tudo por perto."}
