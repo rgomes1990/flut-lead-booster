@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Phone, Mail, MessageCircle, MapPin, Calendar, Video, Image as ImageIcon, Play, School, Hospital, ShoppingCart } from "lucide-react";
+import GoogleMap from "@/components/GoogleMap";
 import PulsatingWhatsAppButton from "@/components/PulsatingWhatsAppButton";
 
 interface LandingPageData {
@@ -397,20 +398,15 @@ const PublicLandingPage = () => {
         <section id="localizacao" className="py-20 bg-white">
           <div className="max-w-7xl mx-auto px-4">
             <div className="grid md:grid-cols-2 gap-12 items-center">
-              {/* Left Side - Aerial Image */}
-              <div>
-                {landingData.location_image ? (
-                  <img 
-                    src={getImageUrl(landingData.location_image)} 
-                    alt="Localização" 
-                    className="w-full h-[500px] object-cover rounded-lg shadow-lg"
-                  />
-                ) : (
-                  <div className="w-full h-[500px] bg-gray-200 rounded-lg flex items-center justify-center">
-                    <MapPin className="h-12 w-12 text-gray-400" />
-                  </div>
-                )}
-              </div>
+            {/* Left Side - Google Maps */}
+            <div>
+              <GoogleMap
+                address={landingData.location_address || ''}
+                neighborhood={landingData.location_neighborhood}
+                city={landingData.location_city}
+                className="w-full h-[500px]"
+              />
+            </div>
               
               {/* Right Side - Text */}
               <div>
