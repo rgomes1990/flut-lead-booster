@@ -391,51 +391,6 @@ const PublicLandingPage = () => {
         </div>
       </section>
 
-      {/* Action Section */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Left Side - Text */}
-            <div className="bg-gray-900 text-white p-12 rounded-lg">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                Visite nosso decorado ou faça um Tour virtual
-              </h2>
-              <p className="text-xl text-gray-300 mb-8">
-                Conheça todos os detalhes e acabamentos do seu futuro lar
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-gray-900 trigger-flut">
-                  <ImageIcon className="h-4 w-4 mr-2" />
-                  Galeria
-                </Button>
-                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-gray-900 trigger-flut">
-                  <Play className="h-4 w-4 mr-2" />
-                  Youtube
-                </Button>
-                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-gray-900 trigger-flut">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Mapa
-                </Button>
-              </div>
-            </div>
-            
-            {/* Right Side - Building Image */}
-            <div>
-              {landingData.action_image ? (
-                <img 
-                  src={getImageUrl(landingData.action_image)} 
-                  alt="Prédio" 
-                  className="w-full h-[400px] object-cover rounded-lg shadow-lg"
-                />
-              ) : (
-                <div className="w-full h-[400px] bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <p className="text-white text-lg">Imagem do prédio</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Location Section */}
       {landingData.location_address && (
