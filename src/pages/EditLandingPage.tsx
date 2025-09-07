@@ -12,6 +12,8 @@ import AdminNavigation from "@/components/AdminNavigation";
 import StepNavigation from "@/components/StepNavigation";
 import FileUploadField from "@/components/FileUploadField";
 import TextareaWithCounter from "@/components/TextareaWithCounter";
+import MoneyInput from "@/components/MoneyInput";
+import NumberInput from "@/components/NumberInput";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save, Eye } from "lucide-react";
 
@@ -464,6 +466,19 @@ const EditLandingPage = () => {
         );
       
       case 'number':
+        // Verificar se é o campo de área total
+        if (field.field_name === 'area_total' || field.field_label?.toLowerCase().includes('área')) {
+          return (
+            <NumberInput
+              id={field.field_name}
+              label={field.field_label}
+              placeholder={field.placeholder}
+              required={field.is_required}
+              value={String(value)}
+              onChange={(newValue) => handleFieldChange(field.field_name, newValue)}
+            />
+          );
+        }
         return (
           <div className="space-y-2">
             <Label htmlFor={field.field_name}>
@@ -502,6 +517,20 @@ const EditLandingPage = () => {
         );
       
       default:
+        // Verificar se é o campo de valor do imóvel
+        if (field.field_name === 'valor_imovel' || field.field_label?.toLowerCase().includes('valor')) {
+          return (
+            <MoneyInput
+              id={field.field_name}
+              label={field.field_label}
+              placeholder={field.placeholder}
+              required={field.is_required}
+              value={String(value)}
+              onChange={(newValue) => handleFieldChange(field.field_name, newValue)}
+            />
+          );
+        }
+        
         return (
           <div className="space-y-2">
             <Label htmlFor={field.field_name}>
