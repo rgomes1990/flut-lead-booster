@@ -245,7 +245,17 @@ Deno.serve(async (req) => {
         // Se houver dados do WhatsApp, abrir
         if (responseData.whatsapp && responseData.whatsapp.phone) {
           const whatsappUrl = \`https://wa.me/\${responseData.whatsapp.phone}?text=\${responseData.whatsapp.message}\`;
-          window.open(whatsappUrl, '_blank');
+          
+          // Detectar Safari e aplicar tratamento específico
+          const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+          
+          if (isSafari) {
+            // No Safari, usar window.location.href em vez de window.open para evitar bloqueio de pop-up
+            window.location.href = whatsappUrl;
+          } else {
+            // Em outros navegadores, usar window.open normalmente
+            window.open(whatsappUrl, '_blank');
+          }
         }
       } else {
         // Erro do servidor
