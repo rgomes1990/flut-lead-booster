@@ -12,6 +12,7 @@
 /landing/*    /index.html   200
 /demo/*    /index.html   200
 /audit/*    /index.html   200
+/public/*    /index.html   200
 
 # Handle exact routes
 /admin    /index.html   200
