@@ -224,7 +224,7 @@ const LandingPages = () => {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => window.open(`/public/${page.slug}`, '_blank')}
+                              onClick={() => window.open(`https://app.flut.com.br/public/${page.slug}`, '_blank')}
                               title="Visualizar"
                             >
                               <Eye className="h-4 w-4" />
