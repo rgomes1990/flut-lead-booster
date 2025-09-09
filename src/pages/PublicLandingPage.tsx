@@ -21,6 +21,7 @@ interface LandingPage {
 
 const PublicLandingPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  console.log("PublicLandingPage rendered, slug:", slug);
   const [landingPage, setLandingPage] = useState<LandingPage | null>(null);
   const [landingData, setLandingData] = useState<LandingPageData>({});
   const [loading, setLoading] = useState(true);
