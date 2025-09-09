@@ -1,8 +1,6 @@
 
-# Handle client-side routing fallback
-/*    /index.html   200
-
-# Handle specific routes with better specificity
+# Handle specific routes with better specificity first
+/public/:slug    /index.html   200
 /admin/*    /index.html   200
 /dashboard/*    /index.html   200
 /sites/*    /index.html   200
@@ -12,7 +10,9 @@
 /landing/*    /index.html   200
 /demo/*    /index.html   200
 /audit/*    /index.html   200
-/public/*    /index.html   200
+
+# Handle client-side routing fallback (this must be last)
+/*    /index.html   200
 
 # Handle exact routes
 /admin    /index.html   200
