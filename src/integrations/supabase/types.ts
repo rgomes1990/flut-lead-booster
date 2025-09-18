@@ -519,6 +519,10 @@ export type Database = {
           total_leads: number
         }[]
       }
+      format_whatsapp_number: {
+        Args: { input_phone: string }
+        Returns: string
+      }
       generate_script_id: {
         Args: Record<PropertyKey, never>
         Returns: string
