@@ -13,6 +13,7 @@ import { ArrowLeft, Copy, Settings, MessageCircle, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminNavigation from "@/components/AdminNavigation";
+import WhatsAppInput from "@/components/WhatsAppInput";
 
 type IconType = "whatsapp" | "whatsapp-alt";
 type IconPosition = "top" | "center" | "bottom";
@@ -84,7 +85,7 @@ const SiteConfig = () => {
         setConfig({
           company_name: configData.company_name || "",
           email: configData.email || "",
-          phone: configData.phone || "",
+          phone: configData.phone || "+55 ",
           attendant_name: configData.attendant_name || "",
           default_message: configData.default_message || "",
           field_name: configData.field_name,
@@ -241,15 +242,12 @@ const SiteConfig = () => {
                       placeholder="Nome do atendente"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="phone">WhatsApp</Label>
-                    <Input
-                      id="phone"
-                      value={config.phone}
-                      onChange={(e) => setConfig({ ...config, phone: e.target.value })}
-                      placeholder="(99) 99999-9999"
-                    />
-                  </div>
+                  <WhatsAppInput
+                    id="phone"
+                    label="WhatsApp"
+                    value={config.phone}
+                    onChange={(value) => setConfig({ ...config, phone: value })}
+                  />
                   <div>
                     <Label htmlFor="default_message">Mensagem Padrão no Formulário</Label>
                     <Input
