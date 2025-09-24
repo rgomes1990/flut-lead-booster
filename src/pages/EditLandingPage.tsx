@@ -174,21 +174,8 @@ const EditLandingPage = () => {
   };
 
   const validateCurrentStep = () => {
-    if (steps.length === 0) return false;
-    
-    const currentStepData = steps[currentStep];
-    const requiredFields = currentStepData.fields.filter(field => field.is_required);
-    
-    return requiredFields.every(field => {
-      const value = landingData[field.field_name];
-      if (Array.isArray(value)) {
-        return value.length > 0;
-      }
-      if (typeof value === 'boolean') {
-        return true; // Checkboxes are always valid
-      }
-      return value && String(value).trim() !== '';
-    });
+    // Sempre retorna true para que todos os campos sejam opcionais
+    return true;
   };
 
   const handleNext = async () => {
