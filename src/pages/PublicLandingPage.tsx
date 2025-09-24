@@ -331,71 +331,76 @@ const PublicLandingPage = () => {
         </div>
       </section>
 
-      {/* About Section */}
-      <section id="empreendimento" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Left Side - Building Image */}
-            <div>
-              {landingData.description_image ? (
-                <img 
-                  src={getImageUrl(landingData.description_image)} 
-                  alt="Empreendimento" 
-                  className="w-full h-[500px] object-cover rounded-lg shadow-lg"
-                />
-              ) : (
-                <div className="w-full h-[500px] bg-gray-200 rounded-lg flex items-center justify-center">
-                  <p className="text-gray-500">Imagem do empreendimento</p>
-                </div>
-              )}
-            </div>
-            
-            {/* Right Side - Text */}
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">
-                {landingData.description_title || `Conheça o novo ${landingPage.name}`}
-              </h2>
-              {landingData.description_content && (
-                <div className="text-lg leading-relaxed text-gray-700 mb-8">
-                  {landingData.description_content}
+      {/* About Section - Only show if has content */}
+      {(landingData.description_title || landingData.description_content || landingData.description_image || 
+        landingData.info_area || landingData.info_rooms || landingData.info_parking || landingData.info_price) && (
+        <section id="empreendimento" className="py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              {/* Left Side - Building Image */}
+              {landingData.description_image && (
+                <div>
+                  <img 
+                    src={getImageUrl(landingData.description_image)} 
+                    alt="Empreendimento" 
+                    className="w-full h-[500px] object-cover rounded-lg shadow-lg"
+                  />
                 </div>
               )}
               
-              {/* Technical Info Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
-                {landingData.info_area && (
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-900">{landingData.info_area}</div>
-                    <div className="text-sm text-gray-600">Metragem</div>
-                  </div>
+              {/* Right Side - Text */}
+              <div className={landingData.description_image ? "" : "md:col-span-2"}>
+                {(landingData.description_title || landingData.description_content) && (
+                  <>
+                    <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">
+                      {landingData.description_title || `Conheça o novo ${landingPage.name}`}
+                    </h2>
+                    {landingData.description_content && (
+                      <div className="text-lg leading-relaxed text-gray-700 mb-8">
+                        {landingData.description_content}
+                      </div>
+                    )}
+                  </>
                 )}
-                {landingData.info_rooms && (
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-900">{landingData.info_rooms}</div>
-                    <div className="text-sm text-gray-600">Suítes</div>
-                  </div>
-                )}
-                {landingData.info_parking && (
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-900">{landingData.info_parking}</div>
-                    <div className="text-sm text-gray-600">Vagas</div>
-                  </div>
-                )}
-                {landingData.info_price && (
-                  <div className="text-center p-4 bg-gray-50 rounded-lg col-span-2 md:col-span-3">
-                    <div className="text-2xl font-bold text-green-600">{landingData.info_price}</div>
-                    <div className="text-sm text-gray-600">Valor</div>
+                
+                {/* Technical Info Grid - Only show if has at least one info */}
+                {(landingData.info_area || landingData.info_rooms || landingData.info_parking || landingData.info_price) && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
+                    {landingData.info_area && (
+                      <div className="text-center p-4 bg-gray-50 rounded-lg">
+                        <div className="text-2xl font-bold text-gray-900">{landingData.info_area}</div>
+                        <div className="text-sm text-gray-600">Metragem</div>
+                      </div>
+                    )}
+                    {landingData.info_rooms && (
+                      <div className="text-center p-4 bg-gray-50 rounded-lg">
+                        <div className="text-2xl font-bold text-gray-900">{landingData.info_rooms}</div>
+                        <div className="text-sm text-gray-600">Suítes</div>
+                      </div>
+                    )}
+                    {landingData.info_parking && (
+                      <div className="text-center p-4 bg-gray-50 rounded-lg">
+                        <div className="text-2xl font-bold text-gray-900">{landingData.info_parking}</div>
+                        <div className="text-sm text-gray-600">Vagas</div>
+                      </div>
+                    )}
+                    {landingData.info_price && (
+                      <div className="text-center p-4 bg-gray-50 rounded-lg col-span-2 md:col-span-3">
+                        <div className="text-2xl font-bold text-green-600">{landingData.info_price}</div>
+                        <div className="text-sm text-gray-600">Valor</div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
 
-      {/* Location Section */}
-      {landingData.location_address && (
+      {/* Location Section - Only show if has address */}
+      {landingData.location_address && landingData.location_address.trim() && (
         <section id="localizacao" className="py-20 bg-white">
           <div className="max-w-7xl mx-auto px-4">
             <div className="grid md:grid-cols-2 gap-12 items-center">
@@ -414,9 +419,11 @@ const PublicLandingPage = () => {
                 <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">
                   {landingData.location_title || "Conheça mais sobre o bairro"}
                 </h2>
-                <p className="text-lg text-gray-700 mb-8">
-                  {landingData.location_description || "Uma localização privilegiada com tudo por perto."}
-                </p>
+                {landingData.location_description && (
+                  <p className="text-lg text-gray-700 mb-8">
+                    {landingData.location_description}
+                  </p>
+                )}
                 
                 {/* Conveniences */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -475,37 +482,33 @@ const PublicLandingPage = () => {
         </section>
       )}
 
-      {/* Broker Section */}
-      {landingData.broker_name && (
+      {/* Broker Section - Only show if has broker name */}
+      {landingData.broker_name && landingData.broker_name.trim() && (
         <section className="py-20 bg-white">
           <div className="max-w-7xl mx-auto px-4">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               {/* Left Side - Photo */}
-              <div className="text-center">
-                {landingData.broker_photo ? (
+              {landingData.broker_photo && (
+                <div className="text-center">
                   <img 
                     src={getImageUrl(landingData.broker_photo)} 
                     alt={landingData.broker_name}
                     className="w-80 h-80 object-cover rounded-full mx-auto shadow-xl"
                   />
-                ) : (
-                  <div className="w-80 h-80 bg-gray-200 rounded-full mx-auto flex items-center justify-center">
-                    <p className="text-gray-500">Foto do corretor</p>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
               
               {/* Right Side - Info */}
-              <div>
+              <div className={landingData.broker_photo ? "" : "md:col-span-2"}>
                 <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
                   Eu sou o {landingData.broker_name}
                 </h2>
-                {landingData.broker_creci && (
+                {landingData.broker_creci && landingData.broker_creci.trim() && (
                   <p className="text-lg text-gray-600 mb-4">
                     CRECI: {landingData.broker_creci}
                   </p>
                 )}
-                {landingData.broker_description && (
+                {landingData.broker_description && landingData.broker_description.trim() && (
                   <p className="text-lg text-gray-700 mb-8 leading-relaxed">
                     {landingData.broker_description}
                   </p>
@@ -523,14 +526,14 @@ const PublicLandingPage = () => {
         </section>
       )}
 
-      {/* Amenities Section */}
-      {landingData.leisure_items && (
+      {/* Amenities Section - Only show if has leisure items */}
+      {landingData.leisure_items && landingData.leisure_items.trim() && (
         <section id="lazer" className="py-20 bg-gray-900 text-white">
           <div className="max-w-7xl mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">
               {landingData.leisure_title || 'Diferenciais e Lazer'}
             </h2>
-            {landingData.leisure_subtitle && (
+            {landingData.leisure_subtitle && landingData.leisure_subtitle.trim() && (
               <p className="text-xl text-gray-300 mb-12">
                 {landingData.leisure_subtitle}
               </p>
