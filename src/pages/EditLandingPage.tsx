@@ -414,7 +414,6 @@ const EditLandingPage = () => {
             />
             <Label htmlFor={field.field_name}>
               {field.field_label}
-              {field.is_required && <span className="text-red-500 ml-1">*</span>}
             </Label>
           </div>
         );
@@ -438,7 +437,6 @@ const EditLandingPage = () => {
           <div className="space-y-2">
             <Label htmlFor={field.field_name}>
               {field.field_label}
-              {field.is_required && <span className="text-red-500 ml-1">*</span>}
             </Label>
             <Textarea
               id={field.field_name}
@@ -470,7 +468,6 @@ const EditLandingPage = () => {
           <div className="space-y-2">
             <Label htmlFor={field.field_name}>
               {field.field_label}
-              {field.is_required && <span className="text-red-500 ml-1">*</span>}
             </Label>
             <Input
               id={field.field_name}
@@ -489,7 +486,6 @@ const EditLandingPage = () => {
           <div className="space-y-2">
             <Label htmlFor={field.field_name}>
               {field.field_label}
-              {field.is_required && <span className="text-red-500 ml-1">*</span>}
             </Label>
             <Input
               id={field.field_name}
@@ -508,7 +504,6 @@ const EditLandingPage = () => {
           <div className="space-y-2">
             <Label htmlFor={field.field_name}>
               {field.field_label}
-              {field.is_required && <span className="text-red-500 ml-1">*</span>}
             </Label>
             <Input
               id={field.field_name}
@@ -542,7 +537,6 @@ const EditLandingPage = () => {
           <div className="space-y-2">
             <Label htmlFor={field.field_name}>
               {field.field_label}
-              {field.is_required && <span className="text-red-500 ml-1">*</span>}
             </Label>
             <Input
               id={field.field_name}

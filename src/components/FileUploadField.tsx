@@ -130,7 +130,6 @@ const FileUploadField = ({
     <div className="space-y-2">
       <Label htmlFor={id}>
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
       </Label>
       
       <div className="space-y-2">
