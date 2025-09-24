@@ -516,6 +516,25 @@ const EditLandingPage = () => {
           </div>
         );
       
+      case 'text':
+        return (
+          <div className="space-y-2">
+            <Label htmlFor={field.field_name}>
+              {field.field_label}
+              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <Input
+              id={field.field_name}
+              type="text"
+              value={String(value)}
+              onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+              placeholder={field.placeholder}
+              required={field.is_required}
+              className="w-full"
+            />
+          </div>
+        );
+      
       default:
         // Verificar se é o campo de valor do imóvel
         if (field.field_name === 'valor_imovel' || field.field_label?.toLowerCase().includes('valor')) {
@@ -531,7 +550,24 @@ const EditLandingPage = () => {
           );
         }
         
-        return null;
+        // Para campos de texto que não foram capturados pelo case 'text'
+        return (
+          <div className="space-y-2">
+            <Label htmlFor={field.field_name}>
+              {field.field_label}
+              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <Input
+              id={field.field_name}
+              type="text"
+              value={String(value)}
+              onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+              placeholder={field.placeholder}
+              required={field.is_required}
+              className="w-full"
+            />
+          </div>
+        );
     }
   };
 
