@@ -332,16 +332,16 @@ const PublicLandingPage = () => {
       </section>
 
       {/* About Section - Only show if has content */}
-      {(landingData.description_title || landingData.description_content || landingData.description_image || 
+      {(landingData.description_title || landingData.description_content || landingData.imagem_empreendimento || 
         landingData.info_area || landingData.info_rooms || landingData.info_parking || landingData.info_price) && (
         <section id="empreendimento" className="py-20 bg-white">
           <div className="max-w-7xl mx-auto px-4">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               {/* Left Side - Building Image */}
-              {landingData.description_image && (
+              {landingData.imagem_empreendimento && (
                 <div>
                   <img 
-                    src={getImageUrl(landingData.description_image)} 
+                    src={getImageUrl(landingData.imagem_empreendimento)} 
                     alt="Empreendimento" 
                     className="w-full h-[500px] object-cover rounded-lg shadow-lg"
                   />
@@ -349,7 +349,7 @@ const PublicLandingPage = () => {
               )}
               
               {/* Right Side - Text */}
-              <div className={landingData.description_image ? "" : "md:col-span-2"}>
+              <div className={landingData.imagem_empreendimento ? "" : "md:col-span-2"}>
                 {(landingData.description_title || landingData.description_content) && (
                   <>
                     <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">
