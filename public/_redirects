@@ -1,26 +1,2 @@
-
-# Handle specific routes with better specificity first
-/public/:slug    /index.html   200
-/admin/*    /index.html   200
-/dashboard/*    /index.html   200
-/sites/*    /index.html   200
-/leads-captured/*    /index.html   200
-/plans/*    /index.html   200
-/auth/*    /index.html   200
-/landing/*    /index.html   200
-/demo/*    /index.html   200
-/audit/*    /index.html   200
-
-# Handle client-side routing fallback (this must be last)
+# Netlify SPA redirect - handle all routes
 /*    /index.html   200
-
-# Handle exact routes
-/admin    /index.html   200
-/dashboard    /index.html   200
-/sites    /index.html   200
-/leads-captured    /index.html   200
-/plans    /index.html   200
-/auth    /index.html   200
-/landing    /index.html   200
-/demo    /index.html   200
-/audit    /index.html   200
