@@ -72,8 +72,7 @@ const LeadsCaptured = () => {
     'Tráfego Direto',
     'Instagram',
     'Chat GPT',
-    'Tráfego Orgânico',
-    'UTM Campaign'
+    'Tráfego Orgânico'
   ];
 
   // Calculate server-side pagination

@@ -69,11 +69,6 @@ export const detectOriginFromUrl = (url: string): string => {
       return 'Google Ads';
     }
     
-    // Verificar outros UTM sources
-    if (utmSource) {
-      return 'UTM Campaign';
-    }
-    
     // Se não tem parâmetros na URL, é tráfego direto
     if (!url.includes('?') && !url.includes('&')) {
       return 'Tráfego Direto';
@@ -88,7 +83,6 @@ export const detectOriginFromUrl = (url: string): string => {
     if (url.match(/[?&]utm_source=(chatgpt|chatgpt\.com)(&|$)/i)) return 'Chat GPT';
     if (url.match(/[?&]srsltid=/)) return 'Tráfego Orgânico';
     if (url.match(/[?&](gclid|gad_source)=/)) return 'Google Ads';
-    if (url.match(/[?&]utm_source=/)) return 'UTM Campaign';
     
     // Se não tem parâmetros na URL, é tráfego direto
     if (!url.includes('?') && !url.includes('&')) {

@@ -48,8 +48,7 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
     'Tráfego Direto',
     'Instagram',
     'Chat GPT',
-    'Tráfego Orgânico',
-    'UTM Campaign'
+    'Tráfego Orgânico'
   ];
 
   // Calcular dados únicos baseado nos filtros ativos
