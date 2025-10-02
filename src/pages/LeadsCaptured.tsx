@@ -65,6 +65,17 @@ const LeadsCaptured = () => {
   const { userProfile } = useAuth();
   const { toast } = useToast();
 
+  // Definir todas as origens possíveis do sistema
+  const allOrigins = [
+    'Meta Ads',
+    'Google Ads', 
+    'Tráfego Direto',
+    'Instagram',
+    'Chat GPT',
+    'Tráfego Orgânico',
+    'UTM Campaign'
+  ];
+
   // Calculate server-side pagination
   const totalPages = Math.ceil(totalCount / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -628,7 +639,7 @@ const LeadsCaptured = () => {
                   <SelectValue placeholder="Selecione a origem" />
                 </SelectTrigger>
                 <SelectContent>
-                  {[...new Set(leads.map(lead => lead.origin).filter(Boolean))].sort().map(origin => (
+                  {allOrigins.map(origin => (
                     <SelectItem key={origin} value={origin}>
                       {origin}
                     </SelectItem>
