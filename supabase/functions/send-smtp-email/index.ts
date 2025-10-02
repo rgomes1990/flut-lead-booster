@@ -38,14 +38,15 @@ serve(async (req) => {
   try {
     const { to, subject, html, leadData }: EmailData = await req.json();
     
-    // Buscar credenciais SMTP das secrets
-    const smtpHost = Deno.env.get('HOSTGATOR_SMTP_HOST');
-    const smtpPort = Deno.env.get('HOSTGATOR_SMTP_PORT');
-    const smtpUser = Deno.env.get('HOSTGATOR_SMTP_USER');
-    const smtpPassword = Deno.env.get('HOSTGATOR_SMTP_PASSWORD');
+    // Buscar credenciais SMTP do SendGrid
+    const smtpHost = Deno.env.get('SENDGRID_SMTP_HOST');
+    const smtpPort = Deno.env.get('SENDGRID_SMTP_PORT');
+    const smtpUser = Deno.env.get('SENDGRID_SMTP_USER');
+    const smtpPassword = Deno.env.get('SENDGRID_SMTP_PASSWORD');
+    const fromEmail = Deno.env.get('SENDGRID_FROM_EMAIL');
 
-    if (!smtpHost || !smtpPort || !smtpUser || !smtpPassword) {
-      console.error('SMTP credentials not configured');
+    if (!smtpHost || !smtpPort || !smtpUser || !smtpPassword || !fromEmail) {
+      console.error('SendGrid SMTP credentials not configured');
       return new Response('SMTP not configured', { status: 500 });
     }
 
@@ -112,7 +113,7 @@ serve(async (req) => {
 
     // Enviar email
     await client.send({
-      from: smtpUser,
+      from: fromEmail,
       to: to,
       subject: subject,
       content: emailBody,
