@@ -75,6 +75,21 @@ Deno.serve(async (req) => {
   const SITE_CONFIG = ${JSON.stringify(siteConfig || {})};
   const SITE_DATA = ${JSON.stringify(site || {})};
 
+  // Capturar URL de entrada (com UTMs) no sessionStorage
+  function captureEntryUrl() {
+    try {
+      if (!sessionStorage.getItem('flut_entry_url')) {
+        sessionStorage.setItem('flut_entry_url', window.location.href);
+        console.log('Flut: URL de entrada capturada:', window.location.href);
+      }
+    } catch (error) {
+      console.warn('Flut: Erro ao acessar sessionStorage:', error);
+    }
+  }
+
+  // Capturar URL de entrada imediatamente
+  captureEntryUrl();
+
   // Criar botão flutuante do WhatsApp
   function createWhatsAppButton() {
     const button = document.createElement('div');
@@ -588,9 +603,21 @@ Deno.serve(async (req) => {
     
     const { origin, campaign } = detectOriginAndCampaign();
     
+    // Usar URL de entrada (com UTMs) ou URL atual como fallback
+    let websiteUrl = window.location.href;
+    try {
+      const entryUrl = sessionStorage.getItem('flut_entry_url');
+      if (entryUrl) {
+        websiteUrl = entryUrl;
+        console.log('Flut: Usando URL de entrada:', websiteUrl);
+      }
+    } catch (error) {
+      console.warn('Flut: Erro ao ler sessionStorage:', error);
+    }
+    
     const leadData = {
       site_id: SITE_ID,
-      website_url: window.location.href,
+      website_url: websiteUrl,
       phone: phoneEl ? phoneEl.value : '',
       email: emailEl ? emailEl.value : '',
       name: nameEl ? nameEl.value : '',
