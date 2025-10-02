@@ -56,26 +56,95 @@ serve(async (req) => {
       const formattedDate = formatDateToBrasilia(leadData.created_at);
       
       emailBody = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">🎯 Novo Lead Capturado!</h2>
-          
-          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #28a745; margin-top: 0;">Informações do Contato:</h3>
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">
+                🎯 Novo Lead Capturado!
+              </h1>
+              <p style="color: #e0e7ff; margin: 10px 0 0 0; font-size: 14px;">
+                Sistema FLUT - Gestão de Leads Inteligente
+              </p>
+            </div>
             
-            <p><strong>Nome:</strong> ${leadData.name}</p>
-            <p><strong>E-mail:</strong> ${leadData.email}</p>
-            <p><strong>WhatsApp:</strong> ${leadData.phone}</p>
-            ${leadData.message ? `<p><strong>Mensagem:</strong> ${leadData.message}</p>` : ''}
-            <p><strong>Data/Hora:</strong> ${formattedDate}</p>
-            <p><strong>URL de origem:</strong> ${leadData.website_url}</p>
+            <!-- Body -->
+            <div style="padding: 30px; background-color: #ffffff;">
+              <p style="color: #333333; font-size: 16px; margin: 0 0 10px 0;">
+                <strong>Olá RSG,</strong>
+              </p>
+              
+              <p style="color: #666666; font-size: 14px; margin: 0 0 25px 0;">
+                Um novo lead foi capturado pelo seu sistema! Confira os detalhes abaixo:
+              </p>
+              
+              <!-- Lead Data Box -->
+              <div style="border-left: 4px solid #667eea; background-color: #f8f9ff; padding: 20px; margin: 20px 0; border-radius: 4px;">
+                <h2 style="color: #667eea; font-size: 16px; margin: 0 0 15px 0; font-weight: bold;">
+                  📋 Dados do Lead
+                </h2>
+                
+                <div style="margin: 10px 0;">
+                  <span style="color: #667eea; font-weight: bold;">👤 Nome:</span>
+                  <span style="color: #333333; margin-left: 5px;">${leadData.name}</span>
+                </div>
+                
+                <div style="margin: 10px 0;">
+                  <span style="color: #667eea; font-weight: bold;">✉️ Email:</span>
+                  <span style="color: #333333; margin-left: 5px;">${leadData.email}</span>
+                </div>
+                
+                <div style="margin: 10px 0;">
+                  <span style="color: #667eea; font-weight: bold;">📱 Telefone:</span>
+                  <span style="color: #333333; margin-left: 5px;">${leadData.phone}</span>
+                </div>
+                
+                ${leadData.message ? `
+                <div style="margin: 10px 0;">
+                  <span style="color: #667eea; font-weight: bold;">💬 Mensagem:</span>
+                  <span style="color: #333333; margin-left: 5px;">${leadData.message}</span>
+                </div>
+                ` : ''}
+                
+                <div style="margin: 10px 0;">
+                  <span style="color: #667eea; font-weight: bold;">🌐 Site de Origem:</span>
+                  <span style="color: #333333; margin-left: 5px;">${leadData.website_url}</span>
+                </div>
+                
+                <div style="margin: 10px 0;">
+                  <span style="color: #667eea; font-weight: bold;">🕐 Data/Hora:</span>
+                  <span style="color: #333333; margin-left: 5px;">${formattedDate}</span>
+                </div>
+              </div>
+              
+              <!-- Next Steps Box -->
+              <div style="background-color: #e7f3ff; padding: 20px; margin: 20px 0; border-radius: 4px; border-left: 4px solid #2196F3;">
+                <h3 style="color: #2196F3; font-size: 16px; margin: 0 0 15px 0; font-weight: bold;">
+                  Próximos Passos:
+                </h3>
+                <ul style="margin: 0; padding-left: 20px; color: #333333; font-size: 14px; line-height: 1.8;">
+                  <li>Entre em contato com o lead o quanto antes</li>
+                  <li>Acesse o painel administrativo para gerenciar este e outros leads</li>
+                  <li>Monitore as métricas de conversão no dashboard</li>
+                </ul>
+              </div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 8px 8px;">
+              <p style="color: #999999; font-size: 12px; margin: 0;">
+                © 2025 Sistema FLUT - Gestão de Leads Inteligente
+              </p>
+            </div>
           </div>
-          
-          <div style="background-color: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff;">
-            <p style="margin: 0; color: #0066cc;">
-              💡 <strong>Dica:</strong> Entre em contato rapidamente para aumentar suas chances de conversão!
-            </p>
-          </div>
-        </div>
+        </body>
+        </html>
       `;
     }
 
