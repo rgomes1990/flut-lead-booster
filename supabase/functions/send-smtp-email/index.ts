@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts"
 
 interface EmailData {
   to: string;
@@ -38,16 +37,16 @@ serve(async (req) => {
   try {
     const { to, subject, html, leadData }: EmailData = await req.json();
     
-    // Buscar credenciais SMTP do SendGrid
-    const smtpHost = Deno.env.get('SENDGRID_SMTP_HOST');
-    const smtpPort = Deno.env.get('SENDGRID_SMTP_PORT');
-    const smtpUser = Deno.env.get('SENDGRID_SMTP_USER');
-    const smtpPassword = Deno.env.get('SENDGRID_SMTP_PASSWORD');
-    const fromEmail = Deno.env.get('SENDGRID_FROM_EMAIL');
+    // Buscar API key do SendGrid
+    const sendgridApiKey = Deno.env.get('SENDGRID_SMTP_PASSWORD');
+    const fromEmail = Deno.env.get('SENDGRID_FROM_EMAIL') || 'lead@flut.com.br';
 
-    if (!smtpHost || !smtpPort || !smtpUser || !smtpPassword || !fromEmail) {
-      console.error('SendGrid SMTP credentials not configured');
-      return new Response('SMTP not configured', { status: 500 });
+    if (!sendgridApiKey) {
+      console.error('SendGrid API key not configured');
+      return new Response(JSON.stringify({ error: 'SendGrid not configured' }), { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     let emailBody = html;
@@ -80,49 +79,42 @@ serve(async (req) => {
       `;
     }
 
-    // Configurar e enviar email via fetch para serviço SMTP
-    const emailPayload = {
-      host: smtpHost,
-      port: parseInt(smtpPort),
-      secure: smtpPort === '465',
-      auth: {
-        user: smtpUser,
-        pass: smtpPassword
+    console.log('Enviando email via SendGrid API para:', to);
+
+    // Enviar email via API do SendGrid
+    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${sendgridApiKey}`,
+        'Content-Type': 'application/json',
       },
-      from: smtpUser,
-      to: to,
-      subject: subject,
-      html: emailBody
-    };
-
-    console.log('Enviando email para:', to);
-    console.log('Dados formatados:', { formattedDate: leadData ? formatDateToBrasilia(leadData.created_at) : 'N/A' });
-
-    // Configurar cliente SMTP
-    const client = new SMTPClient({
-      connection: {
-        hostname: smtpHost,
-        port: parseInt(smtpPort),
-        tls: smtpPort === '465',
-        auth: {
-          username: smtpUser,
-          password: smtpPassword,
+      body: JSON.stringify({
+        personalizations: [
+          {
+            to: [{ email: to }],
+            subject: subject,
+          },
+        ],
+        from: {
+          email: fromEmail,
+          name: 'Sistema Flut',
         },
-      },
+        content: [
+          {
+            type: 'text/html',
+            value: emailBody,
+          },
+        ],
+      }),
     });
 
-    // Enviar email
-    await client.send({
-      from: fromEmail,
-      to: to,
-      subject: subject,
-      content: emailBody,
-      html: emailBody,
-    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Erro SendGrid:', response.status, errorText);
+      throw new Error(`SendGrid API error: ${response.status} - ${errorText}`);
+    }
 
-    await client.close();
-
-    console.log('Email enviado com sucesso para:', to);
+    console.log('Email enviado com sucesso via SendGrid API');
 
     return new Response(JSON.stringify({ 
       success: true, 
@@ -136,7 +128,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Erro ao enviar email:', error);
     return new Response(JSON.stringify({ 
-      error: 'Erro interno do servidor',
+      error: 'Erro ao enviar email',
       details: error.message 
     }), {
       status: 500,
