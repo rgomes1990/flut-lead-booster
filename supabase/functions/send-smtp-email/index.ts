@@ -1,5 +1,5 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts"
 
 interface EmailData {
   to: string;
@@ -97,7 +97,32 @@ serve(async (req) => {
     console.log('Enviando email para:', to);
     console.log('Dados formatados:', { formattedDate: leadData ? formatDateToBrasilia(leadData.created_at) : 'N/A' });
 
-    // Simular envio (substituir por integração SMTP real conforme necessário)
+    // Configurar cliente SMTP
+    const client = new SMTPClient({
+      connection: {
+        hostname: smtpHost,
+        port: parseInt(smtpPort),
+        tls: smtpPort === '465',
+        auth: {
+          username: smtpUser,
+          password: smtpPassword,
+        },
+      },
+    });
+
+    // Enviar email
+    await client.send({
+      from: smtpUser,
+      to: to,
+      subject: subject,
+      content: emailBody,
+      html: emailBody,
+    });
+
+    await client.close();
+
+    console.log('Email enviado com sucesso para:', to);
+
     return new Response(JSON.stringify({ 
       success: true, 
       message: 'Email enviado com sucesso',
