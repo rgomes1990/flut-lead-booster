@@ -54,6 +54,11 @@ export const detectOriginFromUrl = (url: string): string => {
       return 'Meta Ads';
     }
     
+    // Verificar Chat GPT (parâmetro utm_source=chatgpt ou chatgpt.com)
+    if (utmSource === 'chatgpt' || utmSource === 'chatgpt.com') {
+      return 'Chat GPT';
+    }
+    
     // Verificar Tráfego Orgânico (parâmetro srsltid)
     if (params.has('srsltid')) {
       return 'Tráfego Orgânico';
@@ -80,6 +85,7 @@ export const detectOriginFromUrl = (url: string): string => {
     if (url.match(/[?&]fbclid=/)) return 'Meta Ads';
     if (url.match(/[?&]utm_source=instagram(&|$)/i)) return 'Instagram';
     if (url.match(/[?&]utm_source=meta(&|$)/i)) return 'Meta Ads'; // CORRIGIDO
+    if (url.match(/[?&]utm_source=(chatgpt|chatgpt\.com)(&|$)/i)) return 'Chat GPT';
     if (url.match(/[?&]srsltid=/)) return 'Tráfego Orgânico';
     if (url.match(/[?&](gclid|gad_source)=/)) return 'Google Ads';
     if (url.match(/[?&]utm_source=/)) return 'UTM Campaign';
