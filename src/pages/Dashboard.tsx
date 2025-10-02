@@ -116,8 +116,14 @@ const Dashboard = () => {
         }
       }
 
-      // Processar leads com dados UTM
-      const processedLeads = allLeads.map(lead => updateLeadWithUTMData(lead));
+      // Processar leads com dados UTM (mas manter o origin do banco)
+      const processedLeads = allLeads.map(lead => {
+        const utmData = updateLeadWithUTMData(lead);
+        return {
+          ...utmData,
+          origin: lead.origin || 'Tráfego Direto' // Manter o origin do banco de dados
+        };
+      });
 
       // Calcular estatísticas
       const now = new Date();
