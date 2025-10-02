@@ -218,7 +218,12 @@ const LeadsCaptured = () => {
             }
           };
 
-          return updateLeadWithUTMData(baseData);
+          // Processar dados UTM mas manter o origin do banco de dados
+          const utmData = updateLeadWithUTMData(baseData);
+          return {
+            ...utmData,
+            origin: lead.origin || 'Tráfego Direto' // Manter o origin do banco
+          };
         });
 
         setLeads(transformedLeads);
