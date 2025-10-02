@@ -70,7 +70,6 @@ const LeadsCaptured = () => {
     'Meta Ads',
     'Google Ads', 
     'Tráfego Direto',
-    'Instagram',
     'Chat GPT',
     'Tráfego Orgânico'
   ];

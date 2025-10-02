@@ -46,7 +46,6 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
     'Meta Ads',
     'Google Ads', 
     'Tráfego Direto',
-    'Instagram',
     'Chat GPT',
     'Tráfego Orgânico'
   ];

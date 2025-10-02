@@ -43,10 +43,10 @@ export const detectOriginFromUrl = (url: string): string => {
       return 'Meta Ads';
     }
     
-    // Verificar Instagram (parâmetro utm_source=instagram)
+    // Verificar Instagram (parâmetro utm_source=instagram) - Redirecionar para Tráfego Orgânico
     const utmSource = params.get('utm_source')?.toLowerCase();
     if (utmSource === 'instagram') {
-      return 'Instagram';
+      return 'Tráfego Orgânico';
     }
     
     // Verificar Meta Ads (parâmetro utm_source=meta) - CORRIGIDO para case insensitive
@@ -78,7 +78,7 @@ export const detectOriginFromUrl = (url: string): string => {
   } catch {
     // Se a URL for inválida, usar regex - ALTERADO para Meta Ads
     if (url.match(/[?&]fbclid=/)) return 'Meta Ads';
-    if (url.match(/[?&]utm_source=instagram(&|$)/i)) return 'Instagram';
+    if (url.match(/[?&]utm_source=instagram(&|$)/i)) return 'Tráfego Orgânico';
     if (url.match(/[?&]utm_source=meta(&|$)/i)) return 'Meta Ads'; // CORRIGIDO
     if (url.match(/[?&]utm_source=(chatgpt|chatgpt\.com)(&|$)/i)) return 'Chat GPT';
     if (url.match(/[?&]srsltid=/)) return 'Tráfego Orgânico';
