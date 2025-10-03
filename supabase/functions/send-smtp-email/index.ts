@@ -4,6 +4,7 @@ interface EmailData {
   to: string;
   subject: string;
   html: string;
+  clientName?: string;
   leadData?: {
     name: string;
     email: string;
@@ -35,7 +36,7 @@ serve(async (req) => {
   }
 
   try {
-    const { to, subject, html, leadData }: EmailData = await req.json();
+    const { to, subject, html, clientName, leadData }: EmailData = await req.json();
     
     // Buscar API key do SendGrid
     const sendgridApiKey = Deno.env.get('SENDGRID_SMTP_PASSWORD');
@@ -77,7 +78,7 @@ serve(async (req) => {
             <!-- Body -->
             <div style="padding: 30px; background-color: #ffffff;">
               <p style="color: #333333; font-size: 16px; margin: 0 0 10px 0;">
-                <strong>Olá RSG,</strong>
+                <strong>Olá ${clientName || 'Cliente'},</strong>
               </p>
               
               <p style="color: #666666; font-size: 14px; margin: 0 0 25px 0;">

@@ -265,10 +265,10 @@ Deno.serve(async (req) => {
 
     console.log('Lead saved successfully with origin:', finalOrigin, 'and UTM data:', utmData);
 
-    // Buscar email do usuário para enviar alerta
+    // Buscar email e nome do usuário para enviar alerta
     const { data: userProfile } = await supabase
       .from('profiles')
-      .select('email')
+      .select('email, name')
       .eq('user_id', site.user_id)
       .single();
 
@@ -282,6 +282,7 @@ Deno.serve(async (req) => {
           body: { 
             to: userProfile.email,
             subject: '🚨 Novo Lead Recebido - Sistema Flut',
+            clientName: userProfile.name || 'Cliente',
             leadData: { 
               ...leadData, 
               created_at: insertedLead.created_at,
