@@ -224,6 +224,33 @@ const Admin = () => {
         return;
       }
 
+      // Obter o email atual do perfil para verificar se mudou
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("user_id", editingUser.user_id)
+        .single();
+
+      // Se o email mudou, atualizar via edge function
+      if (currentProfile && currentProfile.email !== editingUser.email) {
+        const emailResponse = await fetch(`https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/update-user-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3aXNubmlwZGpxbXhwZ2Z2aGlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxMjQ2NzcsImV4cCI6MjA3MDcwMDY3N30.xMOfCDIniXTn5TnlOdcUiQycp-5yPetalylgzm2_VeQ`,
+          },
+          body: JSON.stringify({
+            user_id: editingUser.user_id,
+            email: editingUser.email
+          }),
+        });
+
+        const emailResult = await emailResponse.json();
+        if (!emailResult.success) {
+          throw new Error(emailResult.error || 'Erro ao atualizar email');
+        }
+      }
+
       // Se há uma nova senha, fazer update via edge function
       if (editingUser.newPassword && editingUser.newPassword.trim()) {
         const response = await fetch(`https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/update-user-password`, {
