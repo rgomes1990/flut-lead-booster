@@ -38,6 +38,17 @@ serve(async (req) => {
 
     if (error) throw error
 
+    // Também atualizar o email na tabela profiles
+    const { error: profileError } = await supabaseClient
+      .from('profiles')
+      .update({ email: email })
+      .eq('user_id', user_id)
+
+    if (profileError) {
+      console.error('Erro ao atualizar profiles:', profileError)
+      throw new Error(`Erro ao atualizar perfil: ${profileError.message}`)
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
