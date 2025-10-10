@@ -224,6 +224,8 @@ const Admin = () => {
         return;
       }
 
+      console.log('Updating user:', editingUser.user_id, 'New email:', editingUser.email);
+
       // Obter o email atual do perfil para verificar se mudou
       const { data: currentProfile } = await supabase
         .from("profiles")
@@ -231,8 +233,12 @@ const Admin = () => {
         .eq("user_id", editingUser.user_id)
         .single();
 
+      console.log('Current profile email:', currentProfile?.email);
+
       // Se o email mudou, atualizar via edge function
       if (currentProfile && currentProfile.email !== editingUser.email) {
+        console.log('Email changed, calling update-user-email function');
+        
         const emailResponse = await fetch(`https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/update-user-email`, {
           method: 'POST',
           headers: {
@@ -245,14 +251,20 @@ const Admin = () => {
           }),
         });
 
+        console.log('Email update response status:', emailResponse.status);
         const emailResult = await emailResponse.json();
+        console.log('Email update result:', emailResult);
+        
         if (!emailResult.success) {
           throw new Error(emailResult.error || 'Erro ao atualizar email');
         }
+      } else {
+        console.log('Email unchanged, skipping email update');
       }
 
       // Se há uma nova senha, fazer update via edge function
       if (editingUser.newPassword && editingUser.newPassword.trim()) {
+        console.log('Updating password');
         const response = await fetch(`https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/update-user-password`, {
           method: 'POST',
           headers: {
@@ -272,6 +284,7 @@ const Admin = () => {
       }
 
       // Atualizar profile
+      console.log('Updating profile in database');
       const { error: profileError } = await supabase
         .from("profiles")
         .update({

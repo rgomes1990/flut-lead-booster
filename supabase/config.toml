@@ -11,3 +11,27 @@ verify_jwt = false
 
 [functions.submit-site-lead]
 verify_jwt = false
+
+[functions.update-user-email]
+verify_jwt = false
+
+[functions.update-user-password]
+verify_jwt = false
+
+[functions.create-user]
+verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false
+
+[functions.send-smtp-email]
+verify_jwt = false
+
+[functions.get-audit-logs]
+verify_jwt = false
+
+[functions.send-lead-alert]
+verify_jwt = false
+
+[functions.get-maps-config]
+verify_jwt = false
