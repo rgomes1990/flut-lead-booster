@@ -238,26 +238,27 @@ const Admin = () => {
       // Se o email mudou, atualizar via edge function
       if (currentProfile && currentProfile.email !== editingUser.email) {
         console.log('Email changed, calling update-user-email function');
+        console.log('Old email:', currentProfile.email, 'New email:', editingUser.email);
         
-        const emailResponse = await fetch(`https://qwisnnipdjqmxpgfvhij.supabase.co/functions/v1/update-user-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3aXNubmlwZGpxbXhwZ2Z2aGlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxMjQ2NzcsImV4cCI6MjA3MDcwMDY3N30.xMOfCDIniXTn5TnlOdcUiQycp-5yPetalylgzm2_VeQ`,
-          },
-          body: JSON.stringify({
+        const { data: emailResult, error: emailError } = await supabase.functions.invoke('update-user-email', {
+          body: {
             user_id: editingUser.user_id,
             email: editingUser.email
-          }),
+          }
         });
 
-        console.log('Email update response status:', emailResponse.status);
-        const emailResult = await emailResponse.json();
         console.log('Email update result:', emailResult);
+        console.log('Email update error:', emailError);
         
-        if (!emailResult.success) {
-          throw new Error(emailResult.error || 'Erro ao atualizar email');
+        if (emailError) {
+          throw new Error(emailError.message || 'Erro ao atualizar email');
         }
+        
+        if (!emailResult?.success) {
+          throw new Error(emailResult?.error || 'Erro ao atualizar email');
+        }
+        
+        console.log('Email atualizado com sucesso!');
       } else {
         console.log('Email unchanged, skipping email update');
       }
