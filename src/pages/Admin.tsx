@@ -347,12 +347,15 @@ const Admin = () => {
       setEditDialogOpen(false);
       setEditingUser(null);
       
-      // Recarregar dados baseado no modo
-      if (isClientMode) {
-        loadOwnProfile();
-      } else {
-        loadUsers();
-      }
+      // Força recarregamento imediato para garantir que os dados atualizados apareçam
+      setTimeout(() => {
+        // Recarregar dados baseado no modo
+        if (isClientMode) {
+          loadOwnProfile();
+        } else {
+          loadUsers();
+        }
+      }, 500);
     } catch (error: any) {
       console.error('Update user error:', error);
       toast({
