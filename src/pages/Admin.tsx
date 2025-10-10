@@ -300,6 +300,28 @@ const Admin = () => {
         throw new Error(`Erro ao atualizar perfil: ${profileError.message}`);
       }
 
+      // Se o email mudou, atualizar também nas configurações do site
+      if (currentProfile && currentProfile.email !== editingUser.email) {
+        console.log('Updating email in site_configs');
+        
+        // Buscar os sites do usuário
+        const { data: sites } = await supabase
+          .from('sites')
+          .select('id')
+          .eq('user_id', editingUser.user_id);
+
+        if (sites && sites.length > 0) {
+          // Atualizar o email em todas as configurações de sites deste usuário
+          for (const site of sites) {
+            await supabase
+              .from('site_configs')
+              .update({ email: editingUser.email })
+              .eq('site_id', site.id);
+          }
+          console.log('Email updated in site_configs for all user sites');
+        }
+      }
+
       // Se for cliente, atualizar dados do cliente
       if (editingUser.user_type === 'client') {
         // Verificar se já existe um registro de cliente
