@@ -173,6 +173,47 @@ Deno.serve(async (req) => {
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
           }
         }
+        
+        /* Estilos para placeholders dos inputs do widget - com alta especificidade */
+        .flut-phone-input-widget::placeholder,
+        .flut-phone-input-widget::-webkit-input-placeholder,
+        .flut-phone-input-widget::-moz-placeholder,
+        .flut-phone-input-widget:-ms-input-placeholder {
+          color: #999 !important;
+          opacity: 1 !important;
+          font-size: 14px !important;
+          font-weight: 400 !important;
+        }
+        
+        .flut-email-input-widget::placeholder,
+        .flut-email-input-widget::-webkit-input-placeholder,
+        .flut-email-input-widget::-moz-placeholder,
+        .flut-email-input-widget:-ms-input-placeholder {
+          color: #999 !important;
+          opacity: 1 !important;
+          font-size: 14px !important;
+          font-weight: 400 !important;
+        }
+        
+        .flut-name-input-widget::placeholder,
+        .flut-name-input-widget::-webkit-input-placeholder,
+        .flut-name-input-widget::-moz-placeholder,
+        .flut-name-input-widget:-ms-input-placeholder {
+          color: #999 !important;
+          opacity: 1 !important;
+          font-size: 14px !important;
+          font-weight: 400 !important;
+        }
+        
+        .flut-message-textarea-widget::placeholder,
+        .flut-message-textarea-widget::-webkit-input-placeholder,
+        .flut-message-textarea-widget::-moz-placeholder,
+        .flut-message-textarea-widget:-ms-input-placeholder {
+          color: #999 !important;
+          opacity: 1 !important;
+          font-size: 14px !important;
+          font-weight: 400 !important;
+        }
       \`;
       document.head.appendChild(style);
     }
@@ -299,7 +340,7 @@ Deno.serve(async (req) => {
             <form id="flut-form" style="display: flex; flex-direction: column; gap: 15px;">
                 \${SITE_CONFIG.field_phone !== false ? \`
                  <div>
-                   <input type="tel" id="flut-phone" \${SITE_CONFIG.field_phone === true ? 'required' : ''} placeholder="DDD + Celular" maxlength="15" style="
+                   <input type="tel" id="flut-phone" class="flut-phone-input-widget" \${SITE_CONFIG.field_phone === true ? 'required' : ''} placeholder="DDD + Celular" maxlength="15" style="
                     all: unset !important;
                     padding: 15px 20px !important;
                     border: none !important;
@@ -320,7 +361,7 @@ Deno.serve(async (req) => {
                \` : ''}
               
                \${SITE_CONFIG.field_email !== false ? \`
-                <input type="email" id="flut-email" \${SITE_CONFIG.field_email === true ? 'required' : ''} placeholder="E-mail" style="
+                 <input type="email" id="flut-email" class="flut-email-input-widget" \${SITE_CONFIG.field_email === true ? 'required' : ''} placeholder="E-mail" style="
                  all: unset !important;
                  padding: 15px 20px !important;
                  border: none !important;
@@ -340,7 +381,7 @@ Deno.serve(async (req) => {
               \` : ''}
               
                \${SITE_CONFIG.field_name !== false ? \`
-                <input type="text" id="flut-name" \${SITE_CONFIG.field_name === true ? 'required' : ''} placeholder="Nome Completo" style="
+                 <input type="text" id="flut-name" class="flut-name-input-widget" \${SITE_CONFIG.field_name === true ? 'required' : ''} placeholder="Nome Completo" style="
                  all: unset !important;
                  padding: 15px 20px !important;
                  border: none !important;
@@ -360,7 +401,7 @@ Deno.serve(async (req) => {
               \` : ''}
               
                \${SITE_CONFIG.field_message !== false ? \`
-                <textarea id="flut-message" \${SITE_CONFIG.field_message === true ? 'required' : ''} placeholder="\${SITE_CONFIG.default_message && SITE_CONFIG.default_message.trim() !== '' ? 'Mensagem:' : 'Digite sua mensagem...'}" style="
+                 <textarea id="flut-message" class="flut-message-textarea-widget" \${SITE_CONFIG.field_message === true ? 'required' : ''} placeholder="\${SITE_CONFIG.default_message && SITE_CONFIG.default_message.trim() !== '' ? 'Mensagem:' : 'Digite sua mensagem...'}" style="
                  all: unset !important;
                  padding: 15px 20px !important;
                  border: none !important;
