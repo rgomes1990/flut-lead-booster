@@ -266,17 +266,32 @@ Deno.serve(async (req) => {
     console.log('Lead saved successfully with origin:', finalOrigin, 'and UTM data:', utmData);
 
     // Buscar email e nome do usuário para enviar alerta
-    const { data: userProfile } = await supabase
+    const { data: userProfile, error: profileError } = await supabase
       .from('profiles')
       .select('email, name')
       .eq('user_id', site.user_id)
       .single();
 
+    if (profileError) {
+      console.error('⚠️ Erro ao buscar perfil do usuário:', profileError);
+    }
+
     // Enviar alerta por email via SMTP (aguardar resposta)
     let emailSuccess = false;
-    try {
-      if (userProfile?.email) {
-        console.log('Iniciando envio de email de alerta para:', userProfile.email);
+    
+    if (!userProfile?.email) {
+      console.error('❌ Email do usuário não encontrado para user_id:', site.user_id);
+      console.log('Perfil encontrado:', userProfile);
+    } else {
+      try {
+        console.log('📧 Iniciando envio de email de alerta para:', userProfile.email);
+        console.log('📧 Nome do cliente:', userProfile.name || 'Cliente');
+        console.log('📧 Lead data:', { 
+          name: leadData.name, 
+          email: leadData.email, 
+          phone: leadData.phone,
+          website_url: website_url || ''
+        });
         
         const emailResponse = await supabase.functions.invoke('send-smtp-email', {
           body: { 
@@ -291,19 +306,20 @@ Deno.serve(async (req) => {
           }
         });
 
-        console.log('Resposta do envio de email:', emailResponse);
+        console.log('📧 Resposta completa do envio de email:', JSON.stringify(emailResponse, null, 2));
         
         if (emailResponse.error) {
-          console.error('Erro ao enviar email:', emailResponse.error);
-        } else {
-          console.log('Email de alerta enviado com sucesso via SMTP');
+          console.error('❌ Erro na resposta do envio de email:', JSON.stringify(emailResponse.error, null, 2));
+        } else if (emailResponse.data?.success) {
+          console.log('✅ Email de alerta enviado com sucesso via SMTP');
           emailSuccess = true;
+        } else {
+          console.error('⚠️ Email enviado mas sem confirmação de sucesso:', emailResponse.data);
         }
-      } else {
-        console.log('Email do usuário não encontrado, alerta não enviado');
+      } catch (emailError) {
+        console.error('❌ Exceção ao chamar função de envio de email:', emailError);
+        console.error('❌ Stack trace:', emailError instanceof Error ? emailError.stack : 'Sem stack trace');
       }
-    } catch (emailError) {
-      console.error('Erro ao chamar função de envio de email:', emailError);
     }
 
     // Preparar resposta com dados para redirecionamento do WhatsApp
