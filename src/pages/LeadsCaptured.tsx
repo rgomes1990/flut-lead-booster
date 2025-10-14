@@ -320,37 +320,33 @@ const LeadsCaptured = () => {
     }
   };
 
-  const exportToCSV = () => {
-    const headers = ["ID", "Nome", "E-mail", "WhatsApp", "Site", "Usuário", "Status", "Data e Hora", "Origem", "Campanha", "Anúncio", "Público"];
-    const csvContent = [
-      headers.join(","),
-      ...leads.map(lead =>
-        [
-          lead.id,
-          `"${lead.name}"`,
-          lead.email,
-          lead.phone,
-          lead.website_url,
-          `"${lead.profile?.name || 'N/A'}"`,
-          lead.status,
-          formatDate(lead.created_at),
-          `"${lead.origin || 'Não informado'}"`,
-          `"${lead.campaign || 'Não informado'}"`,
-          `"${lead.ad_content || 'Não informado'}"`,
-          `"${lead.audience || 'Não informado'}"`
-        ].join(",")
-      )
-    ].join("\n");
+  const exportToCSV = async () => {
+    const XLSX = await import('xlsx');
+    
+    const headers = ["ID", "Nome", "E-mail", "WhatsApp", "Site", "Usuário", "Status", "Data e Hora", "Origem", "Campanha", "Anúncio", "Público", "Mensagem"];
+    
+    const data = leads.map(lead => [
+      lead.id,
+      lead.name,
+      lead.email,
+      lead.phone,
+      lead.website_url,
+      lead.profile?.name || 'N/A',
+      lead.status,
+      formatDate(lead.created_at),
+      lead.origin || 'Não informado',
+      lead.campaign || 'Não informado',
+      lead.ad_content || 'Não informado',
+      lead.audience || 'Não informado',
+      lead.message || 'Sem mensagem'
+    ]);
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `leads_capturados_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const worksheetData = [headers, ...data];
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Leads");
+
+    XLSX.writeFile(workbook, `leads_capturados_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const formatDate = (dateString: string) => {
