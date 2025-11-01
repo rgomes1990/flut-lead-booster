@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Lead {
   id: string;
@@ -40,6 +41,7 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
   const [selectedAdContent, setSelectedAdContent] = useState<string>("");
   const [selectedAudience, setSelectedAudience] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [allClients, setAllClients] = useState<Array<{ name: string; email: string }>>([]);
 
   // Definir todas as origens possíveis do sistema
   const allOrigins = [
@@ -49,6 +51,62 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
     'Chat GPT',
     'Tráfego Orgânico'
   ];
+
+  // Buscar todos os clientes com planos ativos
+  useEffect(() => {
+    const fetchAllClients = async () => {
+      if (userType !== 'admin') return;
+
+      try {
+        // Buscar todos os clientes com planos ativos
+        const { data: clientsData, error: clientsError } = await supabase
+          .from('clients')
+          .select('user_id, is_active')
+          .eq('is_active', true);
+
+        if (clientsError) throw clientsError;
+
+        if (clientsData && clientsData.length > 0) {
+          // Buscar os planos ativos desses clientes
+          const clientIds = clientsData.map(c => c.user_id);
+          
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('name, email, user_id')
+            .in('user_id', clientIds);
+
+          if (profilesError) throw profilesError;
+
+          // Buscar planos ativos
+          const { data: plansData, error: plansError } = await supabase
+            .from('subscription_plans')
+            .select('client_id')
+            .eq('is_active', true)
+            .gt('end_date', new Date().toISOString());
+
+          if (plansError) throw plansError;
+
+          // Filtrar apenas clientes com planos ativos
+          const activeClientIds = new Set(
+            plansData?.map(p => {
+              const client = clientsData.find(c => c.user_id === p.client_id);
+              return client?.user_id;
+            }).filter(Boolean)
+          );
+
+          const activeProfiles = profilesData
+            ?.filter(p => activeClientIds.has(p.user_id))
+            .sort((a, b) => a.name.localeCompare(b.name)) || [];
+
+          setAllClients(activeProfiles);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar clientes:', error);
+      }
+    };
+
+    fetchAllClients();
+  }, [userType]);
 
   // Calcular dados únicos baseado nos filtros ativos
   const uniqueData = useMemo(() => {
@@ -176,9 +234,9 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
             <SelectValue placeholder="Selecione o cliente" />
           </SelectTrigger>
           <SelectContent>
-            {uniqueData.clients.map(client => (
-              <SelectItem key={client} value={client}>
-                {client}
+            {allClients.map(client => (
+              <SelectItem key={client.email} value={client.name}>
+                {client.name}
               </SelectItem>
             ))}
           </SelectContent>
