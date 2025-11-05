@@ -58,32 +58,38 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
       if (userType !== 'admin') return;
 
       try {
-        // Buscar clientes com planos ativos diretamente
-        const { data, error } = await supabase
-          .from('subscription_plans')
+        // Buscar diretamente da tabela clients com JOIN para subscription_plans
+        const { data: clientsWithPlans, error } = await supabase
+          .from('clients')
           .select(`
-            clients!inner (
-              user_id,
-              is_active
+            user_id,
+            subscription_plans!inner (
+              is_active,
+              end_date
             )
           `)
           .eq('is_active', true)
-          .eq('clients.is_active', true)
-          .gt('end_date', new Date().toISOString());
+          .eq('subscription_plans.is_active', true)
+          .gt('subscription_plans.end_date', new Date().toISOString());
 
         if (error) {
-          console.error('Erro ao buscar planos:', error);
+          console.error('Erro ao buscar clientes:', error);
           return;
         }
 
         // Extrair user_ids únicos
         const userIds = [...new Set(
-          data?.map(item => (item.clients as any)?.user_id).filter(Boolean) || []
+          clientsWithPlans?.map(client => client.user_id).filter(Boolean) || []
         )];
 
-        if (userIds.length === 0) return;
+        console.log('User IDs encontrados:', userIds.length);
 
-        // Buscar perfis
+        if (userIds.length === 0) {
+          setAllClients([]);
+          return;
+        }
+
+        // Buscar perfis desses clientes
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('name, email, user_id')
