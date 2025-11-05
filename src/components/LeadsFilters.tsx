@@ -58,47 +58,40 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
       if (userType !== 'admin') return;
 
       try {
-        // Buscar todos os clientes com planos ativos
-        const { data: clientsData, error: clientsError } = await supabase
-          .from('clients')
-          .select('id, user_id, is_active')
-          .eq('is_active', true);
+        // Buscar diretamente clientes com planos ativos usando JOIN
+        const { data: activePlans, error: plansError } = await supabase
+          .from('subscription_plans')
+          .select(`
+            client_id,
+            clients!inner(
+              user_id,
+              is_active
+            )
+          `)
+          .eq('is_active', true)
+          .eq('clients.is_active', true)
+          .gt('end_date', new Date().toISOString());
 
-        if (clientsError) throw clientsError;
+        if (plansError) throw plansError;
 
-        if (clientsData && clientsData.length > 0) {
-          // Buscar os planos ativos desses clientes
-          const clientIds = clientsData.map(c => c.user_id);
-          
+        if (activePlans && activePlans.length > 0) {
+          // Extrair user_ids únicos dos clientes com planos ativos
+          const uniqueUserIds = [...new Set(
+            activePlans.map(plan => (plan.clients as any).user_id).filter(Boolean)
+          )];
+
+          // Buscar os perfis desses clientes
           const { data: profilesData, error: profilesError } = await supabase
             .from('profiles')
             .select('name, email, user_id')
-            .in('user_id', clientIds);
+            .in('user_id', uniqueUserIds);
 
           if (profilesError) throw profilesError;
 
-          // Buscar planos ativos
-          const { data: plansData, error: plansError } = await supabase
-            .from('subscription_plans')
-            .select('client_id')
-            .eq('is_active', true)
-            .gt('end_date', new Date().toISOString());
+          const sortedProfiles = profilesData
+            ?.sort((a, b) => a.name.localeCompare(b.name)) || [];
 
-          if (plansError) throw plansError;
-
-          // Filtrar apenas clientes com planos ativos
-          const activeClientIds = new Set(
-            plansData?.map(p => {
-              const client = clientsData.find(c => c.id === p.client_id);
-              return client?.user_id;
-            }).filter(Boolean)
-          );
-
-          const activeProfiles = profilesData
-            ?.filter(p => activeClientIds.has(p.user_id))
-            .sort((a, b) => a.name.localeCompare(b.name)) || [];
-
-          setAllClients(activeProfiles);
+          setAllClients(sortedProfiles);
         }
       } catch (error) {
         console.error('Erro ao buscar clientes:', error);
