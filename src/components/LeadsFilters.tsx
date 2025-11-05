@@ -55,55 +55,65 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
   // Buscar todos os clientes com planos ativos
   useEffect(() => {
     const fetchAllClients = async () => {
-      if (userType !== 'admin') return;
+      if (userType !== 'admin') {
+        console.log('Usuário não é admin, pulando busca de clientes');
+        return;
+      }
+
+      console.log('Iniciando busca de clientes com planos ativos...');
 
       try {
-        // Buscar diretamente da tabela clients com JOIN para subscription_plans
-        const { data: clientsWithPlans, error } = await supabase
-          .from('clients')
+        // Buscar profiles com JOIN direto para clients e subscription_plans
+        const { data: clientProfiles, error } = await supabase
+          .from('profiles')
           .select(`
-            user_id,
-            subscription_plans!inner (
-              is_active,
-              end_date
-            )
-          `)
-          .eq('is_active', true)
-          .eq('subscription_plans.is_active', true)
-          .gt('subscription_plans.end_date', new Date().toISOString());
+            name,
+            email,
+            user_id
+          `);
 
         if (error) {
-          console.error('Erro ao buscar clientes:', error);
+          console.error('Erro ao buscar profiles:', error);
           return;
         }
 
-        // Extrair user_ids únicos
-        const userIds = [...new Set(
-          clientsWithPlans?.map(client => client.user_id).filter(Boolean) || []
-        )];
+        console.log('Total de profiles encontrados:', clientProfiles?.length || 0);
 
-        console.log('User IDs encontrados:', userIds.length);
-
-        if (userIds.length === 0) {
+        if (!clientProfiles || clientProfiles.length === 0) {
           setAllClients([]);
           return;
         }
 
-        // Buscar perfis desses clientes
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('name, email, user_id')
-          .in('user_id', userIds);
+        // Para cada profile, verificar se tem client ativo com plano ativo
+        const validClients = [];
+        
+        for (const profile of clientProfiles) {
+          const { data: clientData } = await supabase
+            .from('clients')
+            .select(`
+              id,
+              is_active,
+              subscription_plans!inner (
+                is_active,
+                end_date
+              )
+            `)
+            .eq('user_id', profile.user_id)
+            .eq('is_active', true)
+            .eq('subscription_plans.is_active', true)
+            .gt('subscription_plans.end_date', new Date().toISOString())
+            .maybeSingle();
 
-        if (profilesError) {
-          console.error('Erro ao buscar perfis:', profilesError);
-          return;
+          if (clientData) {
+            validClients.push(profile);
+          }
         }
 
-        const sorted = profiles
-          ?.sort((a, b) => a.name.localeCompare(b.name)) || [];
+        const sorted = validClients.sort((a, b) => a.name.localeCompare(b.name));
         
-        console.log('Clientes carregados:', sorted.length, sorted.map(c => c.name));
+        console.log('✅ Clientes com planos ativos:', sorted.length);
+        console.log('Nomes:', sorted.map(c => c.name));
+        
         setAllClients(sorted);
       } catch (error) {
         console.error('Erro ao buscar clientes:', error);
