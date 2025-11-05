@@ -58,12 +58,11 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
       if (userType !== 'admin') return;
 
       try {
-        // Buscar diretamente clientes com planos ativos usando JOIN
-        const { data: activePlans, error: plansError } = await supabase
+        // Buscar clientes com planos ativos diretamente
+        const { data, error } = await supabase
           .from('subscription_plans')
           .select(`
-            client_id,
-            clients!inner(
+            clients!inner (
               user_id,
               is_active
             )
@@ -72,27 +71,34 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
           .eq('clients.is_active', true)
           .gt('end_date', new Date().toISOString());
 
-        if (plansError) throw plansError;
-
-        if (activePlans && activePlans.length > 0) {
-          // Extrair user_ids únicos dos clientes com planos ativos
-          const uniqueUserIds = [...new Set(
-            activePlans.map(plan => (plan.clients as any).user_id).filter(Boolean)
-          )];
-
-          // Buscar os perfis desses clientes
-          const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
-            .select('name, email, user_id')
-            .in('user_id', uniqueUserIds);
-
-          if (profilesError) throw profilesError;
-
-          const sortedProfiles = profilesData
-            ?.sort((a, b) => a.name.localeCompare(b.name)) || [];
-
-          setAllClients(sortedProfiles);
+        if (error) {
+          console.error('Erro ao buscar planos:', error);
+          return;
         }
+
+        // Extrair user_ids únicos
+        const userIds = [...new Set(
+          data?.map(item => (item.clients as any)?.user_id).filter(Boolean) || []
+        )];
+
+        if (userIds.length === 0) return;
+
+        // Buscar perfis
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('name, email, user_id')
+          .in('user_id', userIds);
+
+        if (profilesError) {
+          console.error('Erro ao buscar perfis:', profilesError);
+          return;
+        }
+
+        const sorted = profiles
+          ?.sort((a, b) => a.name.localeCompare(b.name)) || [];
+        
+        console.log('Clientes carregados:', sorted.length, sorted.map(c => c.name));
+        setAllClients(sorted);
       } catch (error) {
         console.error('Erro ao buscar clientes:', error);
       }
