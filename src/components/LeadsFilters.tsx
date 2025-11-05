@@ -61,7 +61,7 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
         // Buscar todos os clientes com planos ativos
         const { data: clientsData, error: clientsError } = await supabase
           .from('clients')
-          .select('user_id, is_active')
+          .select('id, user_id, is_active')
           .eq('is_active', true);
 
         if (clientsError) throw clientsError;
@@ -89,7 +89,7 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
           // Filtrar apenas clientes com planos ativos
           const activeClientIds = new Set(
             plansData?.map(p => {
-              const client = clientsData.find(c => c.user_id === p.client_id);
+              const client = clientsData.find(c => c.id === p.client_id);
               return client?.user_id;
             }).filter(Boolean)
           );
