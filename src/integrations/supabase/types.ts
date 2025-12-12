@@ -507,32 +507,20 @@ export type Database = {
         }
         Returns: undefined
       }
-      determine_origin_from_url: {
-        Args: { url: string }
-        Returns: string
-      }
+      determine_origin_from_url: { Args: { url: string }; Returns: string }
       fix_lead_client_associations: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           corrected_leads: number
           orphaned_leads: number
           total_leads: number
         }[]
       }
-      format_whatsapp_number: {
-        Args: { input_phone: string }
-        Returns: string
-      }
-      generate_script_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      format_whatsapp_number: { Args: { input_phone: string }; Returns: string }
+      generate_script_id: { Args: never; Returns: string }
+      is_admin: { Args: never; Returns: boolean }
       report_orphaned_leads: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string
           current_client_id: string
@@ -543,14 +531,14 @@ export type Database = {
         }[]
       }
       reprocess_leads_utm_data: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           processed_count: number
           updated_count: number
         }[]
       }
       update_leads_by_client_email: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           skipped_null_emails: number
           total_processed: number
