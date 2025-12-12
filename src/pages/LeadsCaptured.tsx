@@ -5,16 +5,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search, X, Phone, Send, Trash2, RefreshCw, RotateCcw } from "lucide-react";
+import { Download, Search, X, Phone, Send, Trash2, RefreshCw, RotateCcw, CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import AdminNavigation from "@/components/AdminNavigation";
 import LeadsFilters from "@/components/LeadsFilters";
 import { extractUTMFromUrl, updateLeadWithUTMData } from "@/utils/utmExtractor";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface Lead {
   id: string;
@@ -62,6 +67,8 @@ const LeadsCaptured = () => {
   const [selectedAdContent, setSelectedAdContent] = useState<string>("");
   const [selectedAudience, setSelectedAudience] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const { userProfile } = useAuth();
   const { toast } = useToast();
 
@@ -93,7 +100,7 @@ const LeadsCaptured = () => {
     if (userProfile) {
       loadLeads();
     }
-  }, [userProfile, currentPage, itemsPerPage, selectedClient, selectedOrigin, selectedCampaign, selectedAdContent, selectedAudience, selectedStatus]);
+  }, [userProfile, currentPage, itemsPerPage, selectedClient, selectedOrigin, selectedCampaign, selectedAdContent, selectedAudience, selectedStatus, startDate, endDate]);
 
   useEffect(() => {
     console.log("useEffect [searchTerm] disparado, searchTerm:", searchTerm);
@@ -136,6 +143,16 @@ const LeadsCaptured = () => {
       }
       if (selectedStatus) {
         query = query.eq('status', selectedStatus);
+      }
+      if (startDate) {
+        const startOfDay = new Date(startDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        query = query.gte('created_at', startOfDay.toISOString());
+      }
+      if (endDate) {
+        const endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        query = query.lte('created_at', endOfDay.toISOString());
       }
       
       // Filter by client if user is not admin
@@ -406,6 +423,8 @@ const LeadsCaptured = () => {
     setSelectedAdContent("");
     setSelectedAudience("");
     setSelectedStatus("");
+    setStartDate(undefined);
+    setEndDate(undefined);
     setCurrentPage(1);
   };
 
@@ -710,7 +729,64 @@ const LeadsCaptured = () => {
                 </SelectContent>
               </Select>
 
-              {(selectedClient || selectedOrigin || selectedCampaign || selectedAdContent || selectedAudience || selectedStatus) && (
+              {/* Filtros de Data */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-48 justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "dd/MM/yyyy", { locale: ptBR }) : "Data início"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => {
+                      setStartDate(date);
+                      setCurrentPage(1);
+                    }}
+                    initialFocus
+                    locale={ptBR}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-48 justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "dd/MM/yyyy", { locale: ptBR }) : "Data fim"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={(date) => {
+                      setEndDate(date);
+                      setCurrentPage(1);
+                    }}
+                    initialFocus
+                    locale={ptBR}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {(selectedClient || selectedOrigin || selectedCampaign || selectedAdContent || selectedAudience || selectedStatus || startDate || endDate) && (
                 <Button
                   variant="outline"
                   size="sm"
