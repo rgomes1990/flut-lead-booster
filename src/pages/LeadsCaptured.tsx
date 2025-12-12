@@ -69,6 +69,7 @@ const LeadsCaptured = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [clientsOptions, setClientsOptions] = useState<{ id: string; name: string }[]>([]);
   const { userProfile } = useAuth();
   const { toast } = useToast();
 
@@ -113,6 +114,56 @@ const LeadsCaptured = () => {
     }
   }, [searchTerm]);
 
+  useEffect(() => {
+    if (userProfile?.user_type === "admin") {
+      loadClientsOptions();
+    }
+  }, [userProfile]);
+
+  const loadClientsOptions = async () => {
+    try {
+      const { data: clientsData, error: clientsError } = await supabase
+        .from("clients")
+        .select("id, user_id, is_active")
+        .eq("is_active", true);
+
+      if (clientsError) throw clientsError;
+
+      if (!clientsData || clientsData.length === 0) {
+        setClientsOptions([]);
+        return;
+      }
+
+      const userIds = [...new Set(clientsData.map((client) => client.user_id))];
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, name")
+        .in("user_id", userIds);
+
+      if (profilesError) throw profilesError;
+
+      const options =
+        profilesData?.length > 0
+          ? clientsData
+              .map((client) => {
+                const profile = profilesData.find(
+                  (p) => p.user_id === client.user_id
+                );
+                return {
+                  id: client.id,
+                  name: profile?.name || "Sem nome",
+                };
+              })
+              .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+          : [];
+
+      setClientsOptions(options);
+    } catch (error) {
+      console.error("Erro ao carregar clientes para filtro:", error);
+    }
+  };
+
   const loadLeads = async () => {
     try {
       setLoading(true);
@@ -156,7 +207,7 @@ const LeadsCaptured = () => {
       }
       
       // Filter by client if user is not admin
-      if (userProfile?.user_type === 'client') {
+      if (userProfile?.user_type === "client") {
         // First, get the client ID
         const { data: clientData } = await supabase
           .from("clients")
@@ -165,23 +216,11 @@ const LeadsCaptured = () => {
           .single();
 
         if (clientData) {
-          query = query.eq('client_id', clientData.id);
+          query = query.eq("client_id", clientData.id);
         }
-      } else if (userProfile?.user_type === 'admin' && selectedClient) {
-        // Filter by selected client for admin users
-        const { data: clientData } = await supabase
-          .from("clients")
-          .select("id, user_id")
-          .eq("user_id", (await supabase
-            .from("profiles")
-            .select("user_id")
-            .eq("name", selectedClient)
-            .single()).data?.user_id)
-          .single();
-
-        if (clientData) {
-          query = query.eq('client_id', clientData.id);
-        }
+      } else if (userProfile?.user_type === "admin" && selectedClient) {
+        // Filter by selected client for admin users (using client_id directly)
+        query = query.eq("client_id", selectedClient);
       }
       
       // Apply pagination and ordering
@@ -632,17 +671,20 @@ const LeadsCaptured = () => {
               </div>
               
               {userProfile?.user_type === 'admin' && (
-                <Select value={selectedClient} onValueChange={(value) => {
-                  setSelectedClient(value);
-                  setCurrentPage(1);
-                }}>
+                <Select
+                  value={selectedClient}
+                  onValueChange={(value) => {
+                    setSelectedClient(value);
+                    setCurrentPage(1);
+                  }}
+                >
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Selecione o cliente" />
                   </SelectTrigger>
                   <SelectContent>
-                    {[...new Set(leads.map(lead => lead.profile?.name).filter(Boolean))].sort().map(client => (
-                      <SelectItem key={client} value={client}>
-                        {client}
+                    {clientsOptions.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
