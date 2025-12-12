@@ -2,8 +2,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { RotateCcw } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RotateCcw, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface Lead {
   id: string;
@@ -41,6 +46,8 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
   const [selectedAdContent, setSelectedAdContent] = useState<string>("");
   const [selectedAudience, setSelectedAudience] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [allClients, setAllClients] = useState<Array<{ name: string; email: string }>>([]);
 
   // Definir todas as origens possíveis do sistema
@@ -182,9 +189,19 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
     if (selectedStatus) {
       filtered = filtered.filter(lead => lead.status === selectedStatus);
     }
+    if (startDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(lead => new Date(lead.created_at) >= startOfDay);
+    }
+    if (endDate) {
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(lead => new Date(lead.created_at) <= endOfDay);
+    }
 
     onFilteredLeads(filtered);
-  }, [leads, selectedClient, selectedOrigin, selectedCampaign, selectedAdContent, selectedAudience, selectedStatus, onFilteredLeads]);
+  }, [leads, selectedClient, selectedOrigin, selectedCampaign, selectedAdContent, selectedAudience, selectedStatus, startDate, endDate, onFilteredLeads]);
 
   // Limpar filtros dependentes quando um filtro superior muda
   const handleClientChange = (value: string) => {
@@ -220,6 +237,8 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
     setSelectedAdContent("");
     setSelectedAudience("");
     setSelectedStatus("");
+    setStartDate(undefined);
+    setEndDate(undefined);
   };
 
   const getStatusLabel = (status: string) => {
@@ -323,7 +342,58 @@ const LeadsFilters = ({ leads, onFilteredLeads, userType }: LeadsFiltersProps) =
         </SelectContent>
       </Select>
 
-      {(selectedClient || selectedOrigin || selectedCampaign || selectedAdContent || selectedAudience || selectedStatus) && (
+      {/* Filtros de Data */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-48 justify-start text-left font-normal",
+              !startDate && "text-muted-foreground"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {startDate ? format(startDate, "dd/MM/yyyy", { locale: ptBR }) : "Data início"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={startDate}
+            onSelect={setStartDate}
+            initialFocus
+            locale={ptBR}
+            className="pointer-events-auto"
+          />
+        </PopoverContent>
+      </Popover>
+
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-48 justify-start text-left font-normal",
+              !endDate && "text-muted-foreground"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {endDate ? format(endDate, "dd/MM/yyyy", { locale: ptBR }) : "Data fim"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={endDate}
+            onSelect={setEndDate}
+            initialFocus
+            locale={ptBR}
+            className="pointer-events-auto"
+          />
+        </PopoverContent>
+      </Popover>
+
+      {(selectedClient || selectedOrigin || selectedCampaign || selectedAdContent || selectedAudience || selectedStatus || startDate || endDate) && (
         <Button
           variant="outline"
           size="sm"
