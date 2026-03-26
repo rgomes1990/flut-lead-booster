@@ -97,10 +97,10 @@ Deno.serve(async (req) => {
           box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         ">
           <h2 style="margin: 0 0 20px 0; color: #333; text-align: center;">Fale Conosco</h2>
-          <form id="flut-form" autocomplete="off">
+          <form id="flut-form" autocomplete="off" novalidate>
             <div style="margin-bottom: 15px;">
               <label style="display: block; margin-bottom: 5px; color: #555;">DDD + Celular *</label>
-              <input type="tel" id="flut-phone" required autocomplete="off" style="
+              <input type="tel" id="flut-phone" required autocomplete="nope-phone" name="flut_phone_x" style="
                 width: 100%;
                 padding: 10px;
                 border: 1px solid #ddd;
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
             </div>
             <div style="margin-bottom: 15px;">
               <label style="display: block; margin-bottom: 5px; color: #555;">E-mail *</label>
-              <input type="email" id="flut-email" required autocomplete="off" style="
+              <input type="text" id="flut-email" required autocomplete="nope-email" name="flut_email_x" style="
                 width: 100%;
                 padding: 10px;
                 border: 1px solid #ddd;
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
             </div>
             <div style="margin-bottom: 15px;">
               <label style="display: block; margin-bottom: 5px; color: #555;">Nome Completo *</label>
-              <input type="text" id="flut-name" required autocomplete="off" style="
+              <input type="text" id="flut-name" required autocomplete="nope-name" name="flut_name_x" style="
                 width: 100%;
                 padding: 10px;
                 border: 1px solid #ddd;
