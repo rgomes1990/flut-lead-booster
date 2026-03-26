@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
           box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         ">
           <h2 style="margin: 0 0 20px 0; color: #333; text-align: center;">Fale Conosco</h2>
-          <form id="flut-form">
+          <form id="flut-form" autocomplete="off">
             <div style="margin-bottom: 15px;">
               <label style="display: block; margin-bottom: 5px; color: #555;">DDD + Celular *</label>
               <input type="tel" id="flut-phone" required autocomplete="off" style="
