@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
             </div>
             <div style="margin-bottom: 15px;">
               <label style="display: block; margin-bottom: 5px; color: #555;">E-mail *</label>
-              <input type="email" id="flut-email" required style="
+              <input type="email" id="flut-email" required autocomplete="off" style="
                 width: 100%;
                 padding: 10px;
                 border: 1px solid #ddd;
