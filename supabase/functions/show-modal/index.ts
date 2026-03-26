@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
           <form id="flut-form">
             <div style="margin-bottom: 15px;">
               <label style="display: block; margin-bottom: 5px; color: #555;">DDD + Celular *</label>
-              <input type="tel" id="flut-phone" required style="
+              <input type="tel" id="flut-phone" required autocomplete="off" style="
                 width: 100%;
                 padding: 10px;
                 border: 1px solid #ddd;
