@@ -243,10 +243,13 @@ Deno.serve(async (req) => {
         document.getElementById('flut-form').reset();
         
         // Se houver dados do WhatsApp, abrir
-        if (responseData.whatsapp && responseData.whatsapp.phone) {
-          var rawPhone = String(responseData.whatsapp.phone || '').trim().replace(/[^\\d]/g, '');
-          var encodedMsg = encodeURIComponent(String(responseData.whatsapp.message || ''));
-          var whatsappUrl = 'https://api.whatsapp.com/send?phone=' + rawPhone + '&text=' + encodedMsg;
+        if (responseData.whatsapp && (responseData.whatsapp.url || responseData.whatsapp.phone)) {
+          var whatsappUrl = String(responseData.whatsapp.url || '').trim();
+          if (!whatsappUrl) {
+            var rawPhone = String(responseData.whatsapp.phone || '').trim().replace(/[^\\d]/g, '');
+            var encodedMsg = encodeURIComponent(String(responseData.whatsapp.message || ''));
+            whatsappUrl = 'https://api.whatsapp.com/send?phone=' + rawPhone + '&text=' + encodedMsg;
+          }
 
           window.location.href = whatsappUrl;
         }
