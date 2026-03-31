@@ -244,16 +244,21 @@ Deno.serve(async (req) => {
         
         // Se houver dados do WhatsApp, abrir
         if (responseData.whatsapp && responseData.whatsapp.phone) {
-          const whatsappUrl = \`https://wa.me/\${responseData.whatsapp.phone}?text=\${responseData.whatsapp.message}\`;
+          // Sanitizar número: remover tudo que não é dígito e garantir formato correto
+          var rawPhone = String(responseData.whatsapp.phone).replace(/\\D/g, '');
+          // Garantir que começa com 55 (Brasil)
+          if (!rawPhone.startsWith('55')) {
+            rawPhone = '55' + rawPhone;
+          }
+          var encodedMsg = encodeURIComponent(responseData.whatsapp.message || '');
+          var whatsappUrl = 'https://wa.me/' + rawPhone + '?text=' + encodedMsg;
           
           // Detectar Safari e aplicar tratamento específico
-          const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+          var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
           
           if (isSafari) {
-            // No Safari, usar window.location.href em vez de window.open para evitar bloqueio de pop-up
             window.location.href = whatsappUrl;
           } else {
-            // Em outros navegadores, usar window.open normalmente
             window.open(whatsappUrl, '_blank');
           }
         }
