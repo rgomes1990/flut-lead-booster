@@ -696,10 +696,7 @@ Deno.serve(async (req) => {
         
         // Redirecionar para WhatsApp se os dados estiverem disponíveis
         if (responseData.whatsapp && responseData.whatsapp.phone) {
-          let phone = String(responseData.whatsapp.phone).trim().replace(/[^\d]/g, '');
-          if (phone.length === 10 || phone.length === 11) {
-            phone = \`55\${phone}\`;
-          }
+          const phone = String(responseData.whatsapp.phone || '').trim().replace(/[^\d]/g, '');
           const text = encodeURIComponent(String(responseData.whatsapp.message || ''));
           const whatsappUrl = \`https://wa.me/\${phone}?text=\${text}\`;
 
