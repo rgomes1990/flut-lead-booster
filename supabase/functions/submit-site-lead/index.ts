@@ -323,7 +323,15 @@ Deno.serve(async (req) => {
     }
 
     // Preparar resposta com dados para redirecionamento do WhatsApp
-    const whatsappPhone = siteConfig?.phone || '';
+    const normalizeWhatsAppPhone = (value: string): string => {
+      let digits = String(value || '').trim().replace(/[^\d]/g, '');
+      if (digits && (digits.length === 10 || digits.length === 11)) {
+        digits = `55${digits}`;
+      }
+      return digits;
+    };
+
+    const whatsappPhone = normalizeWhatsAppPhone(siteConfig?.phone || '');
     const attendantName = siteConfig?.attendant_name || 'Atendimento';
     
     // Criar mensagem para WhatsApp
@@ -336,7 +344,7 @@ ${message ? `${message}` : ''}`;
       emailSent: emailSuccess,
       whatsapp: {
         phone: whatsappPhone,
-        message: encodeURIComponent(whatsappMessage)
+        message: whatsappMessage
       }
     };
 
