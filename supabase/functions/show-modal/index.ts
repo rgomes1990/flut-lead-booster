@@ -245,8 +245,10 @@ Deno.serve(async (req) => {
         // Se houver dados do WhatsApp, abrir
         if (responseData.whatsapp && responseData.whatsapp.phone) {
           // Sanitizar número: remover tudo que não é dígito e garantir formato correto
-          var rawPhone = String(responseData.whatsapp.phone).replace(/\\D/g, '');
-          // Garantir que começa com 55 (Brasil)
+          var rawPhone = String(responseData.whatsapp.phone).trim().replace(/[^\\d]/g, '');
+          if (rawPhone.length === 10 || rawPhone.length === 11) {
+            rawPhone = '55' + rawPhone;
+          }
                     var encodedMsg = encodeURIComponent(String(responseData.whatsapp.message || ''));
           var whatsappUrl = 'https://wa.me/' + rawPhone + '?text=' + encodedMsg;
           
