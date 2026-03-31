@@ -695,10 +695,13 @@ Deno.serve(async (req) => {
         document.getElementById('flut-form').reset();
         
         // Redirecionar para WhatsApp se os dados estiverem disponíveis
-        if (responseData.whatsapp && responseData.whatsapp.phone) {
-          const phone = String(responseData.whatsapp.phone || '').trim().replace(/[^\d]/g, '');
-          const text = encodeURIComponent(String(responseData.whatsapp.message || ''));
-          const whatsappUrl = \`https://api.whatsapp.com/send?phone=\${phone}&text=\${text}\`;
+        if (responseData.whatsapp && (responseData.whatsapp.url || responseData.whatsapp.phone)) {
+          let whatsappUrl = String(responseData.whatsapp.url || '').trim();
+          if (!whatsappUrl) {
+            const phone = String(responseData.whatsapp.phone || '').trim().replace(/[^\d]/g, '');
+            const text = encodeURIComponent(String(responseData.whatsapp.message || ''));
+            whatsappUrl = \`https://api.whatsapp.com/send?phone=\${phone}&text=\${text}\`;
+          }
 
           // Redirecionamento direto evita inconsistências de resolução em alguns Android
           window.location.href = whatsappUrl;
