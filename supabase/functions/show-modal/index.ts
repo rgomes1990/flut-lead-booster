@@ -243,15 +243,14 @@ Deno.serve(async (req) => {
         document.getElementById('flut-form').reset();
         
         // Se houver dados do WhatsApp, abrir
-        if (responseData.whatsapp && responseData.whatsapp.phone) {
-          // Sanitizar número: remover tudo que não é dígito e garantir formato correto
-          var rawPhone = String(responseData.whatsapp.phone).trim().replace(/[^\\d]/g, '');
-          if (rawPhone.length === 10 || rawPhone.length === 11) {
-            rawPhone = '55' + rawPhone;
+        if (responseData.whatsapp && (responseData.whatsapp.url || responseData.whatsapp.phone)) {
+          var whatsappUrl = String(responseData.whatsapp.url || '').trim();
+          if (!whatsappUrl) {
+            var rawPhone = String(responseData.whatsapp.phone || '').trim().replace(/[^\\d]/g, '');
+            var encodedMsg = encodeURIComponent(String(responseData.whatsapp.message || ''));
+            whatsappUrl = 'https://api.whatsapp.com/send?phone=' + rawPhone + '&text=' + encodedMsg;
           }
-                    var encodedMsg = encodeURIComponent(String(responseData.whatsapp.message || ''));
-          var whatsappUrl = 'https://wa.me/' + rawPhone + '?text=' + encodedMsg;
-          
+
           window.location.href = whatsappUrl;
         }
       } else {
