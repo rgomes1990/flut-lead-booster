@@ -696,18 +696,15 @@ Deno.serve(async (req) => {
         
         // Redirecionar para WhatsApp se os dados estiverem disponíveis
         if (responseData.whatsapp && responseData.whatsapp.phone) {
-          const whatsappUrl = \`https://wa.me/\${responseData.whatsapp.phone.replace(/[^0-9]/g, '')}?text=\${responseData.whatsapp.message}\`;
-          
-          // Detectar Safari e aplicar tratamento específico
-          const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-          
-          if (isSafari) {
-            // No Safari, usar window.location.href em vez de window.open para evitar bloqueio de pop-up
-            window.location.href = whatsappUrl;
-          } else {
-            // Em outros navegadores, usar window.open normalmente
-            window.open(whatsappUrl, '_blank');
+          let phone = String(responseData.whatsapp.phone).trim().replace(/[^\d]/g, '');
+          if (phone.length === 10 || phone.length === 11) {
+            phone = \`55\${phone}\`;
           }
+          const text = encodeURIComponent(String(responseData.whatsapp.message || ''));
+          const whatsappUrl = \`https://wa.me/\${phone}?text=\${text}\`;
+
+          // Redirecionamento direto evita inconsistências de resolução em alguns Android
+          window.location.href = whatsappUrl;
         }
       } else {
         try {
