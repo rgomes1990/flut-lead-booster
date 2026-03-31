@@ -698,7 +698,7 @@ Deno.serve(async (req) => {
         if (responseData.whatsapp && responseData.whatsapp.phone) {
           const phone = String(responseData.whatsapp.phone || '').trim().replace(/[^\d]/g, '');
           const text = encodeURIComponent(String(responseData.whatsapp.message || ''));
-          const whatsappUrl = \`https://wa.me/\${phone}?text=\${text}\`;
+          const whatsappUrl = \`https://api.whatsapp.com/send?phone=\${phone}&text=\${text}\`;
 
           // Redirecionamento direto evita inconsistências de resolução em alguns Android
           window.location.href = whatsappUrl;
