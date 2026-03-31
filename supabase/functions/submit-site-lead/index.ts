@@ -338,13 +338,18 @@ Deno.serve(async (req) => {
     const whatsappMessage = `Olá ${attendantName}! Meu nome é ${name || 'Cliente'}. 
 ${message ? `${message}` : ''}`;
 
+    const whatsappUrl = whatsappPhone
+      ? `https://api.whatsapp.com/send?phone=${whatsappPhone}&text=${encodeURIComponent(whatsappMessage)}`
+      : '';
+
     const responseData = {
       success: true,
       message: 'Lead enviado com sucesso!',
       emailSent: emailSuccess,
       whatsapp: {
         phone: whatsappPhone,
-        message: whatsappMessage
+        message: whatsappMessage,
+        url: whatsappUrl
       }
     };
 
