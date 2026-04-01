@@ -97,6 +97,9 @@ const WhatsAppInput = ({
         placeholder={placeholder}
         maxLength={19} // +55 (XX) XXXXX-XXXX
       />
+      <p className="text-xs text-muted-foreground mt-1">
+        Formato obrigatório: +55 (DDD) número. Ex: +55 (11) 97551-0106
+      </p>
     </div>
   );
 };
