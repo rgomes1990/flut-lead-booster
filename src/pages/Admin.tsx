@@ -739,21 +739,18 @@ const Admin = () => {
                           placeholder="exemplo.com"
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="edit-whatsapp">WhatsApp do Usuário</Label>
-                        <Input
-                          id="edit-whatsapp"
-                          value={editingUser.whatsapp || ''}
-                          onChange={(e) => {
-                            console.log("Updating whatsapp field:", e.target.value);
-                            setEditingUser({ ...editingUser, whatsapp: e.target.value });
-                          }}
-                          placeholder="(11) 99999-9999"
-                        />
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Este é o WhatsApp do usuário. Cada site pode ter seu próprio WhatsApp nas configurações.
-                        </p>
-                      </div>
+                      <WhatsAppInput
+                        id="edit-whatsapp"
+                        label="WhatsApp do Usuário"
+                        value={editingUser.whatsapp || ''}
+                        onChange={(value) => {
+                          console.log("Updating whatsapp field:", value);
+                          setEditingUser({ ...editingUser, whatsapp: value });
+                        }}
+                      />
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Este é o WhatsApp do usuário. Cada site pode ter seu próprio WhatsApp nas configurações.
+                      </p>
                     </>
                   )}
                   <Button 
