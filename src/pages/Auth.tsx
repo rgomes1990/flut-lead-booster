@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { FlutLogo } from "@/components/FlutLogo";
 import { useAuth } from "@/hooks/useAuth";
+import WhatsAppInput from "@/components/WhatsAppInput";
 
 const Auth = () => {
   const { user, userProfile, loading } = useAuth();
