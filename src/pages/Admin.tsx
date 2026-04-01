@@ -541,15 +541,12 @@ const Admin = () => {
                             placeholder="exemplo.com"
                           />
                         </div>
-                        <div>
-                          <Label htmlFor="whatsapp">WhatsApp (opcional)</Label>
-                          <Input
-                            id="whatsapp"
-                            value={newUser.whatsapp}
-                            onChange={(e) => setNewUser({ ...newUser, whatsapp: e.target.value })}
-                            placeholder="(11) 99999-9999"
-                          />
-                        </div>
+                        <WhatsAppInput
+                          id="whatsapp"
+                          label="WhatsApp (opcional)"
+                          value={newUser.whatsapp}
+                          onChange={(value) => setNewUser({ ...newUser, whatsapp: value })}
+                        />
                       </>
                     )}
                     <Button 
