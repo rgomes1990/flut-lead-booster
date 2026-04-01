@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminNavigation from "@/components/AdminNavigation";
 import SearchInput from "@/components/SearchInput";
+import WhatsAppInput from "@/components/WhatsAppInput";
 
 const Admin = () => {
   const { userProfile } = useAuth();
