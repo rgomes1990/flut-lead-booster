@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { FlutLogo } from "@/components/FlutLogo";
 import { useAuth } from "@/hooks/useAuth";
+import WhatsAppInput from "@/components/WhatsAppInput";
 
 const Auth = () => {
   const { user, userProfile, loading } = useAuth();
@@ -251,19 +252,15 @@ const Auth = () => {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-whatsapp">WhatsApp</Label>
-                  <Input
-                    id="register-whatsapp"
-                    type="tel"
-                    value={whatsapp}
-                    onChange={(e) => setWhatsapp(e.target.value)}
-                    placeholder="(11) 99999-9999"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Opcional - será usado como contato padrão no site
-                  </p>
-                </div>
+                <WhatsAppInput
+                  id="register-whatsapp"
+                  label="WhatsApp"
+                  value={whatsapp}
+                  onChange={(value) => setWhatsapp(value)}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Opcional - será usado como contato padrão no site
+                </p>
                 <div className="space-y-2">
                   <Label htmlFor="register-password">Senha *</Label>
                   <Input
