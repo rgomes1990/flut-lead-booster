@@ -252,19 +252,15 @@ const Auth = () => {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-whatsapp">WhatsApp</Label>
-                  <Input
-                    id="register-whatsapp"
-                    type="tel"
-                    value={whatsapp}
-                    onChange={(e) => setWhatsapp(e.target.value)}
-                    placeholder="(11) 99999-9999"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Opcional - será usado como contato padrão no site
-                  </p>
-                </div>
+                <WhatsAppInput
+                  id="register-whatsapp"
+                  label="WhatsApp"
+                  value={whatsapp}
+                  onChange={(value) => setWhatsapp(value)}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Opcional - será usado como contato padrão no site
+                </p>
                 <div className="space-y-2">
                   <Label htmlFor="register-password">Senha *</Label>
                   <Input
