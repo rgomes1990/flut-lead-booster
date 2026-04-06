@@ -469,8 +469,9 @@ const LeadsCaptured = () => {
 
   const handleItemsPerPageChange = (value: string) => {
     console.log("Mudando items per page:", value);
-    setItemsPerPage(parseInt(value));
-    setCurrentPage(1); // Reset to first page when items per page changes
+    const numValue = value === "all" ? 999999 : parseInt(value);
+    setItemsPerPage(numValue);
+    setCurrentPage(1);
   };
 
   // Simple pagination function
@@ -854,14 +855,15 @@ const LeadsCaptured = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Mostrar:</span>
-                  <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
-                    <SelectTrigger className="w-20">
+                  <Select value={itemsPerPage >= 999999 ? "all" : itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
+                    <SelectTrigger className="w-24">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="10">10</SelectItem>
                       <SelectItem value="50">50</SelectItem>
                       <SelectItem value="100">100</SelectItem>
+                      <SelectItem value="all">Todos</SelectItem>
                     </SelectContent>
                   </Select>
                   <span className="text-sm text-muted-foreground">
