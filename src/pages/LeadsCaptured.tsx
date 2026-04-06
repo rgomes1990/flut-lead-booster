@@ -469,8 +469,9 @@ const LeadsCaptured = () => {
 
   const handleItemsPerPageChange = (value: string) => {
     console.log("Mudando items per page:", value);
-    setItemsPerPage(parseInt(value));
-    setCurrentPage(1); // Reset to first page when items per page changes
+    const numValue = value === "all" ? 999999 : parseInt(value);
+    setItemsPerPage(numValue);
+    setCurrentPage(1);
   };
 
   // Simple pagination function
