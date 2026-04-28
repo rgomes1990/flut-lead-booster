@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Copy, Settings, MessageCircle, Phone } from "lucide-react";
+import { ArrowLeft, Copy, Settings, MessageCircle, Phone, Webhook } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminNavigation from "@/components/AdminNavigation";
 import WhatsAppInput from "@/components/WhatsAppInput";
+import { Switch } from "@/components/ui/switch";
 
 type IconType = "whatsapp" | "whatsapp-alt";
 type IconPosition = "top" | "center" | "bottom";
@@ -31,6 +32,8 @@ interface SiteConfig {
   field_capture_page: boolean;
   icon_type: IconType;
   icon_position: IconPosition;
+  external_api_enabled: boolean;
+  external_api_token: string;
 }
 
 const SiteConfig = () => {
@@ -53,6 +56,8 @@ const SiteConfig = () => {
     field_capture_page: true,
     icon_type: "whatsapp",
     icon_position: "bottom",
+    external_api_enabled: false,
+    external_api_token: "",
   });
   const [loading, setLoading] = useState(true);
 
@@ -95,6 +100,8 @@ const SiteConfig = () => {
           field_capture_page: configData.field_capture_page,
           icon_type: (configData.icon_type as IconType) || "whatsapp",
           icon_position: (configData.icon_position as IconPosition) || "bottom",
+          external_api_enabled: (configData as any).external_api_enabled ?? false,
+          external_api_token: (configData as any).external_api_token ?? "",
         });
       } else if (configError) {
         throw configError;
@@ -114,10 +121,21 @@ const SiteConfig = () => {
 
   const saveConfig = async () => {
     try {
+      // Validação: se enviar para CRM externo está habilitado, o token é obrigatório
+      if (config.external_api_enabled && !config.external_api_token.trim()) {
+        toast({
+          title: "Token obrigatório",
+          description: "Informe a chave de autorização do CRM externo ou desative o envio.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from("site_configs")
         .upsert({
           ...config,
+          external_api_token: config.external_api_enabled ? config.external_api_token.trim() : null,
           site_id: siteId
         }, {
           onConflict: 'site_id'
