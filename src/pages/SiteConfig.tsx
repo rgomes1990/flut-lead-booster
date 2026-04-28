@@ -407,6 +407,55 @@ const SiteConfig = () => {
                 </CardContent>
               </Card>
 
+              {/* Integração com CRM externo */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Webhook className="h-5 w-5" />
+                    Integração com CRM externo
+                  </CardTitle>
+                  <CardDescription>
+                    Envie automaticamente os leads capturados para o CRM da Flut (https://crm.flut.com.br).
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="external-api-enabled">Enviar leads para o CRM externo</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Quando ativo, cada novo lead será enviado para a API do CRM.
+                      </p>
+                    </div>
+                    <Switch
+                      id="external-api-enabled"
+                      checked={config.external_api_enabled}
+                      onCheckedChange={(checked) =>
+                        setConfig({ ...config, external_api_enabled: checked })
+                      }
+                    />
+                  </div>
+
+                  {config.external_api_enabled && (
+                    <div>
+                      <Label htmlFor="external-api-token">Chave de autorização (Bearer Token)</Label>
+                      <Input
+                        id="external-api-token"
+                        type="text"
+                        value={config.external_api_token}
+                        onChange={(e) =>
+                          setConfig({ ...config, external_api_token: e.target.value })
+                        }
+                        placeholder="oxp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                        className="font-mono text-sm"
+                      />
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Esta chave é única para cada cliente e usada para autenticar no CRM.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               <Button onClick={saveConfig} className="w-full" size="lg">
                 Salvar Configurações
               </Button>
