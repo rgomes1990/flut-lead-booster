@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
     // Obter configuração do site para o telefone do WhatsApp
     const { data: siteConfig } = await supabase
       .from('site_configs')
-      .select('phone, attendant_name')
+      .select('phone, attendant_name, external_api_enabled, external_api_token')
       .eq('site_id', site_id)
       .single();
 
@@ -264,6 +264,41 @@ Deno.serve(async (req) => {
     }
 
     console.log('Lead saved successfully with origin:', finalOrigin, 'and UTM data:', utmData);
+
+    // Enviar lead para CRM externo se habilitado
+    if (siteConfig?.external_api_enabled && siteConfig?.external_api_token) {
+      try {
+        // Normalizar celular: apenas dígitos, sem +55
+        const celularDigits = String(phone || '').replace(/[^\d]/g, '').replace(/^55/, '');
+
+        const externalPayload = {
+          nome: name || 'Não informado',
+          email: email || '',
+          celular: celularDigits,
+          mensagem: message || '',
+        };
+
+        console.log('🔗 Enviando lead para CRM externo:', externalPayload);
+
+        const externalResponse = await fetch('https://crm.flut.com.br/api/leads', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${siteConfig.external_api_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(externalPayload),
+        });
+
+        const externalText = await externalResponse.text();
+        if (externalResponse.ok) {
+          console.log('✅ Lead enviado ao CRM externo com sucesso:', externalResponse.status, externalText);
+        } else {
+          console.error('❌ CRM externo retornou erro:', externalResponse.status, externalText);
+        }
+      } catch (externalError) {
+        console.error('❌ Exceção ao enviar lead para CRM externo:', externalError);
+      }
+    }
 
     // Buscar email e nome do usuário para enviar alerta
     const { data: userProfile, error: profileError } = await supabase
