@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Copy, Settings, MessageCircle, Phone } from "lucide-react";
+import { ArrowLeft, Copy, Settings, MessageCircle, Phone, Webhook } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminNavigation from "@/components/AdminNavigation";
 import WhatsAppInput from "@/components/WhatsAppInput";
+import { Switch } from "@/components/ui/switch";
 
 type IconType = "whatsapp" | "whatsapp-alt";
 type IconPosition = "top" | "center" | "bottom";
@@ -31,6 +32,8 @@ interface SiteConfig {
   field_capture_page: boolean;
   icon_type: IconType;
   icon_position: IconPosition;
+  external_api_enabled: boolean;
+  external_api_token: string;
 }
 
 const SiteConfig = () => {
@@ -53,6 +56,8 @@ const SiteConfig = () => {
     field_capture_page: true,
     icon_type: "whatsapp",
     icon_position: "bottom",
+    external_api_enabled: false,
+    external_api_token: "",
   });
   const [loading, setLoading] = useState(true);
 
@@ -95,6 +100,8 @@ const SiteConfig = () => {
           field_capture_page: configData.field_capture_page,
           icon_type: (configData.icon_type as IconType) || "whatsapp",
           icon_position: (configData.icon_position as IconPosition) || "bottom",
+          external_api_enabled: (configData as any).external_api_enabled ?? false,
+          external_api_token: (configData as any).external_api_token ?? "",
         });
       } else if (configError) {
         throw configError;
@@ -114,10 +121,21 @@ const SiteConfig = () => {
 
   const saveConfig = async () => {
     try {
+      // Validação: se enviar para CRM externo está habilitado, o token é obrigatório
+      if (config.external_api_enabled && !config.external_api_token.trim()) {
+        toast({
+          title: "Token obrigatório",
+          description: "Informe a chave de autorização do CRM externo ou desative o envio.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from("site_configs")
         .upsert({
           ...config,
+          external_api_token: config.external_api_enabled ? config.external_api_token.trim() : null,
           site_id: siteId
         }, {
           onConflict: 'site_id'
@@ -386,6 +404,55 @@ const SiteConfig = () => {
                       </button>
                     ))}
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Integração com CRM externo */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Webhook className="h-5 w-5" />
+                    Integração com CRM externo
+                  </CardTitle>
+                  <CardDescription>
+                    Envie automaticamente os leads capturados para o CRM da Flut (https://crm.flut.com.br).
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="external-api-enabled">Enviar leads para o CRM externo</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Quando ativo, cada novo lead será enviado para a API do CRM.
+                      </p>
+                    </div>
+                    <Switch
+                      id="external-api-enabled"
+                      checked={config.external_api_enabled}
+                      onCheckedChange={(checked) =>
+                        setConfig({ ...config, external_api_enabled: checked })
+                      }
+                    />
+                  </div>
+
+                  {config.external_api_enabled && (
+                    <div>
+                      <Label htmlFor="external-api-token">Chave de autorização (Bearer Token)</Label>
+                      <Input
+                        id="external-api-token"
+                        type="text"
+                        value={config.external_api_token}
+                        onChange={(e) =>
+                          setConfig({ ...config, external_api_token: e.target.value })
+                        }
+                        placeholder="oxp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                        className="font-mono text-sm"
+                      />
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Esta chave é única para cada cliente e usada para autenticar no CRM.
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

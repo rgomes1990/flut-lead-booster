@@ -308,6 +308,8 @@ export type Database = {
           created_at: string
           default_message: string | null
           email: string | null
+          external_api_enabled: boolean
+          external_api_token: string | null
           field_capture_page: boolean
           field_email: boolean
           field_message: boolean
@@ -327,6 +329,8 @@ export type Database = {
           created_at?: string
           default_message?: string | null
           email?: string | null
+          external_api_enabled?: boolean
+          external_api_token?: string | null
           field_capture_page?: boolean
           field_email?: boolean
           field_message?: boolean
@@ -346,6 +350,8 @@ export type Database = {
           created_at?: string
           default_message?: string | null
           email?: string | null
+          external_api_enabled?: boolean
+          external_api_token?: string | null
           field_capture_page?: boolean
           field_email?: boolean
           field_message?: boolean
