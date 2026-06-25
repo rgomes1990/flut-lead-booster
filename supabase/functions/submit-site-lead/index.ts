@@ -231,6 +231,7 @@ Deno.serve(async (req) => {
     const { data: siteConfig } = await supabase
       .from('site_configs')
       .select('phone, attendant_name, external_api_enabled, external_api_token')
+      .select('phone, attendant_name, external_api_enabled, external_api_token, external_api_type, external_api_stage_id')
       .eq('site_id', site_id)
       .single();
 
