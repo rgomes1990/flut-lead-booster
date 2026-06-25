@@ -425,7 +425,7 @@ const SiteConfig = () => {
                     Integração com CRM externo
                   </CardTitle>
                   <CardDescription>
-                    Envie automaticamente os leads capturados para o CRM da Flut (https://crm.flut.com.br).
+                    Envie automaticamente os leads capturados para um CRM externo (Flut ou Ramper Pipeline).
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -446,7 +446,26 @@ const SiteConfig = () => {
                   </div>
 
                   {config.external_api_enabled && (
-                    <div>
+                    <>
+                      <div>
+                        <Label htmlFor="external-api-type">Tipo de CRM</Label>
+                        <Select
+                          value={config.external_api_type}
+                          onValueChange={(value) =>
+                            setConfig({ ...config, external_api_type: value as "flut" | "ramper" })
+                          }
+                        >
+                          <SelectTrigger id="external-api-type">
+                            <SelectValue placeholder="Selecione o CRM" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="flut">CRM Flut (crm.flut.com.br)</SelectItem>
+                            <SelectItem value="ramper">Ramper Pipeline (api.lscrm.com.br)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
                       <Label htmlFor="external-api-token">Chave de autorização (Bearer Token)</Label>
                       <Input
                         id="external-api-token"
@@ -455,13 +474,37 @@ const SiteConfig = () => {
                         onChange={(e) =>
                           setConfig({ ...config, external_api_token: e.target.value })
                         }
-                        placeholder="oxp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                        placeholder={config.external_api_type === 'ramper'
+                          ? 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+                          : 'oxp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
                         className="font-mono text-sm"
                       />
                       <p className="text-sm text-muted-foreground mt-1">
-                        Esta chave é única para cada cliente e usada para autenticar no CRM.
+                        {config.external_api_type === 'ramper'
+                          ? 'Token da API Ramper Pipeline (enviado no header access-token).'
+                          : 'Esta chave é única para cada cliente e usada para autenticar no CRM.'}
                       </p>
-                    </div>
+                      </div>
+
+                      {config.external_api_type === 'ramper' && (
+                        <div>
+                          <Label htmlFor="external-api-stage-id">ID do estágio (stage_id) — opcional</Label>
+                          <Input
+                            id="external-api-stage-id"
+                            type="text"
+                            value={config.external_api_stage_id}
+                            onChange={(e) =>
+                              setConfig({ ...config, external_api_stage_id: e.target.value })
+                            }
+                            placeholder="Ex: 3"
+                            className="font-mono text-sm"
+                          />
+                          <p className="text-sm text-muted-foreground mt-1">
+                            ID do estágio do funil onde a oportunidade será criada. Deixe em branco para usar o padrão.
+                          </p>
+                        </div>
+                      )}
+                    </>
                   )}
                 </CardContent>
               </Card>
