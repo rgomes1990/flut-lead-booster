@@ -34,6 +34,8 @@ interface SiteConfig {
   icon_position: IconPosition;
   external_api_enabled: boolean;
   external_api_token: string;
+  external_api_type: "flut" | "ramper";
+  external_api_stage_id: string;
 }
 
 const SiteConfig = () => {
@@ -58,6 +60,8 @@ const SiteConfig = () => {
     icon_position: "bottom",
     external_api_enabled: false,
     external_api_token: "",
+    external_api_type: "flut",
+    external_api_stage_id: "",
   });
   const [loading, setLoading] = useState(true);
 
@@ -102,6 +106,8 @@ const SiteConfig = () => {
           icon_position: (configData.icon_position as IconPosition) || "bottom",
           external_api_enabled: (configData as any).external_api_enabled ?? false,
           external_api_token: (configData as any).external_api_token ?? "",
+          external_api_type: ((configData as any).external_api_type as "flut" | "ramper") ?? "flut",
+          external_api_stage_id: (configData as any).external_api_stage_id ?? "",
         });
       } else if (configError) {
         throw configError;
@@ -136,6 +142,10 @@ const SiteConfig = () => {
         .upsert({
           ...config,
           external_api_token: config.external_api_enabled ? config.external_api_token.trim() : null,
+          external_api_type: config.external_api_enabled ? config.external_api_type : 'flut',
+          external_api_stage_id: config.external_api_enabled && config.external_api_type === 'ramper'
+            ? (config.external_api_stage_id?.trim() || null)
+            : null,
           site_id: siteId
         }, {
           onConflict: 'site_id'
