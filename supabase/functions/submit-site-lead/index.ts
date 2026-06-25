@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
     // Obter configuração do site para o telefone do WhatsApp
     const { data: siteConfig } = await supabase
       .from('site_configs')
-      .select('phone, attendant_name, external_api_enabled, external_api_token')
+      .select('phone, attendant_name, external_api_enabled, external_api_token, external_api_type, external_api_stage_id')
       .eq('site_id', site_id)
       .single();
 
@@ -270,30 +270,77 @@ Deno.serve(async (req) => {
       try {
         // Normalizar celular: apenas dígitos, sem +55
         const celularDigits = String(phone || '').replace(/[^\d]/g, '').replace(/^55/, '');
+        const crmType = (siteConfig.external_api_type || 'flut').toLowerCase();
 
-        const externalPayload = {
-          nome: name || 'Não informado',
-          email: email || '',
-          celular: celularDigits,
-          mensagem: message || '',
-        };
+        let externalUrl = '';
+        let externalHeaders: Record<string, string> = {};
+        let externalBody: string = '';
+        let externalLogPayload: unknown = null;
 
-        console.log('🔗 Enviando lead para CRM externo:', externalPayload);
+        if (crmType === 'ramper') {
+          // Ramper Pipeline (Movidesk) - Criar Oportunidade para Organização com Pessoa
+          // Endpoint: POST https://api.lscrm.com.br/v1/opportunities
+          // Header: access-token: <token>
+          // Body: application/x-www-form-urlencoded com chaves aninhadas
+          externalUrl = 'https://api.lscrm.com.br/v1/opportunities';
 
-        const externalResponse = await fetch('https://crm.flut.com.br/api/leads', {
-          method: 'POST',
-          headers: {
+          const orgName = name?.trim() ? `${name} (via Flut)` : 'Lead via Flut';
+          const personName = name?.trim() || 'Lead via Flut';
+          const phoneFormatted = celularDigits || '';
+
+          const params = new URLSearchParams();
+          params.append('title', `Lead Flut - ${personName}`);
+          if (siteConfig.external_api_stage_id) {
+            params.append('stage_id', String(siteConfig.external_api_stage_id));
+          }
+          // Organização
+          params.append('organizations[name]', orgName);
+          params.append('organizations[phone]', phoneFormatted);
+          // Pessoa vinculada
+          params.append('organizations_person[name]', personName);
+          params.append('organizations_person[email]', email || '');
+          params.append('organizations_person[phone]', phoneFormatted);
+          // Mensagem como nota nos campos adicionais
+          if (message) {
+            params.append('additional_values[opportunities][mensagem]', message);
+          }
+
+          externalHeaders = {
+            'access-token': siteConfig.external_api_token,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          };
+          externalBody = params.toString();
+          externalLogPayload = externalBody;
+        } else {
+          // CRM Flut (padrão)
+          externalUrl = 'https://crm.flut.com.br/api/leads';
+          const payload = {
+            nome: name || 'Não informado',
+            email: email || '',
+            celular: celularDigits,
+            mensagem: message || '',
+          };
+          externalHeaders = {
             'Authorization': `Bearer ${siteConfig.external_api_token}`,
             'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(externalPayload),
+          };
+          externalBody = JSON.stringify(payload);
+          externalLogPayload = payload;
+        }
+
+        console.log(`🔗 Enviando lead para CRM externo (${crmType}):`, externalLogPayload);
+
+        const externalResponse = await fetch(externalUrl, {
+          method: 'POST',
+          headers: externalHeaders,
+          body: externalBody,
         });
 
         const externalText = await externalResponse.text();
         if (externalResponse.ok) {
-          console.log('✅ Lead enviado ao CRM externo com sucesso:', externalResponse.status, externalText);
+          console.log(`✅ Lead enviado ao CRM externo (${crmType}) com sucesso:`, externalResponse.status, externalText);
         } else {
-          console.error('❌ CRM externo retornou erro:', externalResponse.status, externalText);
+          console.error(`❌ CRM externo (${crmType}) retornou erro:`, externalResponse.status, externalText);
         }
       } catch (externalError) {
         console.error('❌ Exceção ao enviar lead para CRM externo:', externalError);
