@@ -137,6 +137,20 @@ const SiteConfig = () => {
         return;
       }
 
+      // stage_id é obrigatório para Ramper Pipeline
+      if (
+        config.external_api_enabled &&
+        config.external_api_type === 'ramper' &&
+        !config.external_api_stage_id.trim()
+      ) {
+        toast({
+          title: "ID do estágio obrigatório",
+          description: "O Ramper Pipeline exige o ID do estágio (stage_id). Ex.: 3 para Prospecção.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from("site_configs")
         .upsert({
@@ -488,7 +502,7 @@ const SiteConfig = () => {
 
                       {config.external_api_type === 'ramper' && (
                         <div>
-                          <Label htmlFor="external-api-stage-id">ID do estágio (stage_id) — opcional</Label>
+                          <Label htmlFor="external-api-stage-id">ID do estágio (stage_id) *</Label>
                           <Input
                             id="external-api-stage-id"
                             type="text"
@@ -500,7 +514,7 @@ const SiteConfig = () => {
                             className="font-mono text-sm"
                           />
                           <p className="text-sm text-muted-foreground mt-1">
-                            ID do estágio do funil onde a oportunidade será criada. Deixe em branco para usar o padrão.
+                            Obrigatório. ID do estágio do funil onde a oportunidade será criada (ex.: 3 = Prospecção).
                           </p>
                         </div>
                       )}
