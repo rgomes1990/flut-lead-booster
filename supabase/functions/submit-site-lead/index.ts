@@ -302,7 +302,7 @@ Deno.serve(async (req) => {
           params.append('organizations_person[phone]', phoneFormatted);
           // Mensagem como nota nos campos adicionais
           if (message) {
-            params.append('additional_values[opportunities][mensagem]', message);
+            params.append('additional_values[opportunities][qual_e_a_mensagem_do_contato]', message);
           }
 
           externalHeaders = {
