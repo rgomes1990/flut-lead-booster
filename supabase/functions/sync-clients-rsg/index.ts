@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     // Buscar profiles correspondentes
     const userIds = Array.from(new Set((clients ?? []).map((c) => c.user_id).filter(Boolean)))
     const { data: profiles } = userIds.length
-      ? await supabase.from('profiles').select('user_id, name, email, phone').in('user_id', userIds)
+      ? await supabase.from('profiles').select('user_id, name, email').in('user_id', userIds)
       : { data: [] as any[] }
     const profileByUser = new Map((profiles ?? []).map((p: any) => [p.user_id, p]))
 
@@ -56,7 +56,6 @@ Deno.serve(async (req) => {
         id: c.id,
         nome: p.name || '',
         email: p.email || '',
-        telefone: String(p.phone || '').replace(/[^\d]/g, ''),
         website: c.website_url || '',
         ativo: c.is_active,
       }
