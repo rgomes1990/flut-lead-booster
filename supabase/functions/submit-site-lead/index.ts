@@ -265,6 +265,51 @@ Deno.serve(async (req) => {
 
     console.log('Lead saved successfully with origin:', finalOrigin, 'and UTM data:', utmData);
 
+    // Enviar lead para webhook global da Flut (todos os sites)
+    try {
+      const webhookUrl = Deno.env.get('FLUT_WEBHOOK_URL');
+      const webhookSecret = Deno.env.get('FLUT_WEBHOOK_SECRET');
+
+      if (webhookUrl && webhookSecret) {
+        const celularDigitsGlobal = String(phone || '').replace(/[^\d]/g, '').replace(/^55/, '');
+        const globalPayload = {
+          lead_id: insertedLead.id,
+          site_id,
+          client_id: client.id,
+          name: name || '',
+          email: email || '',
+          phone: phone || '',
+          celular: celularDigitsGlobal,
+          message: message || '',
+          website_url: website_url || '',
+          origin: finalOrigin,
+          campaign: utmData.campaign || null,
+          created_at: insertedLead.created_at,
+        };
+
+        console.log('🌐 Enviando lead para webhook global Flut:', webhookUrl);
+
+        const globalResp = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-flut-secret': webhookSecret,
+          },
+          body: JSON.stringify(globalPayload),
+        });
+        const globalText = await globalResp.text();
+        if (globalResp.ok) {
+          console.log('✅ Webhook global Flut OK:', globalResp.status, globalText);
+        } else {
+          console.error('❌ Webhook global Flut erro:', globalResp.status, globalText);
+        }
+      } else {
+        console.warn('⚠️ FLUT_WEBHOOK_URL/SECRET não configurados; pulando webhook global.');
+      }
+    } catch (globalErr) {
+      console.error('❌ Exceção no webhook global Flut:', globalErr);
+    }
+
     // Enviar lead para CRM externo se habilitado
     if (siteConfig?.external_api_enabled && siteConfig?.external_api_token) {
       try {
